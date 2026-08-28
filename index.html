@@ -3,38 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Dino Volante mobile</title>
+  <title>Dino Volante Mobile</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #70c5ce; touch-action: none; font-family: sans-serif; }
-    canvas { display: block; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; overflow: hidden; background: #70c5ce; touch-action: none; font-family: sans-serif; }
+    canvas { display: block; width: 100vw; height: 100vh; }
     #overlay {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       display: flex; flex-direction: column; justify-content: center; align-items: center;
-      background: rgba(0,0,0,0.5); color: white; text-align: center;
+      background: rgba(0,0,0,0.6); color: white; text-align: center; padding: 20px; z-index: 10;
     }
-    button { padding: 15px 30px; font-size: 1.2rem; border: none; border-radius: 8px; background: #ff5722; color: white; }
+    h1 { margin-bottom: 10px; font-size: 2rem; }
+    p { font-size: 1.1rem; line-height: 1.5; margin-bottom: 20px; }
+    button {
+      padding: 18px 45px; font-size: 1.3rem; font-weight: bold; border: none;
+      border-radius: 30px; background: #ff5722; color: white; cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3); -webkit-tap-highlight-color: transparent;
+    }
   </style>
 </head>
 <body>
 
   <div id="overlay">
     <h1 id="title">Dino Volante 🦕</h1>
-    <p>Inclina il telefono per girare<br>Tocca lo schermo per volare</p>
-    <button id="startBtn">GIOCA</button>
+    <p>Inclina il telefono a destra/sinistra per girare.<br>Tocca lo schermo per volare in alto!</p>
+    <button id="startBtn">GIOCA ORA</button>
   </div>
   
   <canvas id="canvas"></canvas>
 
 <script>
-// --- REGISTRO DEI 24 EVENTI / PASSAGGI LOGICI DEL GIOCO ---
-
-// 1. Inizializzazione Canvas e contesto grafico
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const overlay = document.getElementById('overlay');
 const startBtn = document.getElementById('startBtn');
 
-// 2. Ridimensionamento dinamico al display del telefono
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -42,49 +45,55 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// 3. Definizione dello stato del Giocatore (Dinosauro)
 let dino = { x: 0, y: 0, vx: 0, vy: 0, size: 25 };
-
-// 4. Definizione degli ostacoli (Nuvole/Rupi) e punteggio
 let obstacles = [];
 let score = 0;
 let gameOver = false;
 let gameRunning = false;
+let frameCount = 0;
 
-// 5. Configurazione della Fisica (Gravità e Spinta)
 const gravity = 0.35;
 const flapPower = -7.5;
 let tiltX = 0;
 
-// 6. Evento Touch: Ascolto pressione schermo (Flap / Volo)
+// Gestione Tocchi Schermo (Volo)
 window.addEventListener('touchstart', (e) => {
-  e.preventDefault();
   if (gameRunning && !gameOver) {
-    dino.vy = flapPower; // Evento 7: Applicazione spinta verso l'alto
+    e.preventDefault();
+    dino.vy = flapPower;
   }
 }, { passive: false });
 
-// 8. Evento Gyroscope: Ascolto inclinazione del dispositivo (Tilt)
-window.addEventListener('deviceorientation', (e) => {
-  if (e.gamma !== null) {
-    tiltX = e.gamma; // Evento 9: Calcolo dell'angolo di inclinazione sull'asse X
+// Gestione Accelerometro (Inclinazione)
+function handleOrientation(e) {
+  if (e.gamma !== null && e.gamma !== undefined) {
+    tiltX = e.gamma;
   }
-});
+}
 
-// 10. Evento Start: Avvio della partita al tap sul pulsante
-startBtn.addEventListener('click', () => {
-  // Richiesta permessi sensori (necessario per iOS 13+)
+// Avvio Gioco diretto al click
+startBtn.addEventListener('touchend', initGame);
+startBtn.addEventListener('click', initGame);
+
+function initGame(e) {
+  if (e) e.preventDefault();
+  
+  // Richiesta permessi iOS per giroscopio
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission().then(response => {
-      if (response === 'granted') startGame();
-      else startGame();
-    }).catch(() => startGame());
+    DeviceOrientationEvent.requestPermission()
+      .then(permissionState => {
+        if (permissionState === 'granted') {
+          window.addEventListener('deviceorientation', handleOrientation);
+        }
+        startGame();
+      })
+      .catch(() => startGame());
   } else {
+    window.addEventListener('deviceorientation', handleOrientation);
     startGame();
   }
-});
+}
 
-// 11. Funzione Reset / Inizio Partita
 function startGame() {
   dino.x = canvas.width / 2;
   dino.y = canvas.height / 2;
@@ -94,14 +103,14 @@ function startGame() {
   score = 0;
   gameOver = false;
   gameRunning = true;
+  frameCount = 0;
   overlay.style.display = 'none';
-  loop(); // Avvio ciclo principale
+  loop();
 }
 
-// 12. Generazione dinamica ostacoli
 function spawnObstacle() {
-  const gap = 170;
-  const topHeight = Math.random() * (canvas.height - gap - 100) + 50;
+  const gap = 180;
+  const topHeight = Math.random() * (canvas.height - gap - 120) + 60;
   obstacles.push({
     x: canvas.width,
     top: topHeight,
@@ -110,56 +119,48 @@ function spawnObstacle() {
   });
 }
 
-// 13. Ciclo Principale di Gioco (Game Loop)
-let frameCount = 0;
 function loop() {
   if (!gameRunning) return;
 
-  // 14. Aggiornamento Fisica Verticale (Gravità)
+  // Fisica
   dino.vy += gravity;
   dino.y += dino.vy;
-
-  // 15. Aggiornamento Fisica Orizzontale (Inclinazione sensore)
-  dino.vx = tiltX * 0.4;
+  dino.vx = tiltX * 0.45;
   dino.x += dino.vx;
 
-  // 16. Limiti mappa (Keep in bounds)
+  // Limiti bordi
   if (dino.x - dino.size < 0) dino.x = dino.size;
   if (dino.x + dino.size > canvas.width) dino.x = canvas.width - dino.size;
 
-  // 17. Generazione cadenzata ostacoli
+  // Generazione ostacoli
   frameCount++;
   if (frameCount % 90 === 0) spawnObstacle();
 
-  // 18. Pulizia dello schermo
+  // Rendering
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 19. Rendering del Dinosauro Volante
+  // Dinosauro
   ctx.fillStyle = '#4CAF50';
   ctx.beginPath();
   ctx.arc(dino.x, dino.y, dino.size, 0, Math.PI * 2);
   ctx.fill();
-  // Ala del dinosauro
-  ctx.fillStyle = '#388E3C';
-  ctx.fillRect(dino.x - 10, dino.y - 5, 12, 8);
+  ctx.fillStyle = '#2E7D32';
+  ctx.fillRect(dino.x - 8, dino.y - 4, 10, 8);
 
-  // 20. Rendering e movimento Ostacoli
+  // Ostacoli
   ctx.fillStyle = '#795548';
   for (let i = obstacles.length - 1; i >= 0; i--) {
     let obs = obstacles[i];
-    obs.x -= 3; // Velocità scorrimento
+    obs.x -= 3.5;
 
-    // Disegna colonna superiore e inferiore
     ctx.fillRect(obs.x, 0, 50, obs.top);
     ctx.fillRect(obs.x, canvas.height - obs.bottom, 50, obs.bottom);
 
-    // 21. Incremento Punteggio al superamento
     if (!obs.passed && obs.x < dino.x) {
       score++;
       obs.passed = true;
     }
 
-    // 22. Rilevamento Collisioni (Hitbox)
     if (
       dino.x + dino.size > obs.x && dino.x - dino.size < obs.x + 50 &&
       (dino.y - dino.size < obs.top || dino.y + dino.size > canvas.height - obs.bottom)
@@ -167,16 +168,15 @@ function loop() {
       triggerGameOver();
     }
 
-    // Rimozione ostacoli fuori schermo
     if (obs.x < -50) obstacles.splice(i, 1);
   }
 
-  // Controlla se cade in basso o vola troppo in alto
+  // Collisione soffitto/pavimento
   if (dino.y + dino.size > canvas.height || dino.y - dino.size < 0) {
     triggerGameOver();
   }
 
-  // 23. Disegno dell'Interfaccia Utente (Score)
+  // Punteggio
   ctx.fillStyle = '#FFFFFF';
   ctx.font = 'bold 24px sans-serif';
   ctx.fillText(`Punti: ${score}`, 20, 40);
@@ -186,12 +186,11 @@ function loop() {
   }
 }
 
-// 24. Evento Game Over e gestione Schermata Finale
 function triggerGameOver() {
   gameOver = true;
   gameRunning = false;
   document.getElementById('title').innerText = 'Game Over! 💥';
-  startBtn.innerText = 'RIAPRI';
+  startBtn.innerText = 'RICOMINCIA';
   overlay.style.display = 'flex';
 }
 </script>
