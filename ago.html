@@ -2,233 +2,304 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Cerca l'Ago nel Pagliaio 3D</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>HAYSTACK: Needle Hunter 3D</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { overflow: hidden; background: #1a140d; font-family: sans-serif; touch-action: none; }
-    canvas { display: block; width: 100vw; height: 100vh; }
-    #overlay {
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; touch-action: none; }
+    
+    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+    
+    /* Overlay UI iniziale / Game Over */
+    #ui-layer {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      background: rgba(0,0,0,0.8); color: white; text-align: center; padding: 20px; z-index: 10;
+      z-index: 10; display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      background: rgba(10, 15, 25, 0.85); backdrop-filter: blur(12px);
+      color: #fff; text-align: center; padding: 30px;
     }
-    h1 { font-size: 1.8rem; color: #fbc02d; margin-bottom: 10px; }
-    p { font-size: 1rem; line-height: 1.4; margin-bottom: 25px; color: #ddd; }
-    button {
-      padding: 18px 45px; font-size: 1.2rem; font-weight: bold; border: none;
-      border-radius: 30px; background: #fbc02d; color: #1a140d; cursor: pointer;
-      box-shadow: 0 4px 15px rgba(251, 192, 45, 0.4); -webkit-tap-highlight-color: transparent;
+    h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; background: linear-gradient(135deg, #FFD700, #FFA500); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    p { font-size: 1.05rem; color: #a0aec0; margin-bottom: 25px; line-height: 1.5; max-width: 320px; }
+    .btn {
+      background: linear-gradient(135deg, #00d2ff, #0066fe); border: none;
+      padding: 18px 45px; border-radius: 50px; font-size: 1.2rem; font-weight: 700;
+      color: #fff; box-shadow: 0 10px 25px rgba(0, 102, 254, 0.4);
+      cursor: pointer; transition: transform 0.2s; -webkit-tap-highlight-color: transparent;
     }
-    #ui {
-      position: absolute; top: 15px; left: 15px; color: #fff; font-weight: bold;
-      font-size: 1.1rem; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); pointer-events: none; z-index: 5;
+    .btn:active { transform: scale(0.95); }
+    
+    /* Banner dinamico ogni 30s */
+    #banner-napoli {
+      position: absolute; top: 20px; right: 20px; z-index: 5;
+      background: rgba(0, 168, 255, 0.9); color: #fff; padding: 10px 18px;
+      border-radius: 20px; font-weight: bold; font-size: 0.95rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); border: 2px solid #fff;
+      display: none; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    @keyframes popIn {
+      0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    /* Target mirino Lente */
+    #lens-ui {
+      position: absolute; width: 140px; height: 140px; border-radius: 50%;
+      border: 4px solid rgba(255, 255, 255, 0.8); box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 15px rgba(255,255,255,0.3);
+      pointer-events: none; z-index: 4; transform: translate(-50%, -50%);
+      display: none;
+    }
+    #lens-ui::after {
+      content: '3X'; position: absolute; bottom: 5px; right: 15px;
+      font-size: 10px; font-weight: bold; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.4); padding: 2px 4px; border-radius: 4px;
     }
   </style>
+
+  <!-- Importing Three.js per la grafica 3D -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-  <div id="ui">Tempo: <span id="timer">0</span>s</div>
+  <div id="canvas-container"></div>
+  <div id="lens-ui"></div>
+  <div id="banner-napoli">sei un napolecanaccio</div>
 
-  <div id="overlay">
-    <h1 id="title">L'Ago nel Pagliaio 3D 🪡</h1>
-    <p>Trascina il dito sullo schermo per muovere la lente di ingrandimento.<br><br>Trova e tocca l'ago di metallo nascosto nel fieno!</p>
-    <button id="startBtn">INIZIA LA RICERCA</button>
+  <div id="ui-layer">
+    <h1 id="ui-title">HAYSTACK 3D</h1>
+    <p id="ui-desc">Sfreccia nella sterminata distesa di fieno. Trascina la tua **Lente d'Ingrandimento 3X** con il dito per scovare l'ago d'oro e vincere il premio finale!</p>
+    <button class="btn" id="start-btn">INIZIA LA SFIDA</button>
   </div>
 
-<script>
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a140d);
-scene.fog = new THREE.FogExp2(0x1a140d, 0.015);
+  <script>
+    // --- SETUP AMBIENTE E VARIABILI PRINCIPALI ---
+    const container = document.getElementById('canvas-container');
+    const uiLayer = document.getElementById('ui-layer');
+    const startBtn = document.getElementById('start-btn');
+    const bannerNapoli = document.getElementById('banner-napoli');
+    const lensUI = document.getElementById('lens-ui');
 
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 25, 15);
-camera.lookAt(0, 0, 0);
+    let scene, camera, renderer, mainLight;
+    let hayGroup, needleMesh, ballMesh;
+    let isPlaying = false;
+    let timer30s = null;
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-document.body.appendChild(renderer.domElement);
+    // Configurazione Lente di ingrandimento 3X
+    const lensRadius = 1.8;
+    const lensZoom = 3.0; // Zoom 3X
+    let raycaster = new THREE.Raycaster();
+    let touchPos = new THREE.Vector2();
+    let needlePos3D = new THREE.Vector3();
 
-const ambientLight = new THREE.AmbientLight(0xfff5e6, 0.8);
-scene.add(ambientLight);
+    // 1. Inizializzazione Scena 3D
+    function init3D() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0a0f18);
+      scene.fog = new THREE.FogExp2(0x0a0f18, 0.015);
 
-const dirLight = new THREE.DirectionalLight(0xffe0b2, 1.2);
-dirLight.position.set(20, 40, 20);
-scene.add(dirLight);
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 22, 12);
+      camera.lookAt(0, 0, 0);
 
-// Terreno
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(60, 60),
-  new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 })
-);
-ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      container.appendChild(renderer.domElement);
 
-// Pagliaio (Fieno 3D)
-const strawCount = 40000;
-const strawGeo = new THREE.CylinderGeometry(0.02, 0.08, 3, 3);
-strawGeo.translate(0, 1.5, 0);
-const strawMat = new THREE.MeshStandardMaterial({ color: 0xd4a359, roughness: 0.6 });
-const strawInstanced = new THREE.InstancedMesh(strawGeo, strawMat, strawCount);
+      // Luci per realismo 3D
+      const ambientLight = new THREE.AmbientLight(0xfff5e6, 0.7);
+      scene.add(ambientLight);
 
-const dummy = new THREE.Object3D();
-const fieldSize = 35;
+      mainLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+      mainLight.position.set(15, 30, 15);
+      mainLight.castShadow = true;
+      scene.add(mainLight);
 
-for (let i = 0; i < strawCount; i++) {
-  dummy.position.set(
-    (Math.random() - 0.5) * fieldSize,
-    0,
-    (Math.random() - 0.5) * fieldSize
-  );
-  dummy.rotation.set(
-    (Math.random() - 0.5) * 0.4,
-    Math.random() * Math.PI,
-    (Math.random() - 0.5) * 0.4
-  );
-  const scale = 0.8 + Math.random() * 0.5;
-  dummy.scale.set(scale, scale, scale);
-  dummy.updateMatrix();
-  strawInstanced.setMatrixAt(i, dummy.matrix);
-}
-scene.add(strawInstanced);
+      createEnvironment();
+    }
 
-// Ago lucido 3D
-const needleGroup = new THREE.Group();
-const needleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1.0, roughness: 0.1 });
-const needleMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.02, 4, 16), needleMat);
-needleMesh.rotation.z = Math.PI / 2;
-needleGroup.add(needleMesh);
+    // 2. Creazione Fieno Vasto e Ago Nascosto
+    function createEnvironment() {
+      hayGroup = new THREE.Group();
 
-const eyeMesh = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 8, 16), needleMat);
-eyeMesh.position.x = -2;
-needleGroup.add(eyeMesh);
+      // Terreno
+      const groundGeo = new THREE.PlaneGeometry(80, 80);
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -0.1;
+      scene.add(ground);
 
-const needlePos = new THREE.Vector3(
-  (Math.random() - 0.5) * (fieldSize - 8),
-  0.2,
-  (Math.random() - 0.5) * (fieldSize - 8)
-);
-needleGroup.position.copy(needlePos);
-needleGroup.rotation.y = Math.random() * Math.PI;
-scene.add(needleGroup);
+      // Generazione Filamenti di Fieno (Ampio campo per scorrimento)
+      const strawGeo = new THREE.CylinderGeometry(0.03, 0.05, 1.8, 4);
+      const strawMat = new THREE.MeshStandardMaterial({ color: 0xd4ac0d, roughness: 0.6 });
+      const instancedStraws = new THREE.InstancedMesh(strawGeo, strawMat, 12000);
 
-// Lente d'Ingrandimento
-const lensGroup = new THREE.Group();
-const ring = new THREE.Mesh(
-  new THREE.TorusGeometry(2.5, 0.15, 16, 64),
-  new THREE.MeshStandardMaterial({ color: 0xb8860b, metalness: 0.8, roughness: 0.2 })
-);
-ring.rotation.x = Math.PI / 2;
-lensGroup.add(ring);
+      const dummy = new THREE.Object3D();
+      for (let i = 0; i < 12000; i++) {
+        dummy.position.set(
+          (Math.random() - 0.5) * 60,
+          Math.random() * 0.4,
+          (Math.random() - 0.5) * 60
+        );
+        dummy.rotation.set(
+          Math.random() * 0.4,
+          Math.random() * Math.PI,
+          Math.random() * 0.4
+        );
+        dummy.scale.set(1, 0.8 + Math.random() * 0.5, 1);
+        dummy.updateMatrix();
+        instancedStraws.setMatrixAt(i, dummy.matrix);
+      }
+      hayGroup.add(instancedStraws);
+      scene.add(hayGroup);
 
-const handle = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.2, 0.2, 3, 16),
-  new THREE.MeshStandardMaterial({ color: 0x4a2e16, roughness: 0.7 })
-);
-handle.position.set(0, 0, 3.8);
-handle.rotation.x = Math.PI / 2;
-lensGroup.add(handle);
+      // Creazione Ago D'Argento/Oro
+      const needleGeo = new THREE.CylinderGeometry(0.04, 0.005, 2.2, 8);
+      const needleMat = new THREE.MeshStandardMaterial({
+        color: 0xe5e8e8,
+        metalness: 0.95,
+        roughness: 0.1
+      });
+      needleMesh = new THREE.Mesh(needleGeo, needleMat);
+      
+      // Posizionamento casuale dell'ago nell'ampia mappa
+      const randomX = (Math.random() - 0.5) * 35;
+      const randomZ = (Math.random() - 0.5) * 35;
+      needleMesh.position.set(randomX, 0.2, randomZ);
+      needleMesh.rotation.z = Math.PI / 2 + (Math.random() * 0.4);
+      needleMesh.rotation.y = Math.PI * Math.random();
+      scene.add(needleMesh);
 
-scene.add(lensGroup);
-lensGroup.position.set(0, 6, 0);
+      needlePos3D.copy(needleMesh.position);
+    }
 
-let gameActive = false;
-let startTime = 0;
-let timerInterval = null;
-const raycaster = new THREE.Raycaster();
-const touchPos = new THREE.Vector2();
-const targetLensPos = new THREE.Vector3(0, 6, 0);
+    // 3. Generazione Premio Finale (Pallone del Napoli 3D)
+    function createNapoliBall() {
+      const ballGroup = new THREE.Group();
+      
+      // Sfera Principale
+      const ballGeo = new THREE.SphereGeometry(2, 32, 32);
+      const ballMat = new THREE.MeshStandardMaterial({ color: 0x0080ff, roughness: 0.3, metalness: 0.1 });
+      const ball = new THREE.Mesh(ballGeo, ballMat);
+      ballGroup.add(ball);
 
-// Controlli Touch Mobile
-window.addEventListener('touchmove', (e) => {
-  if (!gameActive) return;
-  const touch = e.touches[0];
-  touchPos.x = (touch.clientX / window.innerWidth) * 2 - 1;
-  touchPos.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+      // Fascia o Dettaglio Bianco "N"
+      const bandGeo = new THREE.RingGeometry(0.6, 1.1, 32);
+      const bandMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+      const band = new THREE.Mesh(bandGeo, bandMat);
+      band.position.z = 2.01;
+      ballGroup.add(band);
 
-  raycaster.setFromCamera(touchPos, camera);
-  const targetPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -4);
-  const intersectPoint = new THREE.Vector3();
-  raycaster.ray.intersectPlane(targetPlane, intersectPoint);
+      ballGroup.position.set(needlePos3D.x, 3, needlePos3D.z);
+      scene.add(ballGroup);
+      ballMesh = ballGroup;
+    }
 
-  if (intersectPoint) {
-    targetLensPos.copy(intersectPoint);
-  }
-}, { passive: false });
+    // 4. Gestione Eventi Touch (Spostamento Lente)
+    function onTouchMove(e) {
+      if (!isPlaying || !e.touches[0]) return;
+      
+      const x = e.touches[0].clientX;
+      const y = e.touches[0].clientY;
 
-window.addEventListener('touchstart', (e) => {
-  if (!gameActive) return;
-  const touch = e.touches[0];
-  const clickCoords = new THREE.Vector2(
-    (touch.clientX / window.innerWidth) * 2 - 1,
-    -(touch.clientY / window.innerHeight) * 2 + 1
-  );
-  
-  raycaster.setFromCamera(clickCoords, camera);
-  const intersects = raycaster.intersectObject(needleMesh);
+      lensUI.style.left = x + 'px';
+      lensUI.style.top = y + 'px';
 
-  if (intersects.length > 0) {
-    winGame();
-  }
-});
+      // Coordinate normalizzate per Raycaster
+      touchPos.x = (x / window.innerWidth) * 2 - 1;
+      touchPos.y = -(y / window.innerHeight) * 2 + 1;
 
-const startBtn = document.getElementById('startBtn');
-startBtn.addEventListener('touchend', initGame);
-startBtn.addEventListener('click', initGame);
+      // Telecamera segue lo scorrimento della lente sul terreno ampio
+      raycaster.setFromCamera(touchPos, camera);
+      const intersects = raycaster.intersectObjects(scene.children, true);
 
-function initGame(e) {
-  if (e) e.preventDefault();
-  gameActive = true;
-  document.getElementById('overlay').style.display = 'none';
-  startTime = Date.now();
-  
-  timerInterval = setInterval(() => {
-    document.getElementById('timer').innerText = Math.floor((Date.now() - startTime) / 1000);
-  }, 1000);
-  
-  animate();
-}
+      if (intersects.length > 0) {
+        const point = intersects[0].point;
+        
+        // Movimento fluido della telecamera sopra la lente
+        camera.position.x += (point.x - camera.position.x) * 0.1;
+        camera.position.z += ((point.z + 10) - camera.position.z) * 0.1;
+        camera.lookAt(point.x, 0, point.z);
 
-function animate() {
-  if (!gameActive) return;
-  requestAnimationFrame(animate);
+        // Controllo della vittoria (Se la lente intercetta l'ago)
+        const dist = point.distanceTo(needlePos3D);
+        if (dist < lensRadius / 1.5) {
+          winGame();
+        }
+      }
+    }
 
-  lensGroup.position.lerp(targetLensPos, 0.2);
-  
-  const distanceToNeedle = lensGroup.position.distanceTo(
-    new THREE.Vector3(needleGroup.position.x, lensGroup.position.y, needleGroup.position.z)
-  );
+    // 5. Timer 30 Secondi "sei un napolecanaccio"
+    function startTimer() {
+      if (timer30s) clearInterval(timer30s);
+      timer30s = setInterval(() => {
+        bannerNapoli.style.display = 'block';
+        setTimeout(() => {
+          bannerNapoli.style.display = 'none';
+        }, 5000); // Rimane a schermo per 5 secondi
+      }, 30000); // Ogni 30 secondi
+    }
 
-  if (distanceToNeedle < 4) {
-    needleMat.emissive.setHex(0xaaaaaa);
-  } else {
-    needleMat.emissive.setHex(0x000000);
-  }
+    // 6. Vittoria
+    function winGame() {
+      isPlaying = false;
+      clearInterval(timer30s);
+      lensUI.style.display = 'none';
 
-  camera.position.x = lensGroup.position.x * 0.3;
-  camera.position.z = 15 + lensGroup.position.z * 0.3;
-  camera.lookAt(lensGroup.position.x * 0.2, 0, lensGroup.position.z * 0.2);
+      createNapoliBall();
 
-  renderer.render(scene, camera);
-}
+      // Animazione della vittoria
+      document.getElementById('ui-title').innerText = "AGO TROVATO! 🏆";
+      document.getElementById('ui-title').style.background = "linear-gradient(135deg, #00d2ff, #0066fe)";
+      document.getElementById('ui-title').style.webkitBackgroundClip = "text";
+      
+      document.getElementById('ui-desc').innerHTML = "Hai vinto il **Pallone Ufficiale del Napoli 3D**!";
+      startBtn.innerText = "GIOCA ANCORA";
+      uiLayer.style.display = "flex";
+    }
 
-function winGame() {
-  gameActive = false;
-  clearInterval(timerInterval);
-  const finalTime = Math.floor((Date.now() - startTime) / 1000);
-  
-  needleGroup.position.y = 3;
-  needleGroup.scale.set(1.8, 1.8, 1.8);
-  renderer.render(scene, camera);
+    // 7. Avvio Gioco
+    function startGame() {
+      if (ballMesh) scene.remove(ballMesh);
+      if (needleMesh) {
+        needleMesh.position.set((Math.random() - 0.5) * 35, 0.2, (Math.random() - 0.5) * 35);
+        needlePos3D.copy(needleMesh.position);
+      }
 
-  document.getElementById('title').innerText = 'TROVATO! 🪡✨';
-  document.getElementById('overlay').querySelector('p').innerHTML = `Hai trovato l'ago in <b>${finalTime} secondi</b>!`;
-  startBtn.innerText = 'GIOCA ANCORA';
-  startBtn.onclick = () => location.reload();
-  document.getElementById('overlay').style.display = 'flex';
-}
-</script>
+      uiLayer.style.display = "none";
+      lensUI.style.display = "block";
+      isPlaying = true;
+
+      startTimer();
+    }
+
+    // Event Listeners
+    startBtn.addEventListener('click', startGame);
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchstart', onTouchMove, { passive: true });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Loop Animazione 3D
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      if (ballMesh) {
+        ballMesh.rotation.y += 0.02;
+        ballMesh.rotation.x += 0.01;
+      }
+      
+      renderer.render(scene, camera);
+    }
+
+    // Inizio
+    init3D();
+    animate();
+  </script>
 </body>
 </html>
