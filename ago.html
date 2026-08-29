@@ -76,8 +76,8 @@
 
   <div id="intro-screen">
     <h1>ACUTUS 3D</h1>
-    <p>Esplora il campo delimitato da un alto muro di pietra.<br><br>
-    Usa il **cursore a sinistra** per muoverti e **trascina lo schermo** per orientare la visuale. Attiva la **lente 🔎** per ingrandire e **tocca un filo** per toglierlo finché non trovi l'ago.</p>
+    <p>Esplora il campo chiuso dai muri.<br><br>
+    Usa il **cursore a sinistra** per muoverti e **trascina lo schermo** per ruotare la visuale. Attiva la **lente 🔎** e **tocca i fili** per cercare l'ago.</p>
     <button id="start-btn">INIZIA LA RICERCA</button>
   </div>
 
@@ -150,8 +150,8 @@ let isMagnifierActive = false;
 let isGameRunning = false;
 let isWon = false;
 
-// Dimensione Campo Recintato da Muro Rigido (10x10 metri)
-const FIELD_SIZE = 10;
+// DIMENSIONE ESATTA DEL CAMPO (12x12 metri)
+const FIELD_SIZE = 12;
 
 const LOOK_SENSITIVITY = 0.002;
 let pitch = -0.5, yaw = 0;
@@ -172,6 +172,8 @@ function init3D() {
   scene.background = new THREE.Color(0x87ceeb);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 50);
+  
+  // Nascita del giocatore ESATTAMENTE AL CENTRO DEL CAMPO
   camera.position.set(0, 0.8, 0);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -186,39 +188,41 @@ function init3D() {
   sunLight.position.set(10, 20, 10);
   scene.add(sunLight);
 
-  // Terreno
+  // Terreno limitato ESATTAMENTE alle dimensioni dei muri
   const groundGeo = new THREE.PlaneGeometry(FIELD_SIZE, FIELD_SIZE);
   const groundMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
-  // === MURO RIGIDO AI BORDI DELLA MAPPA ===
-  const wallHeight = 4.0;
-  const wallThickness = 0.8;
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.6 });
+  // === 4 MURI ROSSI/MATTONE ALTI E VISIBILI AI BORDI ===
+  const wallHeight = 5.0; // Muro alto 5 metri
+  const wallThickness = 0.6;
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x8b261c, roughness: 0.4 }); // Rosso mattonata scuro ben visibile
 
-  // Parete Nord
-  const wallNorth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE + wallThickness, wallHeight, wallThickness), wallMat);
-  wallNorth.position.set(0, wallHeight / 2, -FIELD_SIZE / 2);
+  const half = FIELD_SIZE / 2;
+
+  // Muro Nord
+  const wallNorth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE, wallHeight, wallThickness), wallMat);
+  wallNorth.position.set(0, wallHeight / 2, -half);
   scene.add(wallNorth);
 
-  // Parete Sud
-  const wallSouth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE + wallThickness, wallHeight, wallThickness), wallMat);
-  wallSouth.position.set(0, wallHeight / 2, FIELD_SIZE / 2);
+  // Muro Sud
+  const wallSouth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE, wallHeight, wallThickness), wallMat);
+  wallSouth.position.set(0, wallHeight / 2, half);
   scene.add(wallSouth);
 
-  // Parete Est
+  // Muro Est
   const wallEast = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE), wallMat);
-  wallEast.position.set(FIELD_SIZE / 2, wallHeight / 2, 0);
+  wallEast.position.set(half, wallHeight / 2, 0);
   scene.add(wallEast);
 
-  // Parete Ovest
+  // Muro Ovest
   const wallWest = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE), wallMat);
-  wallWest.position.set(-FIELD_SIZE / 2, wallHeight / 2, 0);
+  wallWest.position.set(-half, wallHeight / 2, 0);
   scene.add(wallWest);
 
-  // FILI DI FIENO COMPATTI DENTRO IL MURO
+  // FILI DI FIENO DISTRIBUITI FINO AI MURI
   const bladeGeo = new THREE.CylinderGeometry(0.003, 0.005, 0.08, 4);
   bladeGeo.translate(0, 0.04, 0);
   const bladeMat = new THREE.MeshStandardMaterial({ color: 0xd4ac0d, roughness: 0.7 });
@@ -226,12 +230,11 @@ function init3D() {
   hayMesh = new THREE.InstancedMesh(bladeGeo, bladeMat, TOTAL_HAY);
   const dummy = new THREE.Object3D();
   
-  const safeMargin = 0.5;
-  const halfField = (FIELD_SIZE / 2) - safeMargin;
+  const hayArea = half - 0.4; // Riempie quasi fino al muro
 
   for (let i = 0; i < TOTAL_HAY; i++) {
-    const x = (Math.random() * 2 - 1) * halfField;
-    const z = (Math.random() * 2 - 1) * halfField;
+    const x = (Math.random() * 2 - 1) * hayArea;
+    const z = (Math.random() * 2 - 1) * hayArea;
 
     dummy.position.set(x, 0, z);
     dummy.rotation.y = Math.random() * Math.PI;
@@ -249,8 +252,8 @@ function init3D() {
   const needleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.95, roughness: 0.1 });
   needleMesh = new THREE.Mesh(needleGeo, needleMat);
   
-  const rx = (Math.random() * 2 - 1) * (halfField - 0.5);
-  const rz = (Math.random() * 2 - 1) * (halfField - 0.5);
+  const rx = (Math.random() * 2 - 1) * (hayArea - 0.5);
+  const rz = (Math.random() * 2 - 1) * (hayArea - 0.5);
   needlePos.set(rx, 0.015, rz);
   needleMesh.position.copy(needlePos);
   needleMesh.rotation.z = Math.PI / 2;
@@ -359,7 +362,7 @@ function updateJoystick(touch) {
   moveVector.y = dy / maxRadius;
 }
 
-// TOUCH & SWIPE MANAGEMENT
+// TOUCH & SWIPE
 window.addEventListener('touchstart', (e) => {
   if (!isGameRunning || isWon) return;
   if (e.target.closest('#joystick-zone') || e.target.closest('#magnifier-btn') || e.target.closest('#alert-msg')) return;
@@ -411,7 +414,7 @@ window.addEventListener('touchend', (e) => {
     return;
   }
 
-  // 2. Controllo Fili di Fieno con azzeramento immediato della scala
+  // 2. Controllo Fili di Fieno
   const hayIntersects = raycaster.intersectObject(hayMesh);
   if (hayIntersects.length > 0) {
     const instanceId = hayIntersects[0].instanceId;
@@ -468,7 +471,7 @@ function triggerWin() {
   animateWin();
 }
 
-// ANIMAZIONE E COLLISIONE CON MURI RIGIDI
+// ANIMAZIONE E COLLISIONE RIGIDA AI BORDI
 function animate() {
   if (!isWon) requestAnimationFrame(animate);
   if (!isGameRunning) return;
@@ -482,7 +485,7 @@ function animate() {
     nextPos.addScaledVector(forward, -moveVector.y * speed);
     nextPos.addScaledVector(side, moveVector.x * speed);
 
-    // BLOCCO RIGIDO DEL MOVIMENTO CONTRO I MURI
+    // LIMITI RIGIDI: IMPOSSIBILE SUPERARE I MURI (FIELD_SIZE / 2 = 6, limite a 5.5m)
     const limit = (FIELD_SIZE / 2) - 0.5;
     if (Math.abs(nextPos.x) < limit && Math.abs(nextPos.z) < limit) {
       camera.position.copy(nextPos);
@@ -510,27 +513,3 @@ document.getElementById('start-btn').addEventListener('click', () => {
 </script>
 </body>
 </html>
-// === MURO RIGIDO E BEN VISIBILE AI BORDI DELLA MAPPA ===
-  const wallHeight = 6.0; // Muro alto 6 metri
-  const wallThickness = 1.0; // Spessore di 1 metro
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.5 }); // Colore mattonato chiaro
-
-  // Parete Nord
-  const wallNorth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE + wallThickness, wallHeight, wallThickness), wallMat);
-  wallNorth.position.set(0, wallHeight / 2, -FIELD_SIZE / 2);
-  scene.add(wallNorth);
-
-  // Parete Sud
-  const wallSouth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE + wallThickness, wallHeight, wallThickness), wallMat);
-  wallSouth.position.set(0, wallHeight / 2, FIELD_SIZE / 2);
-  scene.add(wallSouth);
-
-  // Parete Est
-  const wallEast = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE), wallMat);
-  wallEast.position.set(FIELD_SIZE / 2, wallHeight / 2, 0);
-  scene.add(wallEast);
-
-  // Parete Ovest
-  const wallWest = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE), wallMat);
-  wallWest.position.set(-FIELD_SIZE / 2, wallHeight / 2, 0);
-  scene.add(wallWest);
