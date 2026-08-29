@@ -3,97 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Panda 4x4: New York HD Ultra</title>
+  <title>Panda 4x4: New York Night Drive HD</title>
   <style>
     * { box-sizing: border-box; touch-action: none; user-select: none; }
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #050814; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #020617; font-family: 'Montserrat', 'Segoe UI', sans-serif; }
     #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
 
-    /* UI HUD */
+    /* HUD MODERNO VETRO SMERIGLIATO */
     #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
     
     #score-box {
-      position: absolute; top: 20px; left: 20px; background: rgba(15, 23, 42, 0.85);
-      color: #f59e0b; padding: 14px 22px; border-radius: 16px; font-weight: 800;
-      font-size: 15px; border: 1px solid rgba(245, 158, 11, 0.4); backdrop-filter: blur(8px);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      position: absolute; top: 20px; left: 20px;
+      background: rgba(15, 23, 42, 0.75);
+      color: #38bdf8; padding: 16px 24px; border-radius: 20px; font-weight: 800;
+      font-size: 16px; border: 1px solid rgba(56, 189, 248, 0.3); backdrop-filter: blur(12px);
+      box-shadow: 0 20px 30px rgba(0, 0, 0, 0.6);
+      display: flex; flex-direction: column; gap: 4px;
     }
+    #score-box span { color: #f59e0b; font-size: 18px; }
 
     #shield-status {
-      color: #10b981; font-size: 13px; display: none; margin-top: 6px; text-shadow: 0 0 8px rgba(16,185,129,0.8);
+      color: #10b981; font-size: 13px; font-weight: 900; display: none; margin-top: 4px;
+      text-shadow: 0 0 10px rgba(16, 185, 129, 0.8); letter-spacing: 0.5px;
     }
 
-    /* CONTROLLI MOBILE */
+    /* CONTROLLI SULLO SCHERMO */
     .btn-control {
-      position: absolute; width: 72px; height: 72px; background: rgba(15, 23, 42, 0.75);
-      border-radius: 50%; color: white; font-weight: bold; font-size: 22px;
+      position: absolute; width: 75px; height: 75px; background: rgba(15, 23, 42, 0.8);
+      border-radius: 50%; color: white; font-weight: 900; font-size: 22px;
       display: flex; justify-content: center; align-items: center;
-      pointer-events: auto; cursor: pointer; backdrop-filter: blur(6px);
-      border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-      transition: transform 0.1s, background 0.1s;
+      pointer-events: auto; cursor: pointer; backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.25); box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      transition: all 0.1s ease;
     }
-    .btn-control:active { transform: scale(0.9); background: rgba(255,255,255,0.25); }
+    .btn-control:active { transform: scale(0.88); background: rgba(56, 189, 248, 0.3); border-color: #38bdf8; }
 
-    #btn-left { bottom: 35px; left: 20px; }
-    #btn-right { bottom: 35px; left: 105px; }
+    #btn-left { bottom: 30px; left: 20px; }
+    #btn-right { bottom: 30px; left: 110px; }
     
-    #btn-brake { bottom: 35px; right: 20px; border-color: rgba(239, 68, 68, 0.6); color: #ef4444; }
-    #btn-gas { bottom: 120px; right: 20px; border-color: rgba(16, 185, 129, 0.6); color: #10b981; }
+    #btn-brake { bottom: 30px; right: 20px; border-color: rgba(239, 68, 68, 0.8); color: #ef4444; background: rgba(239, 68, 68, 0.15); }
+    #btn-gas { bottom: 120px; right: 20px; border-color: rgba(16, 185, 129, 0.8); color: #10b981; background: rgba(16, 185, 129, 0.15); }
     
+    /* PULSANTE CLACSON PRATICAMENTE IMPOSSIBILE DA MANCARE */
     #btn-horn { 
-      bottom: 35px; right: 105px; border-color: rgba(245, 158, 11, 0.6); color: #f59e0b;
-      font-size: 26px;
+      bottom: 30px; right: 110px; border-color: rgba(245, 158, 11, 0.8); color: #f59e0b;
+      font-size: 28px; background: rgba(245, 158, 11, 0.15);
     }
 
-    /* TASTO RAZZO VOLANTE */
+    /* TASTO RAZZO VOLANTE EFFETTO NEON */
     #btn-rocket {
-      position: absolute; top: 20px; right: 20px; padding: 14px 24px;
-      background: linear-gradient(135deg, #ec4899, #f97316); color: white;
-      font-weight: 900; border-radius: 30px; border: none; font-size: 14px;
+      position: absolute; top: 20px; right: 20px; padding: 16px 28px;
+      background: linear-gradient(135deg, #f43f5e, #fb923c); color: white;
+      font-weight: 900; border-radius: 40px; border: none; font-size: 15px;
       display: none; pointer-events: auto; cursor: pointer;
-      box-shadow: 0 0 20px rgba(249, 115, 22, 0.8); animation: pulse 0.7s infinite alternate;
-      letter-spacing: 1px;
+      box-shadow: 0 0 30px rgba(244, 63, 94, 0.8); animation: pulse 0.6s infinite alternate;
+      letter-spacing: 1px; text-transform: uppercase;
     }
 
-    @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+    @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
 
-    /* SCHERMATA OVERLAY */
+    /* MENU AVVIO & GAME OVER */
     #overlay-screen {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100;
-      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+      background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
       display: flex; flex-direction: column; justify-content: center; align-items: center;
       color: white; text-align: center; padding: 30px; pointer-events: auto;
     }
-    #overlay-screen h1 { font-size: 2.5rem; margin-bottom: 15px; color: #38bdf8; text-shadow: 0 0 20px rgba(56,189,248,0.4); }
-    #overlay-screen p { font-size: 1rem; line-height: 1.7; max-width: 420px; margin-bottom: 30px; color: #94a3b8; }
+    #overlay-screen h1 { font-size: 2.8rem; margin-bottom: 10px; color: #38bdf8; text-shadow: 0 0 30px rgba(56, 189, 248, 0.5); font-weight: 900; }
+    #overlay-screen p { font-size: 1.05rem; line-height: 1.8; max-width: 440px; margin-bottom: 35px; color: #94a3b8; }
     #start-btn {
-      padding: 18px 50px; font-size: 1.2rem; font-weight: 800; border: none;
-      border-radius: 40px; background: linear-gradient(135deg, #06b6d4, #3b82f6);
-      color: white; box-shadow: 0 10px 25px rgba(59,130,246,0.5); cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+      padding: 20px 60px; font-size: 1.25rem; font-weight: 900; border: none;
+      border-radius: 50px; background: linear-gradient(135deg, #38bdf8, #6366f1);
+      color: white; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.5); cursor: pointer;
+      transition: transform 0.2s; text-transform: uppercase; letter-spacing: 1px;
     }
-    #start-btn:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(59,130,246,0.7); }
+    #start-btn:active { transform: scale(0.95); }
   </style>
   
+  <!-- THREE.JS R128 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
   <div id="overlay-screen">
-    <h1 id="main-title">PANDA 4x4: NEW YORK ULTRA</h1>
-    <p id="main-desc">Sfreccia tra le strade illuminate di New York sulla leggendaria Fiat Panda 4x4!<br><br>
-    Evita il traffico intenso. Ogni **20 macchine evitate** sbloccherai il **Razzo Volante** 🚀 che al rientro ti donerà lo **Scudo Protettivo (🛡️)**!</p>
-    <button id="start-btn">INIZIA LA GUIDA</button>
+    <h1 id="main-title">PANDA 4x4: NEW YORK NIGHT</h1>
+    <p id="main-desc">Esperienza grafica 3D completamente rinnovata.<br><br>
+    Guida tra le luci e i grattacieli di New York. Evita le auto nel traffico: ogni **20 sorpassi** sblocchi il **Razzo Volante**! Atterrando otterrai uno **Scudo Energetico (🛡️)** che ti proteggerà dal prossimo impatto!</p>
+    <button id="start-btn">ENTRA IN GIOCO</button>
   </div>
 
   <div id="hud">
     <div id="score-box">
-      Punteggio: <span id="score-val">0</span><br>
-      Macchine Evitate: <span id="cars-val">0</span>
-      <div id="shield-status">🛡️ SCUDO PROTETTIVO ATTIVO</div>
+      <div>Punteggio: <span id="score-val">0</span></div>
+      <div>Macchine Evitate: <span id="cars-val">0</span></div>
+      <div id="shield-status">🛡️ SCUDO DI PROTEZIONE ATTIVO</div>
     </div>
 
-    <button id="btn-rocket">🚀 ATTIVA RAZZO!</button>
+    <button id="btn-rocket">🚀 LANCE ROCKET!</button>
 
     <div class="btn-control" id="btn-left">◄</div>
     <div class="btn-control" id="btn-right">►</div>
@@ -105,7 +111,7 @@
   <div id="canvas-container"></div>
 
 <script>
-// AUDIO ENGINE MIGLIORATO
+// SINTETIZZATORE AUDIO AVANZATO
 const AudioEngine = {
   ctx: null,
   init() {
@@ -126,15 +132,15 @@ const AudioEngine = {
   },
   playCrash() {
     if (!this.ctx) return;
-    let bufferSize = this.ctx.sampleRate * 0.4;
+    let bufferSize = this.ctx.sampleRate * 0.5;
     let buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     let data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
     let noise = this.ctx.createBufferSource();
     noise.buffer = buffer;
     let gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.7, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+    gain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
     noise.connect(gain);
     gain.connect(this.ctx.destination);
     noise.start();
@@ -144,10 +150,10 @@ const AudioEngine = {
     let osc = this.ctx.createOscillator();
     let gain = this.ctx.createGain();
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(120, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(500, this.ctx.currentTime + 1.8);
-    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 2.2);
+    osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 2.0);
+    gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 2.5);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -155,10 +161,11 @@ const AudioEngine = {
 };
 
 let scene, camera, renderer;
-let pandaGroup, pandaMesh;
+let pandaGroup, shieldMesh, rocketFireMesh;
 let buildings = [];
 let trafficCars = [];
-let particles = [];
+let streetLamps = [];
+let ads = [];
 
 let score = 0;
 let carsPassed = 0;
@@ -174,111 +181,111 @@ let hasShield = false;
 // FISICA E CONTROLLI
 let inputs = { left: false, right: false, gas: false, brake: false };
 let pandaSpeed = 0;
-const MAX_SPEED = 0.6;
-const ACCEL = 0.015;
-const DECEL = 0.01;
-const ROAD_WIDTH = 12;
+const MAX_SPEED = 0.65;
+const ACCEL = 0.018;
+const DECEL = 0.012;
+const ROAD_WIDTH = 13;
 
 function init3D() {
   const container = document.getElementById('canvas-container');
   container.innerHTML = '';
   
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x070b19);
-  scene.fog = new THREE.FogExp2(0x070b19, 0.008);
+  scene.background = new THREE.Color(0x020617);
+  scene.fog = new THREE.FogExp2(0x020617, 0.007);
 
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 150);
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 180);
   
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
   container.appendChild(renderer.domElement);
 
-  // ILLUMINAZIONE AVANZATA
-  const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.4);
+  // LUCI AMBIENTALI NOTTURNE (NEW YORK STYLE)
+  const ambientLight = new THREE.AmbientLight(0x38bdf8, 0.35);
   scene.add(ambientLight);
 
-  const dirLight = new THREE.DirectionalLight(0xffedd5, 1.2);
-  dirLight.position.set(25, 50, -20);
-  dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 1024;
-  dirLight.shadow.mapSize.height = 1024;
-  dirLight.shadow.camera.near = 0.5;
-  dirLight.shadow.camera.far = 150;
-  dirLight.shadow.camera.left = -20;
-  dirLight.shadow.camera.right = 20;
-  dirLight.shadow.camera.top = 20;
-  dirLight.shadow.camera.bottom = -50;
-  scene.add(dirLight);
+  const moonLight = new THREE.DirectionalLight(0x818cf8, 1.0);
+  moonLight.position.set(30, 60, -30);
+  moonLight.castShadow = true;
+  moonLight.shadow.mapSize.width = 2048;
+  moonLight.shadow.mapSize.height = 2048;
+  scene.add(moonLight);
 
   createRoad();
   createNYCityscape();
   createPanda4x4();
 
-  camera.position.set(0, 4, 8);
+  camera.position.set(0, 4.2, 8.5);
   camera.lookAt(0, 1.2, 0);
 
   window.addEventListener('resize', onWindowResize);
 }
 
-// STRADA REALISTICA CON CORDOLI ED ASFALTO DETTAGLIATO
+// STRADA ASFALTATA BAGNATA E RIFLETTENTE CON CORDOLI
 function createRoad() {
-  const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, 300);
-  const roadMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.9, metalness: 0.1 });
+  const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, 350);
+  const roadMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a, roughness: 0.2, metalness: 0.5
+  });
   const road = new THREE.Mesh(roadGeo, roadMat);
   road.rotation.x = -Math.PI / 2;
   road.receiveShadow = true;
   scene.add(road);
 
-  // MARCIAPIEDI E BARRIERE
-  const curbGeo = new THREE.BoxGeometry(0.8, 0.4, 300);
-  const curbMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+  // MARCIAPIEDI ILLUMINATI
+  const sidewalkGeo = new THREE.BoxGeometry(1.2, 0.4, 350);
+  const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
   
-  const curbL = new THREE.Mesh(curbGeo, curbMat);
-  curbL.position.set(-ROAD_WIDTH/2 - 0.4, 0.2, 0);
-  curbL.receiveShadow = true;
-  scene.add(curbL);
+  const sidewalkL = new THREE.Mesh(sidewalkGeo, sidewalkMat);
+  sidewalkL.position.set(-ROAD_WIDTH/2 - 0.6, 0.2, 0);
+  sidewalkL.receiveShadow = true;
+  scene.add(sidewalkL);
 
-  const curbR = new THREE.Mesh(curbGeo, curbMat);
-  curbR.position.set(ROAD_WIDTH/2 + 0.4, 0.2, 0);
-  curbR.receiveShadow = true;
-  scene.add(curbR);
+  const sidewalkR = new THREE.Mesh(sidewalkGeo, sidewalkMat);
+  sidewalkR.position.set(ROAD_WIDTH/2 + 0.6, 0.2, 0);
+  sidewalkR.receiveShadow = true;
+  scene.add(sidewalkR);
 
-  // SEGNALETICA CORSIE ILLUMINATA
-  for (let i = -140; i < 140; i += 10) {
-    const lineGeo = new THREE.PlaneGeometry(0.35, 4.5);
-    const lineMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+  // STRISCE GIALLE CONTINUE E BIANCHE PER LE CORSIE
+  for (let i = -170; i < 170; i += 12) {
+    const dashGeo = new THREE.PlaneGeometry(0.35, 5);
+    const dashMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
     
     [-ROAD_WIDTH/3, ROAD_WIDTH/3].forEach(xPos => {
-      const line = new THREE.Mesh(lineGeo, lineMat);
-      line.rotation.x = -Math.PI / 2;
-      line.position.set(xPos, 0.02, i);
-      scene.add(line);
+      const dash = new THREE.Mesh(dashGeo, dashMat);
+      dash.rotation.x = -Math.PI / 2;
+      dash.position.set(xPos, 0.02, i);
+      scene.add(dash);
     });
   }
 }
 
-// GRATTACIEULI DI NEW YORK CON FINESTRE ILLUMINATE
+// ARCHITETTURA DI NEW YORK CON TABELLONI AD ALTA LUMINOSITÀ (TIMES SQUARE STYLE)
 function createNYCityscape() {
   buildings = [];
-  const buildingColors = [0x0f172a, 0x1e293b, 0x0284c7, 0x334155, 0x1e1b4b];
+  ads = [];
+  const colors = [0x0f172a, 0x1e1b4b, 0x0284c7, 0x1e293b];
+  const adColors = [0xec4899, 0x38bdf8, 0xa855f7, 0x10b981, 0xf59e0b];
 
-  for (let z = -140; z < 140; z += 16) {
+  for (let z = -160; z < 160; z += 18) {
     [-1, 1].forEach(side => {
-      const height = 35 + Math.random() * 45;
-      const width = 10 + Math.random() * 4;
-      const depth = 12;
+      const height = 45 + Math.random() * 50;
+      const width = 12 + Math.random() * 4;
+      const depth = 14;
       
       const bGroup = new THREE.Group();
 
       // Struttura Palazzo
       const geo = new THREE.BoxGeometry(width, height, depth);
       const mat = new THREE.MeshStandardMaterial({
-        color: buildingColors[Math.floor(Math.random() * buildingColors.length)],
+        color: colors[Math.floor(Math.random() * colors.length)],
         roughness: 0.3,
-        metalness: 0.5
+        metalness: 0.4
       });
 
       const buildingMesh = new THREE.Mesh(geo, mat);
@@ -286,80 +293,91 @@ function createNYCityscape() {
       buildingMesh.receiveShadow = true;
       bGroup.add(buildingMesh);
 
-      // Finestre illuminate casuali
-      const winGeo = new THREE.PlaneGeometry(0.6, 0.9);
-      const winMatOn = new THREE.MeshBasicMaterial({ color: 0xfef08a });
-      const winMatOff = new THREE.MeshBasicMaterial({ color: 0x1e293b });
+      // Cartelloni Pubblicitari Neon su alcuni palazzi
+      if (Math.random() > 0.4) {
+        const adGeo = new THREE.PlaneGeometry(width * 0.7, 6);
+        const adMat = new THREE.MeshBasicMaterial({
+          color: adColors[Math.floor(Math.random() * adColors.length)],
+          side: THREE.DoubleSide
+        });
+        const ad = new THREE.Mesh(adGeo, adMat);
+        ad.position.set(0, 10 + Math.random() * 15 - height/2, depth/2 + 0.1);
+        bGroup.add(ad);
+      }
 
-      for (let hy = 4; hy < height - 4; hy += 2.5) {
-        for (let wx = -width/2 + 1.2; wx < width/2 - 1.2; wx += 1.8) {
-          if (Math.random() > 0.3) {
-            const win = new THREE.Mesh(winGeo, Math.random() > 0.4 ? winMatOn : winMatOff);
+      // Finestre illuminate in griglia
+      const winGeo = new THREE.PlaneGeometry(0.7, 1.0);
+      const winMatOn = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+      const winMatOff = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+
+      for (let hy = 5; hy < height - 5; hy += 3) {
+        for (let wx = -width/2 + 1.5; wx < width/2 - 1.5; wx += 2) {
+          if (Math.random() > 0.25) {
+            const win = new THREE.Mesh(winGeo, Math.random() > 0.45 ? winMatOn : winMatOff);
             win.position.set(wx, hy - height/2, depth/2 + 0.05);
             bGroup.add(win);
           }
         }
       }
 
-      bGroup.position.set(side * (ROAD_WIDTH / 2 + width / 2 + 1.5), height / 2, z);
+      bGroup.position.set(side * (ROAD_WIDTH / 2 + width / 2 + 1.8), height / 2, z);
       scene.add(bGroup);
       buildings.push(bGroup);
     });
   }
 }
 
-// MODELLO DETTAGLIATO FIAT PANDA 4X4
+// MODELLO COMPLETO E DETTAGLIATO FIAT PANDA 4X4 CON SCUDO E RAZZI
 function createPanda4x4() {
   pandaGroup = new THREE.Group();
 
-  // Scocca Principale
-  const bodyGeo = new THREE.BoxGeometry(1.6, 0.85, 2.6);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2d4a22, roughness: 0.4, metalness: 0.2 });
-  pandaMesh = new THREE.Mesh(bodyGeo, bodyMat);
-  pandaMesh.position.y = 0.7;
-  pandaMesh.castShadow = true;
-  pandaGroup.add(pandaMesh);
+  // Scocca Verde Militare / Off-road 4x4
+  const bodyGeo = new THREE.BoxGeometry(1.65, 0.9, 2.7);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.4, metalness: 0.3 });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.75;
+  body.castShadow = true;
+  pandaGroup.add(body);
 
-  // Cabina Vetri Squadrata
-  const cabinGeo = new THREE.BoxGeometry(1.45, 0.75, 1.5);
-  const cabinMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9 });
+  // Vetri Scuri Cabina
+  const cabinGeo = new THREE.BoxGeometry(1.5, 0.8, 1.6);
+  const cabinMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.1, metalness: 0.9 });
   const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-  cabin.position.set(0, 1.35, -0.2);
+  cabin.position.set(0, 1.45, -0.2);
   cabin.castShadow = true;
   pandaGroup.add(cabin);
 
-  // Paraurti Plastica Nera Fuoristrada
-  const bumperGeo = new THREE.BoxGeometry(1.65, 0.35, 0.3);
-  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
-  const bumperF = new THREE.Mesh(bumperGeo, bumperMat);
-  bumperF.position.set(0, 0.45, -1.3);
-  pandaGroup.add(bumperF);
+  // Griglia Frontale & Paraurti Neri
+  const bumperGeo = new THREE.BoxGeometry(1.7, 0.4, 0.3);
+  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+  const bumper = new THREE.Mesh(bumperGeo, bumperMat);
+  bumper.position.set(0, 0.45, -1.35);
+  pandaGroup.add(bumper);
 
-  // Fari Anteriori LED
-  const lightGeo = new THREE.BoxGeometry(0.35, 0.25, 0.1);
-  const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  
+  // Fari LED Lunghi con Cono di Luce
   [-0.55, 0.55].forEach(x => {
-    const light = new THREE.Mesh(lightGeo, lightMat);
-    light.position.set(x, 0.75, -1.31);
-    pandaGroup.add(light);
+    const headlightGeo = new THREE.SphereGeometry(0.18, 16, 16);
+    const headlightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const headlight = new THREE.Mesh(headlightGeo, headlightMat);
+    headlight.position.set(x, 0.75, -1.36);
+    pandaGroup.add(headlight);
 
-    // Luce Spot Fari
-    const spot = new THREE.SpotLight(0xffffff, 2, 25, Math.PI/6, 0.5);
-    spot.position.set(x, 0.75, -1.3);
-    spot.target.position.set(x, 0, -20);
-    pandaGroup.add(spot);
-    pandaGroup.add(spot.target);
+    // Fari Abbaglianti sulla strada
+    const light = new THREE.SpotLight(0xffffff, 3.5, 35, Math.PI / 5, 0.4);
+    light.position.set(x, 0.75, -1.35);
+    light.target.position.set(x, 0, -25);
+    pandaGroup.add(light);
+    pandaGroup.add(light.target);
   });
 
-  // Ruote 4x4 Tassellate
-  const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.3, 24);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+  // Ruote 4x4 Fuoristrada Scanalate
+  const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.32, 24);
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.9 });
   wheelGeo.rotateZ(Math.PI / 2);
 
   const wheelPositions = [
-    [-0.8, 0.36, 0.85], [0.8, 0.36, 0.85],
-    [-0.8, 0.36, -0.85], [0.8, 0.36, -0.85]
+    [-0.85, 0.38, 0.9], [0.85, 0.38, 0.9],
+    [-0.85, 0.38, -0.9], [0.85, 0.38, -0.9]
   ];
 
   wheelPositions.forEach(pos => {
@@ -369,55 +387,74 @@ function createPanda4x4() {
     pandaGroup.add(wheel);
   });
 
+  // SCUDO PROTETTIVO (BOLLA DI FORZA FLUORESCENTE TRASPARENTE)
+  const shieldGeo = new THREE.SphereGeometry(2.1, 32, 32);
+  const shieldMat = new THREE.MeshStandardMaterial({
+    color: 0x10b981, transparent: true, opacity: 0.35, roughness: 0.1, metalness: 1.0, wireframe: true
+  });
+  shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+  shieldMesh.position.set(0, 1.0, 0);
+  shieldMesh.visible = false;
+  pandaGroup.add(shieldMesh);
+
+  // RAZZO POSTERIORE (FUOCO E PARTICELLE)
+  const fireGeo = new THREE.ConeGeometry(0.4, 1.5, 16);
+  fireGeo.rotateX(Math.PI / 2);
+  const fireMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+  rocketFireMesh = new THREE.Mesh(fireGeo, fireMat);
+  rocketFireMesh.position.set(0, 0.75, 2.0);
+  rocketFireMesh.visible = false;
+  pandaGroup.add(rocketFireMesh);
+
   pandaGroup.position.set(0, 0, 0);
   scene.add(pandaGroup);
 }
 
-// GENERAZIONE MACCHINE DEL TRAFFICO DETTAGLIATE
+// TRAFFICO CON MACCHINE VARIABILI E ILLUMINATE
 function spawnTrafficCar() {
   const carGroup = new THREE.Group();
-  const colors = [0xef4444, 0x3b82f6, 0x10b981, 0xf59e0b, 0x64748b, 0xffffff];
+  const colors = [0xef4444, 0x3b82f6, 0xf59e0b, 0x64748b, 0xd97706, 0xffffff];
   const carColor = colors[Math.floor(Math.random() * colors.length)];
 
-  // Telaio
-  const bodyGeo = new THREE.BoxGeometry(1.7, 0.8, 3.2);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: carColor, roughness: 0.2, metalness: 0.5 });
+  // Carrozzeria
+  const bodyGeo = new THREE.BoxGeometry(1.75, 0.8, 3.3);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: carColor, roughness: 0.2, metalness: 0.6 });
   const carBody = new THREE.Mesh(bodyGeo, bodyMat);
   carBody.position.y = 0.6;
   carBody.castShadow = true;
   carGroup.add(carBody);
 
-  // Vetri
-  const glassGeo = new THREE.BoxGeometry(1.5, 0.7, 1.8);
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.1, metalness: 0.8 });
+  // Cabina Vetri
+  const glassGeo = new THREE.BoxGeometry(1.55, 0.7, 1.9);
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.8 });
   const glass = new THREE.Mesh(glassGeo, glassMat);
   glass.position.set(0, 1.25, -0.2);
   carGroup.add(glass);
 
-  // Fari Posteriori Rossi
-  const tailLightGeo = new THREE.BoxGeometry(0.4, 0.15, 0.05);
-  const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-  [-0.6, 0.6].forEach(x => {
+  // Fari Posteriori Rossi Luminosi
+  [-0.65, 0.65].forEach(x => {
+    const tailLightGeo = new THREE.BoxGeometry(0.35, 0.15, 0.05);
+    const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
     const tl = new THREE.Mesh(tailLightGeo, tailLightMat);
-    tl.position.set(x, 0.7, 1.61);
+    tl.position.set(x, 0.7, 1.66);
     carGroup.add(tl);
   });
 
-  // Posizionamento su 3 Corsie Strutturate
-  const lanes = [-3.6, 0, 3.6];
+  // Posizionamento sulle tre corsie
+  const lanes = [-4.0, 0, 4.0];
   const lane = lanes[Math.floor(Math.random() * lanes.length)];
   
-  carGroup.position.set(lane, 0, -110);
+  carGroup.position.set(lane, 0, -125);
   scene.add(carGroup);
 
   trafficCars.push({
     mesh: carGroup,
-    speed: 0.18 + Math.random() * 0.15,
+    speed: 0.2 + Math.random() * 0.15,
     box: new THREE.Box3()
   });
 }
 
-// SETUP CONTROLLI MOBILE & TASTIERA
+// SETUP CONTROLLI TOUCH E TASTIERA
 function setupControls() {
   const bindBtn = (id, key) => {
     const btn = document.getElementById(id);
@@ -432,7 +469,7 @@ function setupControls() {
   bindBtn('btn-gas', 'gas');
   bindBtn('btn-brake', 'brake');
 
-  // TASTIERA PC (FRECCE / WASD)
+  // CONTROLLI TASTIERA PC
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a') inputs.left = true;
     if (e.key === 'ArrowRight' || e.key === 'd') inputs.right = true;
@@ -447,7 +484,7 @@ function setupControls() {
     if (e.key === 'ArrowDown' || e.key === 's') inputs.brake = false;
   });
 
-  // CLACSON VOCALE "NAPOLETAME!"
+  // SUONO VOCALE "NAPOLETAME!"
   document.getElementById('btn-horn').addEventListener('click', () => {
     AudioEngine.playHorn();
   });
@@ -463,12 +500,13 @@ function setupControls() {
 function activateRocket() {
   isRocketActive = true;
   rocketAvailable = false;
-  rocketTimer = 200; // Volo circa 3.5 secondi
+  rocketTimer = 220;
+  rocketFireMesh.visible = true;
   document.getElementById('btn-rocket').style.display = 'none';
   AudioEngine.playRocket();
 }
 
-// GAME LOOP CON FIX DELTATIME
+// MAIN GAME LOOP (INDEPENDENT DELTA-TIME)
 function animate(currentTime) {
   if (!isGameRunning) return;
   requestAnimationFrame(animate);
@@ -476,70 +514,73 @@ function animate(currentTime) {
   const delta = Math.min((currentTime - lastTime) / 1000, 0.1) || 0.016;
   lastTime = currentTime;
 
-  // 1. FISICA ACCELERAZIONE / FRENO
+  // 1. GESTIONE ACCELERAZIONE E FRENO
   if (inputs.gas) {
     pandaSpeed = Math.min(MAX_SPEED, pandaSpeed + ACCEL);
   } else if (inputs.brake) {
-    pandaSpeed = Math.max(0, pandaSpeed - ACCEL * 2);
+    pandaSpeed = Math.max(0, pandaSpeed - ACCEL * 2.5);
   } else {
     pandaSpeed = Math.max(0, pandaSpeed - DECEL);
   }
 
-  // 2. STERZO CON LIMITI DI CARREGGIATA
-  if (inputs.left) pandaGroup.position.x -= 14 * delta;
-  if (inputs.right) pandaGroup.position.x += 14 * delta;
+  // 2. STERZO CON LIMITI FISICI RIGIDI
+  if (inputs.left) pandaGroup.position.x -= 16 * delta;
+  if (inputs.right) pandaGroup.position.x += 16 * delta;
 
-  const maxBound = (ROAD_WIDTH / 2) - 1.1;
+  const maxBound = (ROAD_WIDTH / 2) - 1.2;
   pandaGroup.position.x = Math.max(-maxBound, Math.min(maxBound, pandaGroup.position.x));
 
-  // 3. VOLO RAZZO E SCUDO DI ATTERRAGGIO
+  // 3. RAZZO VOLANTE ED ATTIVAZIONE SCUDO VISIBILE
   if (isRocketActive) {
     rocketTimer--;
-    if (pandaGroup.position.y < 5.0) pandaGroup.position.y += 12 * delta;
+    if (pandaGroup.position.y < 6.0) pandaGroup.position.y += 15 * delta;
     
     if (rocketTimer <= 0) {
       isRocketActive = false;
+      rocketFireMesh.visible = false;
       hasShield = true;
+      shieldMesh.visible = true; // MOSTRA LA BOLLA ENERGETICA
       document.getElementById('shield-status').style.display = 'block';
     }
   } else {
     if (pandaGroup.position.y > 0) {
-      pandaGroup.position.y -= 10 * delta;
+      pandaGroup.position.y -= 12 * delta;
       if (pandaGroup.position.y < 0) pandaGroup.position.y = 0;
     }
   }
 
-  // 4. SCORRIMENTO MONDO E COLLISIONI PRECISE 3D
+  // 4. ANIMAZIONE MONDO E TRAFFICO
   if (pandaSpeed > 0) {
-    score += Math.round(pandaSpeed * 15);
+    score += Math.round(pandaSpeed * 20);
     document.getElementById('score-val').innerText = score;
 
-    // Movimento Grattacieli
+    // Scorrimento Grattacieli
     buildings.forEach(b => {
-      b.position.z += pandaSpeed * 40;
-      if (b.position.z > 50) b.position.z -= 280;
+      b.position.z += pandaSpeed * 45;
+      if (b.position.z > 60) b.position.z -= 320;
     });
 
-    // Spawn Auto del Traffico
-    if (Math.random() < 0.04) {
+    // Spawn Traffico
+    if (Math.random() < 0.045) {
       spawnTrafficCar();
     }
 
-    // Aggiornamento Box Bounding della Panda
+    // Collisioni Bounding Box 3D
     const pandaBox = new THREE.Box3().setFromObject(pandaGroup);
 
     for (let i = trafficCars.length - 1; i >= 0; i--) {
       let car = trafficCars[i];
-      car.mesh.position.z += (pandaSpeed * 40) + (car.speed * 20);
+      car.mesh.position.z += (pandaSpeed * 45) + (car.speed * 20);
 
-      // Collisione solo se a terra
+      // Controllo Impatto solo quando a terra
       if (pandaGroup.position.y < 1.2) {
         car.box.setFromObject(car.mesh);
 
         if (pandaBox.intersectsBox(car.box)) {
           if (hasShield) {
-            // SCUDO CONSUMATO: DISTRUGGE L'AUTO AVVERSARIA
+            // SCUDO CONSUMATO: SALVA DALLA MORTE E DISTRUGGE L'AUTO OSTASCOLO
             hasShield = false;
+            shieldMesh.visible = false;
             document.getElementById('shield-status').style.display = 'none';
             scene.remove(car.mesh);
             trafficCars.splice(i, 1);
@@ -552,7 +593,7 @@ function animate(currentTime) {
         }
       }
 
-      // Auto Evitata con successo
+      // Macchina Superata Correttamente
       if (car.mesh.position.z > 15) {
         scene.remove(car.mesh);
         trafficCars.splice(i, 1);
@@ -568,8 +609,8 @@ function animate(currentTime) {
     }
   }
 
-  // TELECAMERA DINAMICA
-  camera.position.x = pandaGroup.position.x * 0.35;
+  // CAMERA INSEGUIMENTO FLUIDO
+  camera.position.x = pandaGroup.position.x * 0.4;
   renderer.render(scene, camera);
 }
 
@@ -577,9 +618,9 @@ function gameOver() {
   isGameRunning = false;
   AudioEngine.playCrash();
 
-  document.getElementById('main-title').innerText = "INCIDENTE!";
-  document.getElementById('main-desc').innerHTML = `Hai impattato nel traffico di New York!<br><br>Punteggio Finale: <b>${score}</b><br>Macchine Evitate: <b>${carsPassed}</b>`;
-  document.getElementById('start-btn').innerText = "GIOCA ANCORA";
+  document.getElementById('main-title').innerText = "GAME OVER";
+  document.getElementById('main-desc').innerHTML = `Hai urtato una vettura nel traffico!<br><br>Punteggio Ottenuto: <b>${score}</b><br>Macchine Evitate: <b>${carsPassed}</b>`;
+  document.getElementById('start-btn').innerText = "GIOCA DI NUOVO";
   document.getElementById('overlay-screen').style.display = 'flex';
 }
 
@@ -593,6 +634,8 @@ function resetGame() {
   rocketAvailable = false;
   isRocketActive = false;
   hasShield = false;
+  shieldMesh.visible = false;
+  rocketFireMesh.visible = false;
 
   document.getElementById('score-val').innerText = "0";
   document.getElementById('cars-val').innerText = "0";
