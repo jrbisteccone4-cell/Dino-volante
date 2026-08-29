@@ -150,8 +150,8 @@ let isMagnifierActive = false;
 let isGameRunning = false;
 let isWon = false;
 
-// Dimensione Campo Recintato da Muro Rigido (Quadrato)
-const FIELD_SIZE = 10; // Muro 10x10 metri
+// Dimensione Campo Recintato da Muro Rigido (10x10 metri)
+const FIELD_SIZE = 10;
 
 const LOOK_SENSITIVITY = 0.002;
 let pitch = -0.5, yaw = 0;
@@ -193,28 +193,28 @@ function init3D() {
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
-  // COSTRUZIONE MURO RIGIDO TRIDIMENSIONALE (4 Pareti di Pietra)
-  const wallHeight = 2.5;
-  const wallThickness = 0.4;
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a5a5a, roughness: 0.8 });
+  // === MURO RIGIDO AI BORDI DELLA MAPPA ===
+  const wallHeight = 4.0;
+  const wallThickness = 0.8;
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.6 });
 
-  // Parete Nord e Sud
-  const wallGeoNS = new THREE.BoxGeometry(FIELD_SIZE + wallThickness, wallHeight, wallThickness);
-  const wallNorth = new THREE.Mesh(wallGeoNS, wallMat);
+  // Parete Nord
+  const wallNorth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE + wallThickness, wallHeight, wallThickness), wallMat);
   wallNorth.position.set(0, wallHeight / 2, -FIELD_SIZE / 2);
   scene.add(wallNorth);
 
-  const wallSouth = new THREE.Mesh(wallGeoNS, wallMat);
+  // Parete Sud
+  const wallSouth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE + wallThickness, wallHeight, wallThickness), wallMat);
   wallSouth.position.set(0, wallHeight / 2, FIELD_SIZE / 2);
   scene.add(wallSouth);
 
-  // Parete Est e Ovest
-  const wallGeoEW = new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE);
-  const wallEast = new THREE.Mesh(wallGeoEW, wallMat);
+  // Parete Est
+  const wallEast = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE), wallMat);
   wallEast.position.set(FIELD_SIZE / 2, wallHeight / 2, 0);
   scene.add(wallEast);
 
-  const wallWest = new THREE.Mesh(wallGeoEW, wallMat);
+  // Parete Ovest
+  const wallWest = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE), wallMat);
   wallWest.position.set(-FIELD_SIZE / 2, wallHeight / 2, 0);
   scene.add(wallWest);
 
@@ -226,7 +226,7 @@ function init3D() {
   hayMesh = new THREE.InstancedMesh(bladeGeo, bladeMat, TOTAL_HAY);
   const dummy = new THREE.Object3D();
   
-  const safeMargin = 0.3; // Margine interno dal muro
+  const safeMargin = 0.5;
   const halfField = (FIELD_SIZE / 2) - safeMargin;
 
   for (let i = 0; i < TOTAL_HAY; i++) {
@@ -359,7 +359,7 @@ function updateJoystick(touch) {
   moveVector.y = dy / maxRadius;
 }
 
-// TOUCH & SWIPE
+// TOUCH & SWIPE MANAGEMENT
 window.addEventListener('touchstart', (e) => {
   if (!isGameRunning || isWon) return;
   if (e.target.closest('#joystick-zone') || e.target.closest('#magnifier-btn') || e.target.closest('#alert-msg')) return;
@@ -393,7 +393,7 @@ window.addEventListener('touchmove', (e) => {
   touchStartY = touch.clientY;
 });
 
-// TAP PER RIMUOVERE IL FILO O SELEZIONARE L'AGO
+// TAP PER RIMUOVERE IL FILO O TOCCARE L'AGO
 window.addEventListener('touchend', (e) => {
   if (!isGameRunning || isWon || isSwiping) return;
   if (e.target.closest('#joystick-zone') || e.target.closest('#magnifier-btn') || e.target.closest('#alert-msg')) return;
@@ -411,7 +411,7 @@ window.addEventListener('touchend', (e) => {
     return;
   }
 
-  // 2. Controllo Fili di Fieno
+  // 2. Controllo Fili di Fieno con azzeramento immediato della scala
   const hayIntersects = raycaster.intersectObject(hayMesh);
   if (hayIntersects.length > 0) {
     const instanceId = hayIntersects[0].instanceId;
@@ -468,6 +468,7 @@ function triggerWin() {
   animateWin();
 }
 
+// ANIMAZIONE E COLLISIONE CON MURI RIGIDI
 function animate() {
   if (!isWon) requestAnimationFrame(animate);
   if (!isGameRunning) return;
@@ -481,8 +482,8 @@ function animate() {
     nextPos.addScaledVector(forward, -moveVector.y * speed);
     nextPos.addScaledVector(side, moveVector.x * speed);
 
-    // COLLISIONE RIGIDA CON I MURI DI PIETRA
-    const limit = (FIELD_SIZE / 2) - 0.4;
+    // BLOCCO RIGIDO DEL MOVIMENTO CONTRO I MURI
+    const limit = (FIELD_SIZE / 2) - 0.5;
     if (Math.abs(nextPos.x) < limit && Math.abs(nextPos.z) < limit) {
       camera.position.copy(nextPos);
     }
