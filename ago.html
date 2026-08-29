@@ -3,419 +3,443 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Haystack Needle 3D: Ultimate Hunt</title>
+  <title>Haystack Needle 3D: Ultra Vision</title>
   <style>
-    * { box-sizing: border-box; touch-action: none; user-select: none; }
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; }
-    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
-    
-    /* Overlay Introduttivo */
-    #overlay {
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    body { margin: 0; overflow: hidden; background: #111; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+
+    /* Overlay iniziale */
+    #start-overlay {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      background: rgba(10, 15, 25, 0.85); backdrop-filter: blur(8px); color: white;
-      text-align: center; padding: 25px; z-index: 100;
+      background: rgba(10, 15, 25, 0.9); display: flex; flex-direction: column;
+      justify-content: center; align-items: center; z-index: 100; color: #fff; text-align: center; padding: 20px;
     }
-    h1 { font-size: 2.2rem; margin-bottom: 15px; color: #f5c518; text-shadow: 0 0 15px rgba(245,197,24,0.4); letter-spacing: 1px; }
-    p { font-size: 1rem; line-height: 1.6; margin-bottom: 25px; color: #e0e0e0; max-width: 80%; }
-    button {
-      padding: 16px 42px; font-size: 1.2rem; font-weight: 700; border: none;
-      border-radius: 50px; background: linear-gradient(135deg, #0088ff, #0044ff); color: white;
-      box-shadow: 0 6px 20px rgba(0, 136, 255, 0.4); cursor: pointer;
+    #start-overlay h1 { font-size: 2.2rem; margin-bottom: 10px; color: #f39c12; letter-spacing: 1px; }
+    #start-overlay p { font-size: 1rem; color: #ccc; max-width: 80%; line-height: 1.4; margin-bottom: 25px; }
+    #start-btn {
+      padding: 16px 40px; font-size: 1.2rem; font-weight: bold; border: none;
+      border-radius: 50px; background: linear-gradient(45deg, #e67e22, #f1c40f); color: #fff;
+      box-shadow: 0 6px 20px rgba(241, 196, 15, 0.4); cursor: pointer;
     }
 
-    /* Interfaccia di Gioco (HUD) */
-    #hud {
-      position: absolute; top: 15px; left: 15px; z-index: 10;
-      color: #fff; font-size: 1.1rem; font-weight: 600; text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
-      background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+    /* HUD e Contatori */
+    #hud { position: absolute; top: 15px; left: 15px; z-index: 10; color: #fff; font-size: 1rem; text-shadow: 1px 1px 3px #000; }
+    #napolecanaccio-msg {
+      position: absolute; top: 15px; right: 15px; z-index: 20;
+      color: #ff4757; font-weight: bold; font-size: 1.1rem;
+      background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 8px;
+      border: 1px solid #ff4757; display: none; animation: pulse 1s infinite alternate;
     }
-    
-    /* Notifica Temporizzata */
-    #napoli-alert {
-      position: absolute; top: 20px; right: -250px; z-index: 20;
-      background: linear-gradient(135deg, #00aaff, #0055ff); color: #fff;
-      padding: 10px 20px; border-radius: 25px 0 0 25px; font-weight: bold;
-      font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      transition: right 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    #napoli-alert.show { right: 0; }
+    @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
 
-    /* Cursore Bianco & Lente 4X */
-    #joystick-cursor {
-      position: absolute; width: 24px; height: 24px;
-      border: 3px solid #ffffff; border-radius: 50%;
-      transform: translate(-50%, -50%); pointer-events: none; z-index: 50;
-      box-shadow: 0 0 10px rgba(255,255,255,0.8); display: none;
-    }
-    
-    #lens-container {
-      position: absolute; width: 160px; height: 160px;
-      border-radius: 50%; border: 4px solid rgba(255, 255, 255, 0.8);
-      box-shadow: 0 0 25px rgba(0,0,0,0.5), inset 0 0 15px rgba(255,255,255,0.3);
-      overflow: hidden; pointer-events: none; transform: translate(-50%, -50%);
-      z-index: 40; display: none; background: #000;
+    /* Lente d'ingrandimento 4x */
+    #lens {
+      position: absolute; top: 50%; left: 50%; width: 180px; height: 180px;
+      transform: translate(-50%, -50%); border-radius: 50%;
+      border: 5px solid rgba(255, 255, 255, 0.8); box-shadow: 0 0 25px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.3);
+      pointer-events: none; display: none; z-index: 5; overflow: hidden;
     }
     #lens-canvas { width: 100%; height: 100%; }
 
-    /* Schermata di Vittoria */
-    #victory-overlay {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      background: rgba(0, 102, 204, 0.3); color: white; text-align: center;
-      z-index: 90; display: none;
+    /* Cursore Centrale Bianco */
+    #center-crosshair {
+      position: absolute; top: 50%; left: 50%; width: 12px; height: 12px;
+      background: #ffffff; border: 2px solid #000; border-radius: 50%;
+      transform: translate(-50%, -50%); pointer-events: none; z-index: 15;
     }
-    #victory-overlay h2 { font-size: 3rem; text-shadow: 0 0 20px #00d4ff; margin-bottom: 10px; }
+
+    /* Controlli Mobile */
+    #joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px; z-index: 10; }
+    #joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; }
+    #joystick-stick { width: 50px; height: 50px; background: rgba(255,255,255,0.6); border-radius: 50%; position: absolute; top: 35px; left: 35px; }
+
+    #lens-btn {
+      position: absolute; bottom: 45px; right: 30px; width: 80px; height: 80px;
+      background: rgba(241, 196, 15, 0.8); border: 3px solid #fff; border-radius: 50%;
+      z-index: 10; display: flex; justify-content: center; align-items: center;
+      font-size: 1.8rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
   </style>
-  <!-- Three.js Library per ambiente 3D -->
+  <!-- Three.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-  <div id="overlay">
+  <div id="start-overlay">
     <h1>HAYSTACK NEEDLE 3D</h1>
-    <p>1 Milione di fili di fieno celano un unico ago d'argento.<br>Trascina il dito sullo schermo per muovere la <b>Lente 4X</b> e sposta un filo alla volta per trovarlo.</p>
-    <button id="start-btn">INIZIA LA SFIDA</button>
+    <p>Un milione di steli di fieno fitti nascondono un singolo ago d'acciaio.<br>Esplora l'area, attiva la lente 4x ed estrai i fili uno ad uno per trovarlo.</p>
+    <button id="start-btn">INIZIA LA RICERCA</button>
   </div>
 
-  <div id="hud">Fili rimossi: <span id="straw-count">0</span></div>
-  <div id="napoli-alert">sei un napolecanaccio</div>
+  <div id="hud">Fili rimossi: <span id="hay-count">0</span></div>
+  <div id="napolecanaccio-msg">sei un napolecanaccio</div>
 
-  <div id="joystick-cursor"></div>
-  <div id="lens-container"><canvas id="lens-canvas"></canvas></div>
+  <div id="center-crosshair"></div>
+  <div id="lens"><canvas id="lens-canvas"></canvas></div>
 
-  <div id="victory-overlay">
-    <h2>CAMPIONI! 🏆</h2>
-    <p>Hai trovato l'ago nel pagliaio!</p>
+  <div id="joystick-zone">
+    <div id="joystick-base">
+      <div id="joystick-stick"></div>
+    </div>
   </div>
-
-  <div id="canvas-container"></div>
+  <div id="lens-btn">🔍</div>
 
 <script>
-// --- REGISTRO EVENTI E LOGICA DI GIOCO ---
+// SCENA, CAMERA, RENDERER
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
 
-const TOTAL_STRAWS = 1000000; // 1 MILIONE DI FILI DI FIENO
-let scene, camera, renderer, mainCanvas;
-let lensScene, lensCamera, lensRenderer, lensCanvas;
-let strawMesh, needleMesh, napoliBall, fireworksGroup;
-let isPlaying = false, isVictory = false;
-let strawsRemoved = 0;
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
 
-// Sensibilità ridotta per il controllo da touch mobile
-const SENSITIVITY = 0.003; 
+// LENTE 4X (Seconda Camera)
+const lensCanvas = document.getElementById('lens-canvas');
+const lensRenderer = new THREE.WebGLRenderer({ canvas: lensCanvas, antialias: true });
+lensRenderer.setSize(180, 180);
+const lensCamera = new THREE.PerspectiveCamera(15, 1, 0.1, 1000); // 15 deg FOV per ingrandimento ~4x
 
-// Coordinate del cursore e camera
-let targetX = 0, targetZ = 0;
-let touchStartX = 0, touchStartY = 0;
-let cursorPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+// LUCI
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xfffaed, 0.8);
+dirLight.position.set(50, 100, 50);
+scene.add(dirLight);
 
-let audioCtx, bgMusicOsc;
+// TERRENO
+const groundGeo = new THREE.PlaneGeometry(300, 300);
+const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a2511 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
 
-// 1. Inizializzazione del gioco
-document.getElementById('start-btn').addEventListener('click', () => {
-  document.getElementById('overlay').style.display = 'none';
-  document.getElementById('joystick-cursor').style.display = 'block';
-  document.getElementById('lens-container').style.display = 'block';
-  
-  initAudio();
-  init3D();
-  startTimers();
-  isPlaying = true;
+// GENERAZIONE 1.000.000 FILI DI FIENO (InstancedMesh per prestazioni)
+const totalHay = 1000000;
+const hayGeo = new THREE.CylinderGeometry(0.015, 0.03, 1.8, 3);
+hayGeo.translate(0, 0.9, 0);
+const hayMat = new THREE.MeshLambertMaterial({ color: 0xd4ac0d });
+const hayMesh = new THREE.InstancedMesh(hayGeo, hayMat, totalHay);
+
+const dummy = new THREE.Object3D();
+const hayPositions = [];
+const areaSize = 80; // Vasta area per facilità di movimento
+
+for (let i = 0; i < totalHay; i++) {
+  const x = (Math.random() - 0.5) * areaSize;
+  const z = (Math.random() - 0.5) * areaSize;
+  const rotY = Math.random() * Math.PI;
+  const rotZ = (Math.random() - 0.5) * 0.2;
+  const scaleY = 0.8 + Math.random() * 0.5;
+
+  dummy.position.set(x, 0, z);
+  dummy.rotation.set(0, rotY, rotZ);
+  dummy.scale.set(1, scaleY, 1);
+  dummy.updateMatrix();
+
+  hayMesh.setMatrixAt(i, dummy.matrix);
+  hayPositions.push({ x, y: 0.9 * scaleY, z, active: true });
+}
+scene.add(hayMesh);
+
+// AGO NASCOSTO
+const needleGeo = new THREE.CylinderGeometry(0.01, 0.005, 1.2, 8);
+const needleMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, metalness: 0.95, roughness: 0.1 });
+const needle = new THREE.Mesh(needleGeo, needleMat);
+
+// Posiziona l'ago in un punto casuale nel fieno
+const targetIndex = Math.floor(Math.random() * (totalHay - 1000));
+const targetPos = hayPositions[targetIndex];
+needle.position.set(targetPos.x, 0.6, targetPos.z);
+needle.rotation.z = 0.1;
+scene.add(needle);
+
+// POSIZIONE CAMERA / GIOCATORE
+camera.position.set(0, 2.5, 5);
+let yaw = 0, pitch = 0;
+
+// CONTROLLI TOUCH & JOYSTICK (Sensibilità ridotta)
+const joystickZone = document.getElementById('joystick-zone');
+const joystickStick = document.getElementById('joystick-stick');
+let moveVec = { x: 0, y: 0 };
+let joystickActive = false;
+let joystickTouchId = null;
+
+let lookTouchId = null;
+let lastTouchX = 0, lastTouchY = 0;
+const sensitivity = 0.0025; // Sensibilità bassa e fluida
+
+window.addEventListener('touchstart', (e) => {
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    const rect = joystickZone.getBoundingClientRect();
+    if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+      if (!joystickActive) {
+        joystickActive = true;
+        joystickTouchId = t.identifier;
+      }
+    } else if (t.clientX > window.innerWidth / 3 && lookTouchId === null) {
+      lookTouchId = t.identifier;
+      lastTouchX = t.clientX;
+      lastTouchY = t.clientY;
+    }
+  }
 });
 
-// 2. Audio rilassante di sottofondo (Web Audio API)
-function initAudio() {
+window.addEventListener('touchmove', (e) => {
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    if (t.identifier === joystickTouchId) {
+      const rect = joystickZone.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      let dx = t.clientX - centerX;
+      let dy = t.clientY - centerY;
+      const dist = Math.min(Math.hypot(dx, dy), 40);
+      const angle = Math.atan2(dy, dx);
+      dx = Math.cos(angle) * dist;
+      dy = Math.sin(angle) * dist;
+
+      joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
+      moveVec.x = dx / 40;
+      moveVec.y = dy / 40;
+    } else if (t.identifier === lookTouchId) {
+      const deltaX = t.clientX - lastTouchX;
+      const deltaY = t.clientY - lastTouchY;
+      yaw -= deltaX * sensitivity;
+      pitch -= deltaY * sensitivity;
+      pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, pitch));
+      lastTouchX = t.clientX;
+      lastTouchY = t.clientY;
+    }
+  }
+});
+
+window.addEventListener('touchend', (e) => {
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    if (t.identifier === joystickTouchId) {
+      joystickActive = false;
+      joystickTouchId = null;
+      moveVec = { x: 0, y: 0 };
+      joystickStick.style.transform = `translate(0px, 0px)`;
+    } else if (t.identifier === lookTouchId) {
+      lookTouchId = null;
+    }
+  }
+});
+
+// LENTE DI INGRANDIMENTO TOGGLE
+const lensBtn = document.getElementById('lens-btn');
+const lensDiv = document.getElementById('lens');
+let lensActive = false;
+
+lensBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  lensActive = !lensActive;
+  lensDiv.style.display = lensActive ? 'block' : 'none';
+});
+
+// RIMOZIONE SINGOLO FILO DI FIENO
+let removedCount = 0;
+const raycaster = new THREE.Raycaster();
+const centerVector = new THREE.Vector2(0, 0);
+
+window.addEventListener('click', (e) => {
+  if (e.target.id === 'start-btn' || e.target.id === 'lens-btn' || joystickActive) return;
+
+  raycaster.setFromCamera(centerVector, camera);
+
+  // Controllo click sull'Ago (Vittoria)
+  const needleHit = raycaster.intersectObject(needle);
+  if (needleHit.length > 0 && needleHit[0].distance < 4) {
+    winGame();
+    return;
+  }
+
+  // Controllo click sul Fieno
+  const hits = raycaster.intersectObject(hayMesh);
+  if (hits.length > 0 && hits[0].distance < 4) {
+    const instanceId = hits[0].instanceId;
+    if (hayPositions[instanceId].active) {
+      hayPositions[instanceId].active = false;
+      dummy.position.set(0, -1000, 0); // Sposta fuori mappa
+      dummy.updateMatrix();
+      hayMesh.setMatrixAt(instanceId, dummy.matrix);
+      hayMesh.instanceMatrix.needsUpdate = true;
+
+      removedCount++;
+      document.getElementById('hay-count').innerText = removedCount;
+    }
+  }
+});
+
+// MESSAGGIO OGNI 30 SECONDI
+setInterval(() => {
+  const msg = document.getElementById('napolecanaccio-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 4000);
+}, 30000);
+
+// MUSICA RILASSANTE SINTETIZZATA (Web Audio API)
+let audioCtx;
+function playRelaxingMusic() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  
-  function createPadTone(freq, gainVal) {
-    let osc = audioCtx.createOscillator();
-    let gain = audioCtx.createGain();
+  const notes = [261.63, 329.63, 392.00, 523.25, 440.00]; // Accordo Do Maggiore 7 / Lam
+  let noteIndex = 0;
+
+  setInterval(() => {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(notes[noteIndex % notes.length], audioCtx.currentTime);
+
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3.5);
+
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start();
-  }
-  
-  // Musica ambient d'atmosfera in sottofondo
-  createPadTone(130.81, 0.05); // C3
-  createPadTone(196.00, 0.03); // G3
-  createPadTone(261.63, 0.02); // E4
+    osc.stop(audioCtx.currentTime + 3.6);
+
+    noteIndex++;
+  }, 2500);
 }
 
-// 3. Sistema di applausi in caso di vittoria
-function playApplause() {
-  const bufferSize = audioCtx.sampleRate * 3;
-  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = Math.random() * 2 - 1;
-  }
-  const noise = audioCtx.createBufferSource();
-  noise.buffer = buffer;
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.value = 1000;
-  noise.connect(filter);
-  filter.connect(audioCtx.destination);
-  noise.start();
-}
+// AVVIO
+document.getElementById('start-btn').addEventListener('click', () => {
+  document.getElementById('start-overlay').style.display = 'none';
+  playRelaxingMusic();
+});
 
-// 4. Inizializzazione Grafica 3D (Three.js)
-function init3D() {
-  const container = document.getElementById('canvas-container');
-  
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xdceeff);
-  scene.fog = new THREE.FogExp2(0xdceeff, 0.015);
+// ANIMAZIONE VITTORIA (PALLONE NAPOLI + FUOCHI + APPLAUSI)
+let isWon = false;
+let fireworks = [];
 
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
-  camera.position.set(0, 8, 12);
-  camera.lookAt(0, 0, 0);
+function winGame() {
+  isWon = true;
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('lens-btn').style.display = 'none';
+  document.getElementById('joystick-zone').style.display = 'none';
+  document.getElementById('center-crosshair').style.display = 'none';
+  lensDiv.style.display = 'none';
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  container.appendChild(renderer.domElement);
-  mainCanvas = renderer.domElement;
+  // Crea Pallone Napoli 3D
+  const ballGeo = new THREE.SphereGeometry(1.2, 32, 32);
+  const canvasBall = document.createElement('canvas');
+  canvasBall.width = 512; canvasBall.height = 256;
+  const ctx = canvasBall.getContext('2d');
+  ctx.fillStyle = '#0080ff'; ctx.fillRect(0, 0, 512, 256);
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(256, 128, 70, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#0080ff'; ctx.font = 'bold 90px sans-serif'; ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle'; ctx.fillText('N', 256, 128);
 
-  // Lente di Ingrandimento 4X (Setup Renderer secondario)
-  lensCanvas = document.getElementById('lens-canvas');
-  lensRenderer = new THREE.WebGLRenderer({ canvas: lensCanvas, antialias: true });
-  lensRenderer.setSize(160, 160);
-  
-  lensCamera = new THREE.PerspectiveCamera(25, 1, 0.1, 100); // Campo visivo stretto = Zoom 4X
-
-  // Luci ambientali realistiche
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-  scene.add(ambientLight);
-
-  const dirLight = new THREE.DirectionalLight(0xfffaed, 0.8);
-  dirLight.position.set(50, 80, 30);
-  dirLight.castShadow = true;
-  scene.add(dirLight);
-
-  // Terreno vasto
-  const groundGeo = new THREE.PlaneGeometry(200, 200);
-  const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a5a20 });
-  const ground = new THREE.Mesh(groundGeo, groundMat);
-  ground.rotation.x = -Math.PI / 2;
-  scene.add(ground);
-
-  // 5. Creazione di 1 MILIONE di fili di fieno (InstancedMesh)
-  const strawGeo = new THREE.CylinderGeometry(0.02, 0.04, 1.8, 3);
-  const strawMat = new THREE.MeshLambertMaterial({ color: 0xd4ac0d });
-  strawMesh = new THREE.InstancedMesh(strawGeo, strawMat, TOTAL_STRAWS);
-
-  const dummy = new THREE.Object3D();
-  const radius = 25; // Ampiezza campo fieno
-
-  for (let i = 0; i < TOTAL_STRAWS; i++) {
-    // Posizionamento denso e compatto per maggiore difficoltà
-    const r = Math.sqrt(Math.random()) * radius;
-    const theta = Math.random() * Math.PI * 2;
-    
-    const x = r * Math.cos(theta);
-    const z = r * Math.sin(theta);
-    const y = (Math.random() * 0.4);
-
-    dummy.position.set(x, y, z);
-    dummy.rotation.set(
-      (Math.random() - 0.5) * 0.6,
-      Math.random() * Math.PI,
-      (Math.random() - 0.5) * 0.6
-    );
-    dummy.scale.set(1, 0.8 + Math.random() * 0.5, 1);
-    dummy.updateMatrix();
-
-    strawMesh.setMatrixAt(i, dummy.matrix);
-  }
-  scene.add(strawMesh);
-
-  // 6. Posizionamento dell'Ago D'Argento nascondendolo nel fieno
-  const needleGeo = new THREE.CylinderGeometry(0.015, 0.005, 1.2, 8);
-  const needleMat = new THREE.MeshStandardMaterial({ color: 0xe5e8e8, metalness: 0.95, roughness: 0.1 });
-  needleMesh = new THREE.Mesh(needleGeo, needleMat);
-  
-  // Posizione casuale nascosta
-  const needleR = Math.random() * 8;
-  const needleAngle = Math.random() * Math.PI * 2;
-  needleMesh.position.set(needleR * Math.cos(needleAngle), 0.2, needleR * Math.sin(needleAngle));
-  needleMesh.rotation.z = Math.PI / 2.2;
-  scene.add(needleMesh);
-
-  // Setup Eventi Touch Mobile
-  setupTouchControls();
-
-  // Avvio Game Loop
-  animate();
-}
-
-// 7. Controlli Touch Mobile con Sensibilità Ridotta e Cursore
-function setupTouchControls() {
-  window.addEventListener('touchstart', (e) => {
-    if (!isPlaying || isVictory) return;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-  });
-
-  window.addEventListener('touchmove', (e) => {
-    if (!isPlaying || isVictory) return;
-    
-    const touchX = e.touches[0].clientX;
-    const touchY = e.touches[0].clientY;
-
-    const deltaX = (touchX - touchStartX) * SENSITIVITY;
-    const deltaY = (touchY - touchStartY) * SENSITIVITY;
-
-    targetX += deltaX;
-    targetZ += deltaY;
-
-    // Aggiornamento posizione cursore grafico
-    cursorPosition.x = touchX;
-    cursorPosition.y = touchY;
-
-    const cursorEl = document.getElementById('joystick-cursor');
-    const lensEl = document.getElementById('lens-container');
-    
-    cursorEl.style.left = `${cursorPosition.x}px`;
-    cursorEl.style.top = `${cursorPosition.y}px`;
-
-    lensEl.style.left = `${cursorPosition.x}px`;
-    lensEl.style.top = `${cursorPosition.y}px`;
-
-    touchStartX = touchX;
-    touchStartY = touchY;
-  }, { passive: false });
-
-  // 8. Interazione: Rimuovi 1 singolo filo di fieno per tocco
-  window.addEventListener('touchend', (e) => {
-    if (!isPlaying || isVictory) return;
-    
-    // Rilevamento click su ago o fieno
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2(
-      (cursorPosition.x / window.innerWidth) * 2 - 1,
-      -(cursorPosition.y / window.innerHeight) * 2 + 1
-    );
-
-    raycaster.setFromCamera(mouse, camera);
-    const intersectsNeedle = raycaster.intersectObject(needleMesh);
-
-    if (intersectsNeedle.length > 0) {
-      triggerVictory();
-    } else {
-      // Rimuovi 1 filo di fieno
-      strawsRemoved++;
-      document.getElementById('straw-count').innerText = strawsRemoved.toLocaleString();
-      
-      // Animazione rimozione filo via matrix scale a 0
-      const dummy = new THREE.Object3D();
-      dummy.scale.set(0, 0, 0);
-      dummy.updateMatrix();
-      strawMesh.setMatrixAt(strawsRemoved % TOTAL_STRAWS, dummy.matrix);
-      strawMesh.instanceMatrix.needsUpdate = true;
-    }
-  });
-}
-
-// 9. Timer Notifica Temporizzata (Ogni 30 secondi)
-function startTimers() {
-  setInterval(() => {
-    if (!isPlaying || isVictory) return;
-    const alertEl = document.getElementById('napoli-alert');
-    alertEl.classList.add('show');
-    
-    setTimeout(() => {
-      alertEl.classList.remove('show');
-    }, 4000);
-  }, 30000);
-}
-
-// 10. Funzione di Scena Finale e Vittoria (Pallone Napoli & Fuochi Azzurri)
-function triggerVictory() {
-  isVictory = true;
-  document.getElementById('victory-overlay').style.display = 'flex';
-  document.getElementById('lens-container').style.display = 'none';
-  document.getElementById('joystick-cursor').style.display = 'none';
-
-  playApplause();
-
-  // Creazione Pallone Tridimensionale del Napoli
-  const ballGeo = new THREE.SphereGeometry(2, 32, 32);
-  const ballMat = new THREE.MeshStandardMaterial({ color: 0x0080ff, roughness: 0.3, metalness: 0.1 });
-  napoliBall = new THREE.Mesh(ballGeo, ballMat);
-  napoliBall.position.set(camera.position.x, 3, camera.position.z - 6);
+  const ballTex = new THREE.CanvasTexture(canvasBall);
+  const ballMat = new THREE.MeshStandardMaterial({ map: ballTex, roughness: 0.3 });
+  const napoliBall = new THREE.Mesh(ballGeo, ballMat);
+  napoliBall.position.set(camera.position.x, camera.position.y + 0.5, camera.position.z - 3);
   scene.add(napoliBall);
 
-  // Sistema di Fuochi d'Artificio Azzurri
-  fireworksGroup = new THREE.Group();
-  const pCount = 200;
+  // Fuochi d'artificio Azzurri
   const pGeo = new THREE.BufferGeometry();
-  const positions = new Float32Array(pCount * 3);
-  const velocities = [];
+  const pCount = 500;
+  const posArray = new Float32Array(pCount * 3);
+  const velArray = [];
 
   for (let i = 0; i < pCount; i++) {
-    positions[i * 3] = napoliBall.position.x;
-    positions[i * 3 + 1] = napoliBall.position.y;
-    positions[i * 3 + 2] = napoliBall.position.z;
+    posArray[i * 3] = napoliBall.position.x;
+    posArray[i * 3 + 1] = napoliBall.position.y;
+    posArray[i * 3 + 2] = napoliBall.position.z;
 
-    velocities.push(
-      (Math.random() - 0.5) * 0.3,
-      (Math.random() - 0.5) * 0.3 + 0.2,
-      (Math.random() - 0.5) * 0.3
-    );
+    velArray.push({
+      x: (Math.random() - 0.5) * 0.2,
+      y: (Math.random() - 0.5) * 0.2 + 0.1,
+      z: (Math.random() - 0.5) * 0.2
+    });
   }
 
-  pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const pMat = new THREE.PointsMaterial({ color: 0x00d4ff, size: 0.2 });
-  const particles = new THREE.Points(pGeo, pMat);
-  particles.userData = { velocities: velocities };
-  
-  fireworksGroup.add(particles);
-  scene.add(fireworksGroup);
+  pGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+  const pMat = new THREE.PointsMaterial({ size: 0.08, color: 0x00d2ff });
+  const fireworkParticles = new THREE.Points(pGeo, pMat);
+  scene.add(fireworkParticles);
+
+  // Effetto Audio Applausi (Rumore rosa/bianco modulato)
+  if (audioCtx) {
+    const bufferSize = audioCtx.sampleRate * 3;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.8));
+    }
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.2;
+    noise.connect(gain);
+    gain.connect(audioCtx.destination);
+    noise.start();
+  }
+
+  // Rotazione Pallone e Animazione finale
+  function animateWin() {
+    requestAnimationFrame(animateWin);
+    napoliBall.rotation.y += 0.02;
+
+    const positions = fireworkParticles.geometry.attributes.position.array;
+    for (let i = 0; i < pCount; i++) {
+      positions[i * 3] += velArray[i].x;
+      positions[i * 3 + 1] += velArray[i].y;
+      positions[i * 3 + 2] += velArray[i].z;
+    }
+    fireworkParticles.geometry.attributes.position.needsUpdate = true;
+
+    renderer.render(scene, camera);
+  }
+  animateWin();
 }
 
-// 11. Loop di Rendering Grafico
+// LOOP DI RENDERING PRINCIPALE
 function animate() {
+  if (isWon) return;
   requestAnimationFrame(animate);
 
-  if (isPlaying && !isVictory) {
-    // Movimento fluido telecamera
-    camera.position.x += (targetX - camera.position.x) * 0.1;
-    camera.position.z += (targetZ + 12 - camera.position.z) * 0.1;
-    camera.lookAt(camera.position.x, 0, camera.position.z - 12);
+  // Movimento camera basato su Joystick
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  dir.y = 0; dir.normalize();
 
-    // Sincronizzazione Telecamera Lente 4X
+  const side = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
+
+  camera.position.addScaledVector(dir, -moveVec.y * 0.08);
+  camera.position.addScaledVector(side, moveVec.x * 0.08);
+
+  // Orientamento Vista
+  const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+  euler.x = pitch;
+  euler.y = yaw;
+  camera.quaternion.setFromEuler(euler);
+
+  renderer.render(scene, camera);
+
+  // Render Lente 4x
+  if (lensActive) {
     lensCamera.position.copy(camera.position);
-    lensCamera.lookAt(camera.position.x, 0, camera.position.z - 12);
-    
-    // Rendering Finestra Principale
-    renderer.render(scene, camera);
-
-    // Rendering Vista Lente 4X
+    lensCamera.quaternion.copy(camera.quaternion);
     lensRenderer.render(scene, lensCamera);
-  } else if (isVictory) {
-    // Animazione pallone e fuochi d'artificio
-    if (napoliBall) napoliBall.rotation.y += 0.02;
-    
-    if (fireworksGroup) {
-      const points = fireworksGroup.children[0];
-      const pos = points.geometry.attributes.position.array;
-      const vels = points.userData.velocities;
-
-      for (let i = 0; i < vels.length; i++) {
-        pos[i * 3] += vels[i].x;
-        pos[i * 3 + 1] += vels[i].y;
-        pos[i * 3 + 2] += vels[i].z;
-      }
-      points.geometry.attributes.position.needsUpdate = true;
-    }
-    renderer.render(scene, camera);
   }
 }
+animate();
+
+// Ridimensionamento Schermo
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 </script>
 </body>
 </html>
