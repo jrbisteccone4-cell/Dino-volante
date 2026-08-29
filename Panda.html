@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Fiat Panda Challenge 3D</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    body { overflow: hidden; background: #111; font-family: sans-serif; touch-action: none; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    
+    /* Overlay iniziale e finale */
+    #overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      background: rgba(0,0,0,0.85); color: white; text-align: center; padding: 20px; z-index: 20;
+    }
+    h1 { font-size: 2rem; color: #ff9800; margin-bottom: 10px; }
+    p { font-size: 1.1rem; line-height: 1.5; margin-bottom: 25px; color: #ddd; }
+    .btn-main {
+      padding: 18px 45px; font-size: 1.3rem; font-weight: bold; border: none;
+      border-radius: 30px; background: #e53935; color: white; cursor: pointer;
+      box-shadow: 0 4px 15px rgba(229, 57, 53, 0.5); -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Dashboard UI (Contatore e Velocità) */
+    #hud {
+      position: absolute; top: 15px; left: 15px; right: 15px;
+      display: flex; justify-content: space-between;
+      color: #fff; font-weight: bold; font-size: 1.2rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8); pointer-events: none; z-index: 10;
+    }
+    .hud-box { background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 10px; }
+
+    /* Controlli Touch Mobile (Acceleratore e Freno) */
+    #controls {
+      position: absolute; bottom: 25px; left: 0; width: 100%;
+      display: flex; justify-content: space-between; padding: 0 25px;
+      z-index: 10; pointer-events: none;
+    }
+    .pedal {
+      width: 85px; height: 130px; border-radius: 15px; font-size: 1.2rem; font-weight: bold;
+      color: white; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.5); pointer-events: auto;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #brakeBtn { background: linear-gradient(180deg, #d32f2f, #8e0000); border: 3px solid #ff6666; }
+    #gasBtn { background: linear-gradient(180deg, #388e3c, #1b5e20); border: 3px solid #66bb6a; margin-left: auto; }
+    .pedal:active { transform: scale(0.95); opacity: 0.8; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <div id="hud">
+    <div class="hud-box">Superate: <span id="carCount">0</span> / 1000</div>
+    <div class="hud-box"><span id="speedKm">0</span> km/h</div>
+  </div>
+
+  <div id="controls">
+    <div id="brakeBtn" class="pedal">FRENO</div>
+    <div id="gasBtn" class="pedal">GAS</div>
+  </div>
+
+  <div id="overlay">
+    <h1 id="title">FIAT PANDA 3D 🚗</h1>
+    <p id="desc">Guida la Panda! Usa l'acceleratore e il freno in basso per gestire la velocità. Trascina il dito sullo schermo (o inclina il telefono) per sterzare.<br><br><b>Schiva 1000 macchine per vincere la BANANA D'ORO!</b></p>
+    <button id="startBtn" class="btn-main">PARTI ORA</button>
+  </div>
+
+<script>
+// --- VERIFICA DISPOSITIVO MOBILE ---
+if (!('ontouchstart' in window) && navigator.maxTouchPoints <= 0) {
+  document.getElementById('desc').innerHTML = "<b style='color:#ff5252'>Gioco progettato esclusivamente per Smartphone!</b>";
+}
+
+// --- SCENA, CAMERA E RENDERER ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a2a3a);
+scene.fog = new THREE.FogExp2(0x1a2a3a, 0.012);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+// --- LUCI ---
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xfffaed, 1.2);
+dirLight.position.set(20, 40, 20);
+dirLight.castShadow = true;
+scene.add(dirLight);
+
+// --- CREAZIONE AMBIENTE (STRADA ED ERBA) ---
+const roadWidth = 14;
+const roadGeo = new THREE.PlaneGeometry(roadWidth, 1000);
+const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+const road = new THREE.Mesh(roadGeo, roadMat);
+road.rotation.x = -Math.PI / 2;
+road.position.z = -450;
+scene.add(road);
+
+// Linee di mezzeria animate
+const lineGeo = new THREE.PlaneGeometry(0.4, 4);
+const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const roadLines = [];
+for (let i = 0; i < 40; i++) {
+  const line1 = new THREE.Mesh(lineGeo, lineMat);
+  line1.rotation.x = -Math.PI / 2;
+  line1.position.set(-roadWidth / 4, 0.01, -i * 12);
+  scene.add(line1);
+  roadLines.push(line1);
+
+  const line2 = new THREE.Mesh(lineGeo, lineMat);
+  line2.rotation.x = -Math.PI / 2;
+  line2.position.set(roadWidth / 4, 0.01, -i * 12);
+  scene.add(line2);
+  roadLines.push(line2);
+}
+
+// Terreno Laterale
+const grassGeo = new THREE.PlaneGeometry(200, 1000);
+const grassMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.9 });
+const grass = new THREE.Mesh(grassGeo, grassMat);
+grass.rotation.x = -Math.PI / 2;
+grass.position.set(0, -0.05, -450);
+scene.add(grass);
+
+// --- COSTRUZIONE FIAT PANDA 3D (GIOCATORE) ---
+function createPanda() {
+  const group = new THREE.Group();
+
+  // Scocca principale boxy (Stile Fiat Panda)
+  const bodyGeo = new THREE.BoxGeometry(2.1, 1.1, 3.8);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xcc1111, metalness: 0.2, roughness: 0.3 });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.8;
+  group.add(body);
+
+  // Tetto squadrato
+  const cabGeo = new THREE.BoxGeometry(1.9, 0.9, 2.2);
+  const cab = new THREE.Mesh(cabGeo, bodyMat);
+  cab.position.set(0, 1.7, -0.2);
+  group.add(cab);
+
+  // Vetri
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 });
+  const windshield = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.7), glassMat);
+  windshield.position.set(0, 1.75, 0.91);
+  group.add(windshield);
+
+  // Pareurati in plastica nera tipici Panda
+  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
+  const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.4, 0.4), bumperMat);
+  frontBumper.position.set(0, 0.4, 1.9);
+  group.add(frontBumper);
+
+  // Ruote
+  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 16);
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+  wheelGeo.rotateZ(Math.PI / 2);
+  
+  const wheelPositions = [
+    [-1.05, 0.35, 1.2], [1.05, 0.35, 1.2],
+    [-1.05, 0.35, -1.2], [1.05, 0.35, -1.2]
+  ];
+  wheelPositions.forEach(pos => {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.position.set(...pos);
+    group.add(w);
+  });
+
+  return group;
+}
+
+const panda = createPanda();
+scene.add(panda);
+panda.position.set(0, 0, 0);
+
+// --- COSTRUZIONE MACCHINE NEMICHE ---
+const enemyColors = [0x303f9f, 0xfbc02d, 0x388e3c, 0x7b1fa2, 0xe65100, 0xffffff];
+function createEnemyCar() {
+  const group = new THREE.Group();
+  const color = enemyColors[Math.floor(Math.random() * enemyColors.length)];
+  
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(2.2, 1.0, 4.2),
+    new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 })
+  );
+  body.position.y = 0.7;
+  group.add(body);
+
+  const top = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.8, 2.2),
+    new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2 })
+  );
+  top.position.set(0, 1.5, -0.3);
+  group.add(top);
+
+  return group;
+}
+
+const enemies = [];
+const enemyLanes = [-4.5, -1.5, 1.5, 4.5];
+
+function spawnEnemy(zPos) {
+  const enemy = createEnemyCar();
+  const lane = enemyLanes[Math.floor(Math.random() * enemyLanes.length)];
+  enemy.position.set(lane, 0, zPos);
+  scene.add(enemy);
+  enemies.push(enemy);
+}
+
+// Inizializza prime macchine
+for (let i = 0; i < 6; i++) {
+  spawnEnemy(-40 - (i * 35));
+}
+
+// --- BANANA D'ORO E PODIO (SCENA FINALE) ---
+const victoryGroup = new THREE.Group();
+
+function buildPodium() {
+  // Podio
+  const podGeo = new THREE.BoxGeometry(6, 3, 4);
+  const podMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.5, roughness: 0.3 });
+  const podium = new THREE.Mesh(podGeo, podMat);
+  podium.position.y = 1.5;
+  victoryGroup.add(podium);
+
+  // Banana d'Oro 3D
+  const bananaGroup = new THREE.Group();
+  const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9, roughness: 0.1 });
+
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, -1.5, 0),
+    new THREE.Vector3(0.8, -0.5, 0),
+    new THREE.Vector3(0.5, 1.0, 0),
+    new THREE.Vector3(-0.3, 1.8, 0)
+  ]);
+  const bananaGeo = new THREE.TubeGeometry(curve, 20, 0.4, 8, false);
+  const bananaMesh = new THREE.Mesh(bananaGeo, goldMat);
+  bananaGroup.add(bananaMesh);
+
+  bananaGroup.position.set(0, 4.8, 0);
+  bananaGroup.scale.set(1.5, 1.5, 1.5);
+  bananaGroup.name = "goldBanana";
+  victoryGroup.add(bananaGroup);
+
+  victoryGroup.position.set(0, 0, -50);
+  victoryGroup.visible = false;
+  scene.add(victoryGroup);
+}
+buildPodium();
+
+// SISTEMA FUOCHI D'ARTIFICIO
+const particleCount = 150;
+const fireworkGeo = new THREE.BufferGeometry();
+const fireworkPositions = new Float32Array(particleCount * 3);
+const fireworkVelocities = [];
+
+for (let i = 0; i < particleCount; i++) {
+  fireworkPositions[i * 3] = 0;
+  fireworkPositions[i * 3 + 1] = 0;
+  fireworkPositions[i * 3 + 2] = 0;
+  
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.random() * Math.PI;
+  const speed = 0.2 + Math.random() * 0.4;
+
+  fireworkVelocities.push(new THREE.Vector3(
+    Math.sin(phi) * Math.cos(theta) * speed,
+    Math.cos(phi) * speed,
+    Math.sin(phi) * Math.sin(theta) * speed
+  ));
+}
+fireworkGeo.setAttribute('position', new THREE.BufferAttribute(fireworkPositions, 3));
+const fireworkMat = new THREE.PointsMaterial({ color: 0xffd700, size: 0.4, transparent: true });
+const fireworkParticles = new THREE.Points(fireworkGeo, fireworkMat);
+fireworkParticles.visible = false;
+scene.add(fireworkParticles);
+
+// --- STATI DEL GIOCO E FISICA ---
+let gameActive = false;
+let isVictory = false;
+let carsPassed = 0;
+let speed = 0;
+const maxSpeed = 1.6;
+const accel = 0.015;
+const brakeDecel = 0.035;
+const friction = 0.005;
+
+let isGasPressed = false;
+let isBrakePressed = false;
+let targetX = 0;
+
+// CONTROLLI PEDALI TOUCH
+const gasBtn = document.getElementById('gasBtn');
+const brakeBtn = document.getElementById('brakeBtn');
+
+gasBtn.addEventListener('touchstart', (e) => { e.preventDefault(); isGasPressed = true; });
+gasBtn.addEventListener('touchend', (e) => { e.preventDefault(); isGasPressed = false; });
+brakeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); isBrakePressed = true; });
+brakeBtn.addEventListener('touchend', (e) => { e.preventDefault(); isBrakePressed = false; });
+
+// STERZO TOUCH/DRAG
+window.addEventListener('touchmove', (e) => {
+  if (!gameActive || isVictory) return;
+  const touchX = e.touches[0].clientX;
+  const normX = (touchX / window.innerWidth) * 2 - 1;
+  targetX = normX * (roadWidth / 2 - 1.2);
+}, { passive: false });
+
+// ACCELEROMETRO (INCLINAZIONE TELEFONO)
+window.addEventListener('deviceorientation', (e) => {
+  if (!gameActive || isVictory || !e.gamma) return;
+  const tilt = e.gamma; // Inclinazione -90 a 90
+  targetX = (tilt / 30) * (roadWidth / 2 - 1.2);
+});
+
+// --- AVVIO E RESET GIOCO ---
+const startBtn = document.getElementById('startBtn');
+startBtn.addEventListener('touchend', initGame);
+startBtn.addEventListener('click', initGame);
+
+function initGame(e) {
+  if (e) e.preventDefault();
+  
+  // Permessi Giroscopio iOS
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().catch(() => {});
+  }
+
+  carsPassed = 0;
+  speed = 0;
+  targetX = 0;
+  gameActive = true;
+  isVictory = false;
+
+  panda.position.set(0, 0, 0);
+  camera.position.set(0, 4, 8);
+  camera.lookAt(0, 1, -10);
+
+  victoryGroup.visible = false;
+  fireworkParticles.visible = false;
+
+  document.getElementById('carCount').innerText = '0';
+  document.getElementById('speedKm').innerText = '0';
+  document.getElementById('overlay').style.display = 'none';
+
+  // Ripristina nemici
+  enemies.forEach((enemy, i) => {
+    enemy.position.set(enemyLanes[i % 4], 0, -40 - (i * 35));
+  });
+
+  animate();
+}
+
+// --- GAME LOOP ANIMAZIONE ---
+function animate() {
+  if (!gameActive) return;
+  requestAnimationFrame(animate);
+
+  if (!isVictory) {
+    // Gestione Velocità (Gas / Freno)
+    if (isGasPressed) {
+      speed = Math.min(speed + accel, maxSpeed);
+    } else if (isBrakePressed) {
+      speed = Math.max(speed - brakeDecel, 0);
+    } else {
+      speed = Math.max(speed - friction, 0);
+    }
+
+    // Sterzo fluido Panda
+    panda.position.x += (targetX - panda.position.x) * 0.1;
+    panda.position.x = THREE.MathUtils.clamp(panda.position.x, -roadWidth / 2 + 1.2, roadWidth / 2 - 1.2);
+    panda.rotation.z = -(panda.position.x - targetX) * 0.05;
+
+    // Movimento Linee Strada (Effetto corsa)
+    roadLines.forEach(line => {
+      line.position.z += speed * 12;
+      if (line.position.z > 5) line.position.z -= 480;
+    });
+
+    // Gestione Nemici & Collisioni
+    enemies.forEach(enemy => {
+      enemy.position.z += speed * 8 + 0.3; // Avanzano verso il giocatore
+
+      // Collisione
+      const dx = Math.abs(panda.position.x - enemy.position.x);
+      const dz = Math.abs(panda.position.z - enemy.position.z);
+      if (dx < 1.8 && dz < 3.2) {
+        gameOver();
+      }
+
+      // Macchina superata
+      if (enemy.position.z > 10) {
+        enemy.position.z = -180 - Math.random() * 50;
+        enemy.position.x = enemyLanes[Math.floor(Math.random() * enemyLanes.length)];
+        carsPassed++;
+        document.getElementById('carCount').innerText = carsPassed;
+
+        // VITTORIA: 1000 macchine superate
+        if (carsPassed >= 1000) {
+          triggerVictory();
+        }
+      }
+    });
+
+    // HUD Velocità
+    document.getElementById('speedKm').innerText = Math.floor(speed * 110);
+
+    // Dynamic Camera Tracking
+    camera.position.x = panda.position.x * 0.4;
+    camera.lookAt(panda.position.x * 0.2, 1, -10);
+
+  } else {
+    // ANIMAZIONE PODIO & BANANA D'ORO
+    const banana = victoryGroup.getObjectByName("goldBanana");
+    if (banana) banana.rotation.y += 0.03;
+
+    // Espansione Fuochi d'Artificio
+    if (fireworkParticles.visible) {
+      const positions = fireworkParticles.geometry.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] += fireworkVelocities[i].x;
+        positions[i * 3 + 1] += fireworkVelocities[i].y;
+        positions[i * 3 + 2] += fireworkVelocities[i].z;
+      }
+      fireworkParticles.geometry.attributes.position.needsUpdate = true;
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+
+// GAME OVER
+function gameOver() {
+  gameActive = false;
+  document.getElementById('title').innerText = 'CRASH! 💥';
+  document.getElementById('desc').innerHTML = `Hai distrutto la Panda!<br>Sei riuscito a superare <b>${carsPassed}</b> macchine.`;
+  startBtn.innerText = 'RIPROVA';
+  document.getElementById('overlay').style.display = 'flex';
+}
+
+// VITTORIA & FUOCHI D'ARTIFICIO
+function triggerVictory() {
+  isVictory = true;
+  enemies.forEach(e => scene.remove(e));
+  
+  // Posiziona la Panda davanti al Podio
+  panda.position.set(0, 0, -38);
+  panda.rotation.set(0, 0, 0);
+
+  victoryGroup.visible = true;
+
+  // Attiva Fuochi d'Artificio sopra il podio
+  fireworkParticles.position.set(0, 8, -50);
+  fireworkParticles.visible = true;
+
+  camera.position.set(0, 5, -25);
+  camera.lookAt(0, 4, -50);
+
+  setTimeout(() => {
+    document.getElementById('title').innerText = 'CAMPIONE! 🏆🏆';
+    document.getElementById('desc').innerHTML = `Straordinario! Hai superato 1000 macchine!<br><br><b>HAI VINTO LA BANANA D'ORO! 🍌✨</b>`;
+    startBtn.innerText = 'GIOCA ANCORA';
+    document.getElementById('overlay').style.display = 'flex';
+  }, 2500);
+}
+
+// RESIZE SCREEN
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
