@@ -1,300 +1,428 @@
-import pygame
-import random
-import sys
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MERCEDES HYPERDRIVE: URBAN EVASION</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body {
+            background-color: #0f0f14;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 230, 255, 0.2);
+        }
+        canvas {
+            background-color: #228B22;
+            display: block;
+        }
+        /* Controlli Touch per Mobile */
+        #mobile-controls {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 10px;
+            justify-content: space-between;
+        }
+        .btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid #00e6ff;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 10px;
+            touch-action: manipulation;
+        }
+        .btn:active {
+            background: #00e6ff;
+            color: black;
+        }
+        @media (max-width: 800px) {
+            #mobile-controls {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body>
 
-# Inizializzazione Pygame
-pygame.init()
+<div id="game-container">
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+</div>
 
-# Dimensioni Schermo
-WIDTH, HEIGHT = 800, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("MERCEDES HYPERDRIVE: URBAN EVASION")
+<!-- Controlli virtuali per smartphone -->
+<div id="mobile-controls">
+    <button class="btn" id="btn-left">◄</button>
+    <button class="btn" id="btn-up">▲</button>
+    <button class="btn" id="btn-down">▼</button>
+    <button class="btn" id="btn-right">►</button>
+</div>
 
-# Colori
-ROAD_COLOR = (35, 35, 38)
-GRASS_COLOR = (20, 100, 35)
-WHITE = (255, 255, 255)
-YELLOW = (255, 215, 0)
-RED = (220, 20, 60)
-ORANGE = (255, 140, 0)
-DARK_GRAY = (25, 25, 28)
-CYAN = (0, 230, 255)
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-# Impostazioni Gioco
-FPS = 60
-clock = pygame.time.Clock()
+// Dimensioni e Limiti
+const WIDTH = canvas.width;
+const HEIGHT = canvas.height;
+const ROAD_LEFT = 80;
+const ROAD_RIGHT = 320;
+const SPEED_THRESHOLD = 7.5;
 
-# Limiti Pista
-ROAD_LEFT = 160
-ROAD_RIGHT = 640
+// Stato Tastiera e Touch
+const keys = {};
+window.addEventListener("keydown", e => keys[e.code] = true);
+window.addEventListener("keyup", e => keys[e.code] = false);
 
-# Soglia di velocità per esplosione (Valore interno Pygame)
-SPEED_THRESHOLD = 7.5
+// Gestione Touch Mobile
+function setupTouch(id, code) {
+    const btn = document.getElementById(id);
+    btn.addEventListener("touchstart", (e) => { e.preventDefault(); keys[code] = true; });
+    btn.addEventListener("touchend", (e) => { e.preventDefault(); keys[code] = false; });
+}
+setupTouch("btn-left", "ArrowLeft");
+setupTouch("btn-right", "ArrowRight");
+setupTouch("btn-up", "ArrowUp");
+setupTouch("btn-down", "ArrowDown");
 
-def draw_mercedes_car(surface, x, y, width, height, color, is_player=False):
-    """Disegna un'auto dallo stile elegante tipo Mercedes con carrozzeria favolosa."""
-    ix, iy = int(x), int(y)
-    
-    # Ombra della carrozzeria
-    shadow_surf = pygame.Surface((width + 6, height + 6), pygame.SRCALPHA)
-    pygame.draw.rect(shadow_surf, (0, 0, 0, 80), (0, 0, width + 6, height + 6), border_radius=12)
-    surface.blit(shadow_surf, (ix - 3, iy - 3))
+// Funzione Disegno Auto Stile Mercedes
+function drawMercedesCar(x, y, width, height, color, isPlayer = false) {
+    ctx.save();
 
-    # Corpo principale auto
-    car_rect = pygame.Rect(ix, iy, width, height)
-    pygame.draw.rect(surface, color, car_rect, border_radius=12)
+    // Ombra carrozzeria
+    ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+    ctx.beginPath();
+    ctx.roundRect(x - 2, y - 2, width + 4, height + 4, 8);
+    ctx.fill();
 
-    # Profilo metallizzato / cromato
-    pygame.draw.rect(surface, (210, 210, 215), car_rect, width=2, border_radius=12)
+    // Corpo Principale
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, 8);
+    ctx.fill();
 
-    # Parabrezza e Tettuccio
-    glass_color = (120, 210, 255) if is_player else (50, 55, 65)
-    windshield = pygame.Rect(ix + 5, iy + int(height * 0.25), width - 10, int(height * 0.35))
-    pygame.draw.rect(surface, glass_color, windshield, border_radius=6)
-    pygame.draw.rect(surface, (180, 180, 180), windshield, width=1, border_radius=6)
+    // Profilo Cromato
+    ctx.strokeStyle = "#d2d2d7";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
-    # Griglia Mercedes e Stemma
-    grid_y = iy + height - 8 if is_player else iy + 3
-    grid_rect = pygame.Rect(ix + 6, grid_y, width - 12, 5)
-    pygame.draw.rect(surface, (220, 220, 220), grid_rect, border_radius=2)
-    
-    # Stemma centrale (Stella Mercedes)
-    center_x = ix + width // 2
-    center_y = grid_y + 2
-    pygame.draw.circle(surface, (255, 255, 255), (center_x, center_y), 3)
+    // Parabrezza
+    ctx.fillStyle = isPlayer ? "#78d2ff" : "#323741";
+    ctx.beginPath();
+    ctx.roundRect(x + 4, y + height * 0.25, width - 8, height * 0.35, 4);
+    ctx.fill();
+    ctx.strokeStyle = "#b4b4b4";
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-    # Fari anteriore e posteriore
-    headlight = (255, 255, 220)
-    taillight = (255, 20, 20)
-    
-    if is_player:
-        pygame.draw.rect(surface, headlight, (ix + 3, iy + 2, 8, 4), border_radius=2)
-        pygame.draw.rect(surface, headlight, (ix + width - 11, iy + 2, 8, 4), border_radius=2)
-        pygame.draw.rect(surface, taillight, (ix + 4, iy + height - 5, 8, 3))
-        pygame.draw.rect(surface, taillight, (ix + width - 12, iy + height - 5, 8, 3))
-    else:
-        pygame.draw.rect(surface, headlight, (ix + 3, iy + height - 6, 8, 4), border_radius=2)
-        pygame.draw.rect(surface, headlight, (ix + width - 11, iy + height - 6, 8, 4), border_radius=2)
-        pygame.draw.rect(surface, taillight, (ix + 4, iy + 2, 8, 3))
-        pygame.draw.rect(surface, taillight, (ix + width - 12, iy + 2, 8, 3))
+    // Griglia Mercedes e Stemma
+    const gridY = isPlayer ? y + height - 6 : y + 2;
+    ctx.fillStyle = "#dc8d8";
+    ctx.beginPath();
+    ctx.roundRect(x + 5, gridY, width - 10, 4, 1);
+    ctx.fill();
 
-def draw_explosion(surface, x, y):
-    """Effetto speciale di esplosione in caso di scontro ad alta velocità."""
-    for _ in range(35):
-        rx = int(x + random.randint(-40, 40))
-        ry = int(y + random.randint(-40, 40))
-        radius = random.randint(8, 26)
-        color = random.choice([RED, ORANGE, YELLOW])
-        pygame.draw.circle(surface, color, (rx, ry), radius)
+    // Stella Mercedes (Centro Griglia)
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(x + width / 2, gridY + 2, 2, 0, Math.PI * 2);
+    ctx.fill();
 
-class Player:
-    def __init__(self):
-        self.width = 44
-        self.height = 80
-        self.x = float(WIDTH // 2 - self.width // 2)
-        self.y = float(HEIGHT - 120)
-        self.speed = 5.0
-        self.color = DARK_GRAY
+    // Fari
+    const headlight = "#ffffdc";
+    const taillight = "#ff1414";
 
-    def move(self, keys):
-        # Movimento laterale entro i limiti della strada
-        if keys[pygame.K_LEFT] and self.x > ROAD_LEFT + 10:
-            self.x -= 6.0
-        if keys[pygame.K_RIGHT] and self.x < ROAD_RIGHT - self.width - 10:
-            self.x += 6.0
+    if (isPlayer) {
+        ctx.fillStyle = headlight;
+        ctx.fillRect(x + 2, y + 1, 6, 3);
+        ctx.fillRect(x + width - 8, y + 1, 6, 3);
+        ctx.fillStyle = taillight;
+        ctx.fillRect(x + 3, y + height - 4, 6, 2);
+        ctx.fillRect(x + width - 9, y + height - 4, 6, 2);
+    } else {
+        ctx.fillStyle = headlight;
+        ctx.fillRect(x + 2, y + height - 4, 6, 3);
+        ctx.fillRect(x + width - 8, y + height - 4, 6, 3);
+        ctx.fillStyle = taillight;
+        ctx.fillRect(x + 3, y + 1, 6, 2);
+        ctx.fillRect(x + width - 9, y + 1, 6, 2);
+    }
 
-        # Controlli di accelerazione e decelerazione
-        if keys[pygame.K_UP]:
-            self.speed = min(self.speed + 0.1, 13.0)
-        elif keys[pygame.K_DOWN]:
-            self.speed = max(self.speed - 0.15, 2.0)
-        else:
-            if self.speed > 5.0:
-                self.speed -= 0.05
-            elif self.speed < 5.0:
-                self.speed += 0.05
+    ctx.restore();
+}
 
-    def draw(self, surface):
-        draw_mercedes_car(surface, self.x, self.y, self.width, self.height, self.color, is_player=True)
+// Giocatore
+class Player {
+    constructor() {
+        this.width = 30;
+        this.height = 55;
+        this.x = WIDTH / 2 - this.width / 2;
+        this.y = HEIGHT - 90;
+        this.speed = 5.0;
+        this.color = "#19191c";
+    }
 
-    def get_rect(self):
-        return pygame.Rect(int(self.x), int(self.y), self.width, self.height)
+    move() {
+        if ((keys["ArrowLeft"] || keys["KeyA"]) && this.x > ROAD_LEFT + 5) {
+            this.x -= 4.5;
+        }
+        if ((keys["ArrowRight"] || keys["KeyD"]) && this.x < ROAD_RIGHT - this.width - 5) {
+            this.x += 4.5;
+        }
+        if (keys["ArrowUp"] || keys["KeyW"]) {
+            this.speed = Math.min(this.speed + 0.08, 12.0);
+        } else if (keys["ArrowDown"] || keys["KeyS"]) {
+            this.speed = Math.max(this.speed - 0.12, 2.0);
+        } else {
+            if (this.speed > 5.0) this.speed -= 0.04;
+            else if (this.speed < 5.0) this.speed += 0.04;
+        }
+    }
 
-class EnemyCar:
-    def __init__(self):
-        self.width = 44
-        self.height = 80
-        lanes = [190, 310, 430, 540]
-        self.x = float(random.choice(lanes))
-        self.y = -100.0
-        self.base_speed = random.uniform(3.0, 4.5)
-        # Palette colori stile Mercedes
-        self.color = random.choice([
-            (195, 200, 205), # Argento Iridio
-            (245, 245, 250), # Bianco Polare
-            (20, 35, 65),    # Blu Cavansite
-            (75, 10, 20)     # Rosso Designo
-        ])
+    draw() {
+        drawMercedesCar(this.x, this.y, this.width, this.height, this.color, true);
+    }
+}
 
-    def update(self, player_speed):
-        self.y += self.base_speed + (player_speed - 5.0)
-
-    def draw(self, surface):
-        draw_mercedes_car(surface, self.x, self.y, self.width, self.height, self.color, is_player=False)
-
-    def get_rect(self):
-        return pygame.Rect(int(self.x), int(self.y), self.width, self.height)
-
-def show_intro_screen():
-    """Schermata iniziale innovativa con titolo di gioco aggiornato."""
-    intro = True
-    font_title = pygame.font.SysFont("Arial", 36, bold=True)
-    font_sub = pygame.font.SysFont("Arial", 20, bold=True)
-    
-    while intro:
-        clock.tick(FPS)
-        screen.fill((15, 15, 20))
-
-        # Disegno elemento grafico decorativo
-        pygame.draw.rect(screen, CYAN, (WIDTH // 2 - 250, 120, 500, 4), border_radius=2)
+// Auto Nemiche
+class EnemyCar {
+    constructor() {
+        this.width = 30;
+        this.height = 55;
+        const lanes = [95, 155, 215, 275];
+        this.x = lanes[Math.floor(Math.random() * lanes.length)];
+        this.y = -70;
+        this.baseSpeed = 3.0 + Math.random() * 1.5;
         
-        title_surf = font_title.render("MERCEDES HYPERDRIVE", True, WHITE)
-        subtitle_surf = font_title.render("URBAN EVASION", True, CYAN)
-        start_surf = font_sub.render("PREMI 'SPAZIO' PER AVVIARE I MOTORI", True, YELLOW)
+        const colors = ["#c3c8cd", "#f5f5fa", "#142341", "#4b0a14"];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    update(playerSpeed) {
+        this.y += this.baseSpeed + (playerSpeed - 5.0);
+    }
+
+    draw() {
+        drawMercedesCar(this.x, this.y, this.width, this.height, this.color, false);
+    }
+}
+
+// Particelle per Esplosione
+class Particle {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 8;
+        this.vy = (Math.random() - 0.5) * 8;
+        this.radius = Math.random() * 8 + 4;
+        const colors = ["#dc143c", "#ff8c00", "#ffd700"];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        this.life = 30;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life--;
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, Math.max(0, this.radius), 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// Stato del Gioco
+let player = new Player();
+let enemies = [];
+let particles = [];
+let roadOffset = 0;
+let spawnTimer = 0;
+let gameState = "INTRO"; // INTRO, PLAYING, GAMEOVER
+let exploded = false;
+
+function resetGame() {
+    player = new Player();
+    enemies = [];
+    particles = [];
+    roadOffset = 0;
+    spawnTimer = 0;
+    exploded = false;
+    gameState = "PLAYING";
+}
+
+// Loop Principale
+function gameLoop() {
+    // Sfondo e Erba
+    ctx.fillStyle = "#146423";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    if (gameState === "INTRO") {
+        // Schermata Iniziale
+        ctx.fillStyle = "#0f0f14";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        ctx.fillStyle = "#00e6ff";
+        ctx.fillRect(20, 100, WIDTH - 40, 3);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("MERCEDES HYPERDRIVE", WIDTH / 2, 130);
+
+        ctx.fillStyle = "#00e6ff";
+        ctx.font = "bold 18px Arial";
+        ctx.fillText("URBAN EVASION", WIDTH / 2, 160);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "13px Arial";
+        ctx.fillText("• Frecce SU/GIÙ: Accelera / Frena", WIDTH / 2, 230);
+        ctx.fillText("• Frecce SX/DX: Sterza", WIDTH / 2, 260);
         
-        info_1 = font_sub.render("• Frecce SU/GIÙ: Accelera / Frena", True, WHITE)
-        info_2 = font_sub.render("• Frecce SINISTRA/DESTRA: Sterza", True, WHITE)
-        info_3 = font_sub.render("• Attento: A bassa velocità eviti l'impatto!", True, (100, 255, 100))
-        info_4 = font_sub.render("• Ad alta velocità l'impatto causa l'ESPLOSIONE!", True, RED)
-
-        screen.blit(title_surf, (WIDTH // 2 - title_surf.get_width() // 2, 140))
-        screen.blit(subtitle_surf, (WIDTH // 2 - subtitle_surf.get_width() // 2, 185))
+        ctx.fillStyle = "#78ff78";
+        ctx.fillText("• A bassa velocità eviti l'incidente!", WIDTH / 2, 300);
         
-        screen.blit(info_1, (WIDTH // 2 - 200, 270))
-        screen.blit(info_2, (WIDTH // 2 - 200, 305))
-        screen.blit(info_3, (WIDTH // 2 - 200, 340))
-        screen.blit(info_4, (WIDTH // 2 - 200, 375))
-        
-        screen.blit(start_surf, (WIDTH // 2 - start_surf.get_width() // 2, 470))
+        ctx.fillStyle = "#ff4d4d";
+        ctx.fillText("• Ad alta velocità l'impatto esplode!", WIDTH / 2, 330);
 
-        pygame.display.flip()
+        ctx.fillStyle = "#ffd700";
+        ctx.font = "bold 14px Arial";
+        ctx.fillText("PREMI 'SPAZIO' O TOCCA PER INIZIARE", WIDTH / 2, 420);
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    intro = False
+        if (keys["Space"] || keys["Enter"]) resetGame();
+        canvas.onclick = () => { if (gameState === "INTRO") resetGame(); };
 
-def main():
-    show_intro_screen()
+    } else if (gameState === "PLAYING" || gameState === "GAMEOVER") {
 
-    player = Player()
-    enemies = []
-    spawn_timer = 0
-    road_offset = 0.0
-    font = pygame.font.SysFont("Arial", 22, bold=True)
-    game_over = False
-    exploded = False
+        if (gameState === "PLAYING") {
+            player.move();
+            roadOffset = (roadOffset + player.speed) % 30;
 
-    while True:
-        clock.tick(FPS)
-        keys = pygame.key.get_pressed()
+            spawnTimer++;
+            if (spawnTimer > 45) {
+                enemies.push(new EnemyCar());
+                spawnTimer = 0;
+            }
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if game_over and event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
-                    main()
+            // Gestione Collisioni e Movimento
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                e.update(player.speed);
 
-        if not game_over:
-            player.move(keys)
+                if (e.y > HEIGHT + 80) {
+                    enemies.splice(i, 1);
+                    continue;
+                }
 
-            # Scorrimento asfalto
-            road_offset = (road_offset + player.speed) % 40
+                // Controllo rettangoli per collisione
+                if (player.x < e.x + e.width &&
+                    player.x + player.width > e.x &&
+                    player.y < e.y + e.height &&
+                    player.y + player.height > e.y) {
 
-            # Generazione auto avversarie
-            spawn_timer += 1
-            if spawn_timer > 55:
-                enemies.append(EnemyCar())
-                spawn_timer = 0
+                    if (player.speed > SPEED_THRESHOLD) {
+                        // ALTA VELOCITÀ: Esplosione
+                        gameState = "GAMEOVER";
+                        exploded = true;
+                        for (let k = 0; k < 40; k++) {
+                            particles.push(new Particle(player.x + player.width / 2, player.y + player.height / 2));
+                        }
+                    } else {
+                        // BASSA VELOCITÀ: Separazione fisica senza incidente
+                        if (player.x < e.x) player.x = e.x - player.width - 3;
+                        else player.x = e.x + e.width + 3;
 
-            player_rect = player.get_rect()
+                        player.x = Math.max(ROAD_LEFT + 5, Math.min(player.x, ROAD_RIGHT - player.width - 5));
+                        player.speed = Math.max(2.0, player.speed - 0.4);
+                    }
+                }
+            }
+        }
 
-            # Gestione movimento ed eliminazione bug collisioni
-            for enemy in enemies[:]:
-                enemy.update(player.speed)
+        // --- DISEGNO PISTA ---
+        ctx.fillStyle = "#232326";
+        ctx.fillRect(ROAD_LEFT, 0, ROAD_RIGHT - ROAD_LEFT, HEIGHT);
 
-                if enemy.y > HEIGHT + 100:
-                    enemies.remove(enemy)
-                    continue
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(ROAD_LEFT - 4, 0, 8, HEIGHT);
+        ctx.fillRect(ROAD_RIGHT - 4, 0, 8, HEIGHT);
 
-                enemy_rect = enemy.get_rect()
+        // Strisce mezzeria
+        ctx.fillStyle = "#ffd700";
+        for (let y = -30; y < HEIGHT; y += 30) {
+            ctx.fillRect(158, y + roadOffset, 4, 15);
+            ctx.fillRect(238, y + roadOffset, 4, 15);
+        }
 
-                if player_rect.colliderect(enemy_rect):
-                    if player.speed > SPEED_THRESHOLD:
-                        # ALTA VELOCITÀ: Esplosione e Game Over
-                        game_over = True
-                        exploded = True
-                    else:
-                        # BASSA VELOCITÀ: Urto controllato (No incidente/esplosione)
-                        if player.x < enemy.x:
-                            player.x = float(enemy.x - player.width - 4)
-                        else:
-                            player.x = float(enemy.x + enemy.width + 4)
+        // Disegno Nemici
+        enemies.forEach(e => e.draw());
 
-                        # Mantiene l'auto nei limiti della strada dopo la spinta
-                        player.x = max(float(ROAD_LEFT + 10), min(player.x, float(ROAD_RIGHT - player.width - 10)))
-                        
-                        # Riduzione graduale della velocità post-contatto
-                        player.speed = max(2.0, player.speed - 0.4)
+        // Disegno Giocatore o Esplosione
+        if (!exploded) {
+            player.draw();
+        } else {
+            particles.forEach((p, index) => {
+                p.update();
+                p.draw();
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+        }
 
-        # --- DISEGNO ---
-        screen.fill(GRASS_COLOR)
+        // HUD / Velocità
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 14px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(`Velocità: ${Math.floor(player.speed * 15)} km/h`, 10, 25);
 
-        # Asfalto e Corsie
-        pygame.draw.rect(screen, ROAD_COLOR, (ROAD_LEFT, 0, ROAD_RIGHT - ROAD_LEFT, HEIGHT))
-        pygame.draw.rect(screen, WHITE, (ROAD_LEFT - 5, 0, 10, HEIGHT))
-        pygame.draw.rect(screen, WHITE, (ROAD_RIGHT - 5, 0, 10, HEIGHT))
+        if (player.speed > SPEED_THRESHOLD) {
+            ctx.fillStyle = "#ff4d4d";
+            ctx.fillText("PERICOLO ESPLOSIONE!", 10, 45);
+        } else {
+            ctx.fillStyle = "#78ff78";
+            ctx.fillText("Velocità Sicura", 10, 45);
+        }
 
-        # Strisce tratteggiate
-        for y in range(-40, HEIGHT, 40):
-            pygame.draw.rect(screen, YELLOW, (315, int(y + road_offset), 8, 20))
-            pygame.draw.rect(screen, YELLOW, (475, int(y + road_offset), 8, 20))
+        // Game Over
+        if (gameState === "GAMEOVER") {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-        # Auto nemiche
-        for enemy in enemies:
-            enemy.draw(screen)
+            ctx.fillStyle = "#ff1414";
+            ctx.font = "bold 18px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("IMPATTO AD ALTA VELOCITÀ!", WIDTH / 2, HEIGHT / 2 - 20);
 
-        # Disegno Giocatore o Esplosione
-        if not (game_over and exploded):
-            player.draw(screen)
-        else:
-            draw_explosion(screen, player.x + player.width / 2, player.y + player.height / 2)
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "14px Arial";
+            ctx.fillText("Premi 'R' o Tocca per Ripartire", WIDTH / 2, HEIGHT / 2 + 20);
 
-        # HUD / Interfaccia utente
-        speed_kmh = int(player.speed * 15)
-        speed_text = font.render(f"Velocità: {speed_kmh} km/h", True, WHITE)
-        screen.blit(speed_text, (20, 20))
+            if (keys["KeyR"]) resetGame();
+            canvas.onclick = () => { if (gameState === "GAMEOVER") resetGame(); };
+        }
+    }
 
-        if player.speed > SPEED_THRESHOLD:
-            status_txt = font.render("RISCHIO ESPLOSIONE!", True, RED)
-        else:
-            status_txt = font.render("Velocità Sicura", True, (50, 255, 50))
-        screen.blit(status_txt, (20, 50))
+    requestAnimationFrame(gameLoop);
+}
 
-        # Schermata di Game Over
-        if game_over:
-            over_font = pygame.font.SysFont("Arial", 32, bold=True)
-            msg = over_font.render("IMPATTO AD ALTA VELOCITÀ!", True, RED)
-            restart_msg = font.render("Premi 'R' per Riavviare", True, WHITE)
-            screen.blit(msg, (WIDTH // 2 - msg.get_width() // 2, HEIGHT // 2 - 30))
-            screen.blit(restart_msg, (WIDTH // 2 - restart_msg.get_width() // 2, HEIGHT // 2 + 20))
-
-        pygame.display.flip()
-
-if __name__ == "__main__":
-    main()
+// Avvio Loop
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
