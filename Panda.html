@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Panda 4x4: New York & Mountain Off-Road</title>
+  <title>Panda 4x4: New York Edition</title>
   <style>
     * { box-sizing: border-box; touch-action: none; user-select: none; }
     body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
@@ -13,7 +13,7 @@
     #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
     
     #score-box {
-      position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.8);
+      position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.85);
       color: #ffd700; padding: 12px 18px; border-radius: 12px; font-weight: bold;
       font-size: 14px; border: 1px solid rgba(255,215,0,0.5); backdrop-filter: blur(4px);
     }
@@ -38,10 +38,10 @@
     #btn-brake { bottom: 30px; right: 20px; border-color: #ff4d4d; color: #ff4d4d; }
     #btn-gas { bottom: 110px; right: 20px; border-color: #38ef7d; color: #38ef7d; }
     
-    /* TASTO CLACSON VICINO AL FRENO */
+    /* TASTO CLACSON POSIZIONATO VICINO AL FRENO */
     #btn-horn { 
       bottom: 30px; right: 100px; border-color: #ffd700; color: #ffd700;
-      font-size: 22px; text-align: center;
+      font-size: 24px; text-align: center;
     }
 
     /* TASTO RAZZO VOLANTE */
@@ -55,7 +55,7 @@
 
     @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
 
-    /* SCHERMATA START / GAME OVER */
+    /* SCHERMATA OVERLAY */
     #overlay-screen {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100;
       background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
@@ -76,17 +76,17 @@
 <body>
 
   <div id="overlay-screen">
-    <h1 id="main-title">PANDA 4x4: NEW YORK</h1>
-    <p id="main-desc">Guida la mitica Panda 4x4 tra le strade di New York!<br><br>
-    Evita il traffico cittadino. **Ogni 20 macchine evitate** sblocchi il **Razzo Volante**: al rientro a terra otterrai uno **Scudo Protettivo** che ti salverà dal prossimo impatto!</p>
-    <button id="start-btn">INIZIA LA CORSA</button>
+    <h1 id="main-title">PANDA 4x4: NEW YORK RUSH</h1>
+    <p id="main-desc">Guida la Fiat Panda 4x4 a New York!<br><br>
+    Evita le macchine del traffico. **Superate 20 macchine** potrai attivare il **Razzo Volante**. Al rientro otterrai lo **Scudo Protettivo** che non ti fa morire al prossimo impatto!</p>
+    <button id="start-btn">INIZIA IL GIOCO</button>
   </div>
 
   <div id="hud">
     <div id="score-box">
       Punteggio: <span id="score-val">0</span><br>
       Macchine Evitate: <span id="cars-val">0</span>
-      <div id="shield-status">🛡️ SCUDO ATTIVO!</div>
+      <div id="shield-status">🛡️ SCUDO PRONTO!</div>
     </div>
 
     <button id="btn-rocket">🚀 RAZZO PRONTO!</button>
@@ -101,7 +101,7 @@
   <div id="canvas-container"></div>
 
 <script>
-// --- AUDIO ENGINE CON VOCE SYNTH "NAPOLETAME!" ---
+// SUONO VOCALE "NAPOLETAME!" E SUONI AUDIO
 const AudioEngine = {
   ctx: null,
   init() {
@@ -149,7 +149,7 @@ const AudioEngine = {
 };
 
 let scene, camera, renderer;
-let panda, pandaBody;
+let panda, pandaMesh;
 let buildings = [];
 let trafficCars = [];
 
@@ -157,13 +157,13 @@ let score = 0;
 let carsPassed = 0;
 let isGameRunning = false;
 
-// STATI RAZZO E SCUDO
+// MODIFICHE RAZZO E SCUDO
 let rocketAvailable = false;
 let isRocketActive = false;
 let rocketTimer = 0;
 let hasShield = false;
 
-// CONTROLLI GUIDA FIAT PANDA 4X4
+// FISICA PANDA E CONTROLLI
 let inputs = { left: false, right: false, gas: false, brake: false };
 let pandaSpeed = 0;
 const MAX_SPEED = 0.45;
@@ -176,8 +176,8 @@ function init3D() {
   container.innerHTML = '';
   
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1a2a3a); // Cielo notturno New York
-  scene.fog = new THREE.FogExp2(0x1a2a3a, 0.012);
+  scene.background = new THREE.Color(0x0f172a); // Notte New York
+  scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 120);
   
@@ -186,7 +186,7 @@ function init3D() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.appendChild(renderer.domElement);
 
-  // LUCI AMBIENTALI CITTADINE
+  // LUCI STRADALI
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
   scene.add(ambientLight);
 
@@ -196,7 +196,7 @@ function init3D() {
 
   createRoad();
   createNYCityscape();
-  createPanda();
+  createPanda4x4();
 
   camera.position.set(0, 3.5, 7);
   camera.lookAt(0, 1, 0);
@@ -204,7 +204,332 @@ function init3D() {
   window.addEventListener('resize', onWindowResize);
 }
 
-// STRADA E BARRIERE DI CONFINE
+// STRADA E MURI/GUARDRAIL RIGIDI
 function createRoad() {
   const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, 200);
-  const roadMat = new THREE.Mesh
+  const roadMat = new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 0.8 });
+  const road = new THREE.Mesh(roadGeo, roadMat);
+  road.rotation.x = -Math.PI / 2;
+  scene.add(road);
+
+  // SEGNALETICA CORSIE STRADALI
+  for (let i = -90; i < 90; i += 8) {
+    const lineGeo = new THREE.PlaneGeometry(0.3, 4);
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    
+    const line1 = new THREE.Mesh(lineGeo, lineMat);
+    line1.rotation.x = -Math.PI / 2;
+    line1.position.set(-ROAD_WIDTH / 4, 0.01, i);
+    scene.add(line1);
+
+    const line2 = new THREE.Mesh(lineGeo, lineMat);
+    line2.rotation.x = -Math.PI / 2;
+    line2.position.set(ROAD_WIDTH / 4, 0.01, i);
+    scene.add(line2);
+  }
+
+  // BORDURA RIGIDA AI BORDI DELLA STRADA
+  const railGeo = new THREE.BoxGeometry(0.4, 0.8, 200);
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 });
+  
+  const railL = new THREE.Mesh(railGeo, railMat);
+  railL.position.set(-ROAD_WIDTH / 2 - 0.2, 0.4, 0);
+  scene.add(railL);
+
+  const railR = new THREE.Mesh(railGeo, railMat);
+  railR.position.set(ROAD_WIDTH / 2 + 0.2, 0.4, 0);
+  scene.add(railR);
+}
+
+// PAESAGGIO NEW YORK CON GRATTACIEULI
+function createNYCityscape() {
+  buildings = [];
+  const colors = [0x0f172a, 0x1e293b, 0x111827, 0x0f2744];
+
+  for (let z = -90; z < 90; z += 12) {
+    [-1, 1].forEach(side => {
+      const height = 20 + Math.random() * 30;
+      const width = 7 + Math.random() * 3;
+      const geo = new THREE.BoxGeometry(width, height, 10);
+      const mat = new THREE.MeshStandardMaterial({
+        color: colors[Math.floor(Math.random() * colors.length)],
+        roughness: 0.4
+      });
+
+      const building = new THREE.Mesh(geo, mat);
+      building.position.set(side * (ROAD_WIDTH / 2 + width / 2 + 2), height / 2, z);
+      scene.add(building);
+      buildings.push(building);
+    });
+  }
+}
+
+// FIAT PANDA 4X4 ORIGINALE (MODELLO COMPLETO)
+function createPanda4x4() {
+  panda = new THREE.Group();
+
+  // Scocca Principale (Verde 4x4 Off-Road)
+  const bodyGeo = new THREE.BoxGeometry(1.4, 0.8, 2.4);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3b5323, roughness: 0.5 });
+  pandaMesh = new THREE.Mesh(bodyGeo, bodyMat);
+  pandaMesh.position.y = 0.6;
+  panda.add(pandaMesh);
+
+  // Cabina / Vetri Squadrati
+  const cabinGeo = new THREE.BoxGeometry(1.3, 0.7, 1.4);
+  const cabinMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.1 });
+  const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+  cabin.position.set(0, 1.25, -0.2);
+  panda.add(cabin);
+
+  // Fari Tondi/Squadrati Anteriore
+  const lightGeo = new THREE.BoxGeometry(0.3, 0.2, 0.1);
+  const lightMat = new THREE.MeshBasicMaterial({ color: 0xffea00 });
+  
+  const lightL = new THREE.Mesh(lightGeo, lightMat);
+  lightL.position.set(-0.5, 0.65, -1.21);
+  panda.add(lightL);
+
+  const lightR = new THREE.Mesh(lightGeo, lightMat);
+  lightR.position.set(0.5, 0.65, -1.21);
+  panda.add(lightR);
+
+  // Ruote Tassellate Fuoristrada 4x4
+  const wheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.25, 16);
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+  wheelGeo.rotateZ(Math.PI / 2);
+
+  const wheelPositions = [
+    [-0.72, 0.32, 0.75], [0.72, 0.32, 0.75],
+    [-0.72, 0.32, -0.75], [0.72, 0.32, -0.75]
+  ];
+
+  wheelPositions.forEach(pos => {
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    wheel.position.set(...pos);
+    panda.add(wheel);
+  });
+
+  panda.position.set(0, 0, 0);
+  scene.add(panda);
+}
+
+// CREAZIONE MACCHINE DEL TRAFFICO PERFEZIONATE
+function spawnTrafficCar() {
+  const carGroup = new THREE.Group();
+  const colors = [0xd97706, 0xdc2626, 0x2563eb, 0x475569, 0xffffff];
+  const carColor = colors[Math.floor(Math.random() * colors.length)];
+
+  // Scocca Veicolo
+  const carBodyGeo = new THREE.BoxGeometry(1.5, 0.75, 2.8);
+  const carBodyMat = new THREE.MeshStandardMaterial({ color: carColor, roughness: 0.3 });
+  const carBody = new THREE.Mesh(carBodyGeo, carBodyMat);
+  carBody.position.y = 0.5;
+  carGroup.add(carBody);
+
+  // Vetri Cabina
+  const glassGeo = new THREE.BoxGeometry(1.35, 0.65, 1.5);
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1 });
+  const glass = new THREE.Mesh(glassGeo, glassMat);
+  glass.position.set(0, 1.1, -0.1);
+  carGroup.add(glass);
+
+  // Posizionamento su 3 Corsie
+  const lanes = [-2.8, 0, 2.8];
+  const lane = lanes[Math.floor(Math.random() * lanes.length)];
+  
+  carGroup.position.set(lane, 0, -85);
+  scene.add(carGroup);
+
+  trafficCars.push({
+    mesh: carGroup,
+    speed: 0.15 + Math.random() * 0.12
+  });
+}
+
+// CONTROLLI
+function setupControls() {
+  const bindBtn = (id, key) => {
+    const btn = document.getElementById(id);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); inputs[key] = true; });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); inputs[key] = false; });
+    btn.addEventListener('mousedown', () => { inputs[key] = true; });
+    btn.addEventListener('mouseup', () => { inputs[key] = false; });
+  };
+
+  bindBtn('btn-left', 'left');
+  bindBtn('btn-right', 'right');
+  bindBtn('btn-gas', 'gas');
+  bindBtn('btn-brake', 'brake');
+
+  // CLACSON "NAPOLETAME!" VICINO AL FRENO
+  document.getElementById('btn-horn').addEventListener('click', () => {
+    AudioEngine.playHorn();
+  });
+
+  // ATTIVAZIONE RAZZO
+  const rocketBtn = document.getElementById('btn-rocket');
+  rocketBtn.addEventListener('click', () => {
+    if (rocketAvailable && !isRocketActive) {
+      activateRocket();
+    }
+  });
+}
+
+// RAZZO VOLANTE
+function activateRocket() {
+  isRocketActive = true;
+  rocketAvailable = false;
+  rocketTimer = 180; // Volo per 3 secondi
+  document.getElementById('btn-rocket').style.display = 'none';
+  AudioEngine.playRocket();
+}
+
+// LOOP ANIMAZIONE
+function animate() {
+  if (!isGameRunning) return;
+  requestAnimationFrame(animate);
+
+  // 1. MOVIMENTO PANDA
+  if (inputs.gas) {
+    pandaSpeed = Math.min(MAX_SPEED, pandaSpeed + ACCEL);
+  } else if (inputs.brake) {
+    pandaSpeed = Math.max(0, pandaSpeed - ACCEL * 1.5);
+  } else {
+    pandaSpeed = Math.max(0, pandaSpeed - DECEL);
+  }
+
+  // 2. STERZO CON COLLISIONE BORDI RIGIDI
+  if (inputs.left) panda.position.x -= 0.12;
+  if (inputs.right) panda.position.x += 0.12;
+
+  const maxBound = (ROAD_WIDTH / 2) - 0.9;
+  panda.position.x = Math.max(-maxBound, Math.min(maxBound, panda.position.x));
+
+  // 3. VOLO RAZZO E SCUDO DI INVULNERABILITÀ
+  if (isRocketActive) {
+    rocketTimer--;
+    if (panda.position.y < 3.8) panda.position.y += 0.15; // Decompressione verso l'alto
+    
+    if (rocketTimer <= 0) {
+      isRocketActive = false;
+      hasShield = true; // SCUDO ATTIVO AL RIENTRO A TERRA
+      document.getElementById('shield-status').style.display = 'block';
+    }
+  } else {
+    if (panda.position.y > 0) {
+      panda.position.y -= 0.1; // Discesa a terra
+      if (panda.position.y < 0) panda.position.y = 0;
+    }
+  }
+
+  // 4. MOVIMENTO AMBIENTE E TRAFFICO
+  if (pandaSpeed > 0) {
+    score += Math.round(pandaSpeed * 10);
+    document.getElementById('score-val').innerText = score;
+
+    // Scorrimento Grattacieli
+    buildings.forEach(b => {
+      b.position.z += pandaSpeed * 20;
+      if (b.position.z > 30) b.position.z -= 180;
+    });
+
+    // Generazione Traffico
+    if (Math.random() < 0.035) {
+      spawnTrafficCar();
+    }
+
+    // Gestione Traffico e Collisioni
+    for (let i = trafficCars.length - 1; i >= 0; i--) {
+      let car = trafficCars[i];
+      car.mesh.position.z += pandaSpeed * 20 + car.speed * 10;
+
+      // CONTROLLO COLLISIONE (Valido solo a terra)
+      if (panda.position.y < 1.0) {
+        let dx = Math.abs(panda.position.x - car.mesh.position.x);
+        let dz = Math.abs(panda.position.z - car.mesh.position.z);
+
+        if (dx < 1.3 && dz < 2.2) {
+          if (hasShield) {
+            // SCUDO ATTIVO: Salva dalla morte e distrugge l'ostacolo
+            hasShield = false;
+            document.getElementById('shield-status').style.display = 'none';
+            scene.remove(car.mesh);
+            trafficCars.splice(i, 1);
+            AudioEngine.playCrash();
+            continue;
+          } else {
+            gameOver();
+            return;
+          }
+        }
+      }
+
+      // Macchina Superata
+      if (car.mesh.position.z > 10) {
+        scene.remove(car.mesh);
+        trafficCars.splice(i, 1);
+        carsPassed++;
+        document.getElementById('cars-val').innerText = carsPassed;
+
+        // Razzo sbloccato ogni 20 macchine evitate
+        if (carsPassed > 0 && carsPassed % 20 === 0 && !isRocketActive) {
+          rocketAvailable = true;
+          document.getElementById('btn-rocket').style.display = 'block';
+        }
+      }
+    }
+  }
+
+  camera.position.x = panda.position.x * 0.3;
+  renderer.render(scene, camera);
+}
+
+function gameOver() {
+  isGameRunning = false;
+  AudioEngine.playCrash();
+
+  document.getElementById('main-title').innerText = "GAME OVER";
+  document.getElementById('main-desc').innerHTML = `Hai urtato una macchina!<br><br>Punteggio finale: <b>${score}</b><br>Macchine evitate: <b>${carsPassed}</b>`;
+  document.getElementById('start-btn').innerText = "RIPROVA";
+  document.getElementById('overlay-screen').style.display = 'flex';
+}
+
+function resetGame() {
+  trafficCars.forEach(c => scene.remove(c.mesh));
+  trafficCars = [];
+  score = 0;
+  carsPassed = 0;
+  pandaSpeed = 0;
+  panda.position.set(0, 0, 0);
+  rocketAvailable = false;
+  isRocketActive = false;
+  hasShield = false;
+
+  document.getElementById('score-val').innerText = "0";
+  document.getElementById('cars-val').innerText = "0";
+  document.getElementById('shield-status').style.display = 'none';
+  document.getElementById('btn-rocket').style.display = 'none';
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  document.getElementById('overlay-screen').style.display = 'none';
+  AudioEngine.init();
+  if (!scene) {
+    init3D();
+    setupControls();
+  } else {
+    resetGame();
+  }
+  isGameRunning = true;
+  animate();
+});
+</script>
+</body>
+</html>
