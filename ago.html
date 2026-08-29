@@ -11,12 +11,12 @@
     #overlay {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       display: flex; flex-direction: column; justify-content: center; align-items: center;
-      background: rgba(0,0,0,0.75); color: white; text-align: center; padding: 20px; z-index: 10;
+      background: rgba(0,0,0,0.8); color: white; text-align: center; padding: 20px; z-index: 10;
     }
     h1 { font-size: 1.8rem; color: #fbc02d; margin-bottom: 10px; }
     p { font-size: 1rem; line-height: 1.4; margin-bottom: 25px; color: #ddd; }
     button {
-      padding: 16px 40px; font-size: 1.2rem; font-weight: bold; border: none;
+      padding: 18px 45px; font-size: 1.2rem; font-weight: bold; border: none;
       border-radius: 30px; background: #fbc02d; color: #1a140d; cursor: pointer;
       box-shadow: 0 4px 15px rgba(251, 192, 45, 0.4); -webkit-tap-highlight-color: transparent;
     }
@@ -25,8 +25,7 @@
       font-size: 1.1rem; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); pointer-events: none; z-index: 5;
     }
   </style>
-  <!-- 1. Importazione di Three.js per la grafica 3D -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
@@ -34,20 +33,11 @@
 
   <div id="overlay">
     <h1 id="title">L'Ago nel Pagliaio 3D 🪡</h1>
-    <p>Trascina il dito sullo schermo per muovere la lente di ingrandimento ed esplorare il pagliaio.<br><br>Trova l'ago di metallo nascosto tra i fili di fieno!</p>
+    <p>Trascina il dito sullo schermo per muovere la lente di ingrandimento.<br><br>Trova e tocca l'ago di metallo nascosto nel fieno!</p>
     <button id="startBtn">INIZIA LA RICERCA</button>
   </div>
 
 <script>
-// --- REGISTRO DEI 24 EVENTI / PASSAGGI LOGICI DEL GIOCO ---
-
-// 2. Controllo supporto Touch per dispositivi Mobile
-if (!('ontouchstart' in window) && navigator.maxTouchPoints <= 0) {
-  document.getElementById('title').innerText = "Dispositivo non supportato";
-  document.getElementById('overlay').querySelector('p').innerText = "Questo gioco è progettato esclusivamente per smartphone.";
-}
-
-// 3. Inizializzazione della Scena 3D, Cam e Renderer WebGL
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a140d);
 scene.fog = new THREE.FogExp2(0x1a140d, 0.015);
@@ -56,46 +46,47 @@ const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerH
 camera.position.set(0, 25, 15);
 camera.lookAt(0, 0, 0);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
-// 4. Configurazione dell'Illuminazione Ambientale e Luci Ombra
-const ambientLight = new THREE.AmbientLight(0xfff5e6, 0.7);
+const ambientLight = new THREE.AmbientLight(0xfff5e6, 0.8);
 scene.add(ambientLight);
 
 const dirLight = new THREE.DirectionalLight(0xffe0b2, 1.2);
 dirLight.position.set(20, 40, 20);
-dirLight.castShadow = true;
 scene.add(dirLight);
 
-// 5. Creazione del Terreno del Pagliaio
-const groundGeo = new THREE.PlaneGeometry(60, 60);
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
-const ground = new THREE.Mesh(groundGeo, groundMat);
+// Terreno
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(60, 60),
+  new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 })
+);
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-// 6. Generazione Istanziata dei Fili di Fieno (Alta Efficienza 3D)
-const strawCount = 80000; // Ottimizzato per rendering mobile a 60fps
+// Pagliaio (Fieno 3D)
+const strawCount = 40000;
 const strawGeo = new THREE.CylinderGeometry(0.02, 0.08, 3, 3);
 strawGeo.translate(0, 1.5, 0);
 const strawMat = new THREE.MeshStandardMaterial({ color: 0xd4a359, roughness: 0.6 });
 const strawInstanced = new THREE.InstancedMesh(strawGeo, strawMat, strawCount);
 
 const dummy = new THREE.Object3D();
-const fieldSize = 40;
+const fieldSize = 35;
 
-// 7. Evento Distribuzione Casuale del Fieno 3D
 for (let i = 0; i < strawCount; i++) {
-  const x = (Math.random() - 0.5) * fieldSize;
-  const z = (Math.random() - 0.5) * fieldSize;
-  dummy.position.set(x, 0, z);
-  dummy.rotation.y = Math.random() * Math.PI;
-  dummy.rotation.x = (Math.random() - 0.5) * 0.4;
-  dummy.rotation.z = (Math.random() - 0.5) * 0.4;
+  dummy.position.set(
+    (Math.random() - 0.5) * fieldSize,
+    0,
+    (Math.random() - 0.5) * fieldSize
+  );
+  dummy.rotation.set(
+    (Math.random() - 0.5) * 0.4,
+    Math.random() * Math.PI,
+    (Math.random() - 0.5) * 0.4
+  );
   const scale = 0.8 + Math.random() * 0.5;
   dummy.scale.set(scale, scale, scale);
   dummy.updateMatrix();
@@ -103,49 +94,46 @@ for (let i = 0; i < strawCount; i++) {
 }
 scene.add(strawInstanced);
 
-// 8. Creazione del Modello 3D dell'Ago Lucido
+// Ago lucido 3D
 const needleGroup = new THREE.Group();
-const needleGeo = new THREE.CylinderGeometry(0.06, 0.01, 4, 16);
-const needleMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, metalness: 0.95, roughness: 0.1 });
-const needleMesh = new THREE.Mesh(needleGeo, needleMat);
+const needleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1.0, roughness: 0.1 });
+const needleMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.02, 4, 16), needleMat);
 needleMesh.rotation.z = Math.PI / 2;
 needleGroup.add(needleMesh);
 
-// Crocchia dell'ago (Foro)
-const eyeGeo = new THREE.TorusGeometry(0.08, 0.02, 8, 16);
-const eyeMesh = new THREE.Mesh(eyeGeo, needleMat);
+const eyeMesh = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 8, 16), needleMat);
 eyeMesh.position.x = -2;
 needleGroup.add(eyeMesh);
 
-// 9. Posizionamento Casuale dell'Ago all'interno del Pagliaio
-let needlePos = new THREE.Vector3(
-  (Math.random() - 0.5) * (fieldSize - 10),
+const needlePos = new THREE.Vector3(
+  (Math.random() - 0.5) * (fieldSize - 8),
   0.2,
-  (Math.random() - 0.5) * (fieldSize - 10)
+  (Math.random() - 0.5) * (fieldSize - 8)
 );
 needleGroup.position.copy(needlePos);
 needleGroup.rotation.y = Math.random() * Math.PI;
 scene.add(needleGroup);
 
-// 10. Creazione 3D della Lente d'Ingrandimento (Montatura + Vetro)
+// Lente d'Ingrandimento
 const lensGroup = new THREE.Group();
-const ringGeo = new THREE.TorusGeometry(2.5, 0.15, 16, 64);
-const ringMat = new THREE.MeshStandardMaterial({ color: 0xb8860b, metalness: 0.8, roughness: 0.2 });
-const ring = new THREE.Mesh(ringGeo, ringMat);
+const ring = new THREE.Mesh(
+  new THREE.TorusGeometry(2.5, 0.15, 16, 64),
+  new THREE.MeshStandardMaterial({ color: 0xb8860b, metalness: 0.8, roughness: 0.2 })
+);
 ring.rotation.x = Math.PI / 2;
 lensGroup.add(ring);
 
-const handleGeo = new THREE.CylinderGeometry(0.2, 0.2, 3, 16);
-const handleMat = new THREE.MeshStandardMaterial({ color: 0x4a2e16, roughness: 0.7 });
-const handle = new THREE.Mesh(handleGeo, handleMat);
+const handle = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.2, 0.2, 3, 16),
+  new THREE.MeshStandardMaterial({ color: 0x4a2e16, roughness: 0.7 })
+);
 handle.position.set(0, 0, 3.8);
 handle.rotation.x = Math.PI / 2;
 lensGroup.add(handle);
 
 scene.add(lensGroup);
-lensGroup.position.set(0, 8, 0);
+lensGroup.position.set(0, 6, 0);
 
-// 11. Variabili di Stato del Gioco
 let gameActive = false;
 let startTime = 0;
 let timerInterval = null;
@@ -153,16 +141,13 @@ const raycaster = new THREE.Raycaster();
 const touchPos = new THREE.Vector2();
 const targetLensPos = new THREE.Vector3(0, 6, 0);
 
-// 12. Gestione TouchMove: Tracciamento del dito sullo schermo
+// Controlli Touch Mobile
 window.addEventListener('touchmove', (e) => {
   if (!gameActive) return;
-  e.preventDefault();
-  
   const touch = e.touches[0];
   touchPos.x = (touch.clientX / window.innerWidth) * 2 - 1;
   touchPos.y = -(touch.clientY / window.innerHeight) * 2 + 1;
 
-  // 13. Proiezione Coordinate Schermo -> Piano 3D (Raycasting)
   raycaster.setFromCamera(touchPos, camera);
   const targetPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -4);
   const intersectPoint = new THREE.Vector3();
@@ -173,7 +158,6 @@ window.addEventListener('touchmove', (e) => {
   }
 }, { passive: false });
 
-// 14. Evento TouchStart: Rilevamento Tap per identificare l'Ago
 window.addEventListener('touchstart', (e) => {
   if (!gameActive) return;
   const touch = e.touches[0];
@@ -185,28 +169,21 @@ window.addEventListener('touchstart', (e) => {
   raycaster.setFromCamera(clickCoords, camera);
   const intersects = raycaster.intersectObject(needleMesh);
 
-  // 15. Verificatore di Vittoria (Collisione con l'Ago)
   if (intersects.length > 0) {
     winGame();
   }
 });
 
-// 16. Evento Resize: Adattamento Risoluzione Schermo Telefono
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+const startBtn = document.getElementById('startBtn');
+startBtn.addEventListener('touchend', initGame);
+startBtn.addEventListener('click', initGame);
 
-// 17. Evento Start: Avvio partita dal Pulsante Overlay
-document.getElementById('startBtn').addEventListener('click', startGame);
-
-function startGame() {
+function initGame(e) {
+  if (e) e.preventDefault();
   gameActive = true;
   document.getElementById('overlay').style.display = 'none';
   startTime = Date.now();
   
-  // 18. Inizio Conteggio Tempo
   timerInterval = setInterval(() => {
     document.getElementById('timer').innerText = Math.floor((Date.now() - startTime) / 1000);
   }, 1000);
@@ -214,31 +191,22 @@ function startGame() {
   animate();
 }
 
-// 19. Logica di Ingrandimento e Distorsione Ottica Lente
-function updateLensZoom() {
-  // Smooth Interpolation per il movimento della lente
-  lensGroup.position.lerp(targetLensPos, 0.15);
-  
-  // 20. Ingrandimento Dinamico della Telecamera / Vista sotto la Lente
-  const distanceToNeedle = lensGroup.position.distanceTo(
-    new THREE.Vector3(needleGroup.position.x, lensGroup.position.y, needleGroup.position.z)
-  );
-
-  // Se la lente è sopra l'ago, fa risaltare il riflesso metallico
-  if (distanceToNeedle < 3.5) {
-    needleMat.emissive.setHex(0x555555);
-  } else {
-    needleMat.emissive.setHex(0x000000);
-  }
-}
-
-// 21. Ciclo di Rendering Animazione 3D (60 FPS Game Loop)
 function animate() {
   if (!gameActive) return;
   requestAnimationFrame(animate);
 
-  // 22. Aggiornamento posizione Lente e Telecamera Inclinata
-  updateLensZoom();
+  lensGroup.position.lerp(targetLensPos, 0.2);
+  
+  const distanceToNeedle = lensGroup.position.distanceTo(
+    new THREE.Vector3(needleGroup.position.x, lensGroup.position.y, needleGroup.position.z)
+  );
+
+  if (distanceToNeedle < 4) {
+    needleMat.emissive.setHex(0xaaaaaa);
+  } else {
+    needleMat.emissive.setHex(0x000000);
+  }
+
   camera.position.x = lensGroup.position.x * 0.3;
   camera.position.z = 15 + lensGroup.position.z * 0.3;
   camera.lookAt(lensGroup.position.x * 0.2, 0, lensGroup.position.z * 0.2);
@@ -246,21 +214,19 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// 23. Evento Vittoria e Schermata di Fine Gioco
 function winGame() {
   gameActive = false;
   clearInterval(timerInterval);
   const finalTime = Math.floor((Date.now() - startTime) / 1000);
   
-  // 24. Animazione Ago Trovato e Visualizzazione Risultato
   needleGroup.position.y = 3;
-  needleGroup.scale.set(1.5, 1.5, 1.5);
+  needleGroup.scale.set(1.8, 1.8, 1.8);
   renderer.render(scene, camera);
 
   document.getElementById('title').innerText = 'TROVATO! 🪡✨';
-  document.getElementById('overlay').querySelector('p').innerHTML = `Hai trovato l'ago nel pagliaio in soli <b>${finalTime} secondi</b>!`;
-  document.getElementById('startBtn').innerText = 'GIOCA ANCORA';
-  document.getElementById('startBtn').onclick = () => location.reload();
+  document.getElementById('overlay').querySelector('p').innerHTML = `Hai trovato l'ago in <b>${finalTime} secondi</b>!`;
+  startBtn.innerText = 'GIOCA ANCORA';
+  startBtn.onclick = () => location.reload();
   document.getElementById('overlay').style.display = 'flex';
 }
 </script>
