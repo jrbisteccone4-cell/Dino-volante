@@ -1,640 +1,980 @@
-# Create the HTML code for the 3D Fiat Panda Racing Game using Three.js
-
-html_content = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Panda Rush 3D: La Leggenda Dorata</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    body { overflow: hidden; background: #0b0e14; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; touch-action: none; }
-    canvas { display: block; width: 100vw; height: 100vh; }
-    
-    /* UI Overlay Principale */
-    #overlay {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      background: radial-gradient(circle, rgba(20,28,40,0.95) 0%, rgba(5,8,15,0.98) 100%);
-      color: white; text-align: center; padding: 25px; z-index: 20; transition: opacity 0.5s ease;
-    }
-    
-    .logo-container { margin-bottom: 20px; position: relative; }
-    h1 {
-      font-size: 2.4rem; font-weight: 900; letter-spacing: 2px;
-      background: linear-gradient(135deg, #e0e0e0 0%, #888888 50%, #ffffff 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      text-shadow: 0 10px 20px rgba(0,0,0,0.5); text-transform: uppercase;
-    }
-    .badge {
-      display: inline-block; background: #ffaa00; color: #000; font-weight: 800;
-      font-size: 0.8rem; padding: 4px 12px; border-radius: 20px; margin-top: 5px;
-      text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 15px rgba(255,170,0,0.5);
-    }
-    
-    p.description {
-      font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px; color: #a0aec0; max-width: 320px;
-    }
-    
-    .start-btn {
-      padding: 18px 50px; font-size: 1.3rem; font-weight: 900; border: none;
-      border-radius: 40px; background: linear-gradient(135deg, #ff9900 0%, #ff5500 100%);
-      color: white; text-transform: uppercase; letter-spacing: 1.5px;
-      box-shadow: 0 8px 25px rgba(255, 85, 0, 0.5), inset 0 2px 2px rgba(255,255,255,0.4);
-      cursor: pointer; active { transform: scale(0.96); }
-      -webkit-tap-highlight-color: transparent;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>PANDA 4X4: LEGEND OF THE GOLDEN BANANA</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0f19;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+        }
 
-    /* HUD durante il gioco */
-    #hud {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      pointer-events: none; z-index: 10; display: none;
-    }
-    
-    .stats-bar {
-      position: absolute; top: 15px; left: 15px; right: 15px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .stat-card {
-      background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 12px;
-      color: white; font-weight: bold; font-size: 0.9rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    .stat-card span { color: #ffaa00; font-size: 1.2rem; font-weight: 900; }
-    
-    .speedometer {
-      position: absolute; top: 70px; right: 15px;
-      background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.1); padding: 8px 14px; border-radius: 12px;
-      color: #fff; font-weight: bold; text-align: right;
-    }
-    .speedometer .val { font-size: 1.5rem; color: #00e5ff; font-family: monospace; }
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
 
-    /* Indicatore Turbo Razzo */
-    #rocket-status {
-      position: absolute; top: 70px; left: 15px;
-      background: rgba(255, 85, 0, 0.85); color: white; padding: 8px 14px;
-      border-radius: 12px; font-weight: 900; font-size: 0.85rem;
-      text-transform: uppercase; letter-spacing: 1px; display: none;
-      box-shadow: 0 0 20px rgba(255, 85, 0, 0.8);
-      animation: pulse 0.5s infinite alternate;
-    }
-    @keyframes pulse { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
+        /* UI Overlays */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(11, 15, 25, 0.92);
+            backdrop-filter: blur(8px);
+            padding: 20px;
+            text-align: center;
+        }
 
-    /* Controlli Touch Mobile */
-    .controls-container {
-      position: absolute; bottom: 20px; left: 0; width: 100%;
-      display: flex; justify-content: space-between; padding: 0 20px;
-      pointer-events: auto;
-    }
-    
-    .pedals { display: flex; gap: 12px; flex-direction: column-reverse; }
-    .btn-pedal {
-      width: 75px; height: 90px; border-radius: 16px; border: 2px solid rgba(255,255,255,0.2);
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      color: white; font-weight: 900; font-size: 0.8rem; letter-spacing: 1px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.4); backdrop-filter: blur(5px);
-      -webkit-tap-highlight-color: transparent;
-    }
-    #btn-accel { background: linear-gradient(180deg, rgba(46, 213, 115,0.8) 0%, rgba(38, 166, 91,0.9) 100%); }
-    #btn-brake { background: linear-gradient(180deg, rgba(255, 71, 87,0.8) 0%, rgba(214, 48, 49,0.9) 100%); }
-    .btn-pedal:active, .btn-pedal.active { transform: scale(0.92); opacity: 0.9; }
+        /* Innovative Intro Title */
+        .game-title-badge {
+            background: linear-gradient(135deg, #ff4e00, #ec9f05);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            box-shadow: 0 0 15px rgba(255, 78, 0, 0.5);
+        }
 
-    .steering { display: flex; gap: 15px; align-items: flex-end; }
-    .btn-steer {
-      width: 75px; height: 75px; border-radius: 50%;
-      background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
-      border: 2px solid rgba(255,255,255,0.3); color: white; font-size: 1.8rem;
-      display: flex; justify-content: center; align-items: center;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.4); -webkit-tap-highlight-color: transparent;
-    }
-    .btn-steer:active, .btn-steer.active { background: rgba(255,255,255,0.35); transform: scale(0.92); }
-  </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+        h1.main-title {
+            font-size: 38px;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 15px;
+            background: linear-gradient(180deg, #ffffff 0%, #b0bec5 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: #90a4ae;
+            max-width: 320px;
+            margin-bottom: 30px;
+            line-height: 1.4;
+        }
+
+        .instructions-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px;
+            width: 100%;
+            max-width: 320px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .instruction-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .instruction-item:last-child { margin-bottom: 0; }
+        .instruction-icon {
+            font-size: 20px;
+            margin-right: 12px;
+            width: 30px;
+            text-align: center;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #00c853, #b2ff59);
+            color: #052e16;
+            border: none;
+            padding: 18px 45px;
+            font-size: 20px;
+            font-weight: 900;
+            border-radius: 50px;
+            box-shadow: 0 10px 25px rgba(0, 200, 83, 0.4);
+            cursor: pointer;
+            letter-spacing: 1px;
+            transform: scale(1);
+            transition: transform 0.2s;
+        }
+        .btn-start:active { transform: scale(0.95); }
+
+        /* Game HUD */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 20px;
+            z-index: 5;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+
+        .hud-box {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 10px 16px;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .hud-label {
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .hud-value {
+            font-size: 22px;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        /* Rocket Alert Banner */
+        #rocket-banner {
+            position: absolute;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%) scale(0);
+            background: linear-gradient(135deg, #ff0055, #ff5000);
+            padding: 8px 24px;
+            border-radius: 30px;
+            font-weight: 900;
+            font-size: 16px;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.8);
+            z-index: 6;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
+        }
+
+        /* Mobile Controls Overlay */
+        #controls-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 180px;
+            z-index: 5;
+            display: none;
+            justify-content: space-between;
+            padding: 15px 20px 25px 20px;
+            pointer-events: none;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
+        }
+
+        .btn-ctrl {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 26px;
+            color: white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+        .btn-ctrl:active, .btn-ctrl.active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.92);
+        }
+
+        .btn-gas {
+            background: rgba(0, 200, 83, 0.3);
+            border-color: #00c853;
+            width: 80px;
+            height: 80px;
+        }
+        .btn-gas:active, .btn-gas.active {
+            background: rgba(0, 200, 83, 0.7);
+        }
+
+        .btn-brake {
+            background: rgba(213, 0, 0, 0.3);
+            border-color: #d50000;
+            width: 80px;
+            height: 80px;
+        }
+        .btn-brake:active, .btn-brake.active {
+            background: rgba(213, 0, 0, 0.7);
+        }
+
+        /* Victory & Game Over screens */
+        #victory-screen {
+            display: none;
+        }
+
+        .victory-card {
+            background: linear-gradient(180deg, rgba(30, 27, 75, 0.95), rgba(15, 23, 42, 0.95));
+            border: 2px solid #ffd700;
+            border-radius: 24px;
+            padding: 25px;
+            text-align: center;
+            max-width: 340px;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
+        }
+
+        .banana-icon {
+            font-size: 60px;
+            margin-bottom: 10px;
+            animation: bounce 1s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-12px); }
+        }
+
+        #desktop-warning {
+            display: none;
+            position: absolute;
+            top: 10px;
+            background: #ff9800;
+            color: #000;
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 20;
+        }
+    </style>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-  <!-- Overlay Schermata Iniziale / Vittoria / Game Over -->
-  <div id="overlay">
-    <div class="logo-container">
-      <h1>PANDA RUSH 3D</h1>
-      <div class="badge">Edizione Leggenda Dorata 🪡🍌</div>
+    <div id="desktop-warning">📱 Gioco ottimizzato per Touchscreen/Mobile</div>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-box">
+            <div class="hud-label">Mercedes Superate</div>
+            <div class="hud-value" id="score-val">0 <span style="font-size: 14px; color: #64748b;">/ 500</span></div>
+        </div>
+        <div class="hud-box" style="text-align: right;">
+            <div class="hud-label">Velocità</div>
+            <div class="hud-value" id="speed-val">0 <span style="font-size: 12px; color: #64748b;">km/h</span></div>
+        </div>
     </div>
-    <p class="description" id="overlay-desc">
-      Mettiti alla guida della leggendaria <b>Fiat Panda Grigia</b>! Schiva <b>500 Mercedes</b> in autostrada. Ogni 20 sorpassi attiverai il <b>RAZZO CON LE ALI</b> per 3 secondi di super velocità volante!
-    </p>
-    <button class="start-btn" id="start-btn">ACCENDI I MOTORI</button>
-  </div>
 
-  <!-- HUD di Gioco -->
-  <div id="hud">
-    <div class="stats-bar">
-      <div class="stat-card">Mercedes: <span id="score-val">0</span> / 500</div>
-      <div class="stat-card">Prossimo Razzo: <span id="rocket-count">20</span></div>
+    <!-- Rocket Notification -->
+    <div id="rocket-banner">🚀 SUPER RAZZO CON ALI ATTIVO! 🚀</div>
+
+    <!-- Touch Controls -->
+    <div id="controls-container">
+        <div class="control-group">
+            <div class="btn-ctrl" id="btn-left">◀</div>
+            <div class="btn-ctrl" id="btn-right">▶</div>
+        </div>
+        <div class="control-group" style="align-items: flex-end;">
+            <div class="btn-ctrl btn-brake" id="btn-brake">🛑<br><span style="font-size: 10px; font-weight: bold;">FRENO</span></div>
+            <div class="btn-ctrl btn-gas" id="btn-gas">⚡<br><span style="font-size: 10px; font-weight: bold;">GAS</span></div>
+        </div>
     </div>
-    <div class="speedometer">
-      <div class="val" id="speed-val">0</div>
-      <div style="font-size: 0.65rem; color: #888;">KM/H</div>
+
+    <!-- Intro Screen -->
+    <div class="overlay" id="intro-screen">
+        <div class="game-title-badge">🏎️ Edizione Speciale 3D</div>
+        <h1 class="main-title">FIAT PANDA 4X4<br><span style="color: #ffd700;">LA BANANA D'ORO</span></h1>
+        <p class="subtitle">Sfreccia sull'autostrada 3D, schiva il traffico di Mercedes e conquista il premio leggendario!</p>
+
+        <div class="instructions-card">
+            <div class="instruction-item">
+                <div class="instruction-icon">🚘</div>
+                <div>Supera <b>500 Mercedes</b> per raggiungere il traguardo.</div>
+            </div>
+            <div class="instruction-item">
+                <div class="instruction-icon">🚀</div>
+                <div>Ogni <b>20 macchine</b> attivi il <b>Super Razzo con Ali</b> (1 sec di volo invincibile).</div>
+            </div>
+            <div class="instruction-item">
+                <div class="instruction-icon">🕹️</div>
+                <div>Usa i tasti touch in basso: <b>Sterzo, Freno e Acceleratore</b>.</div>
+            </div>
+        </div>
+
+        <button class="btn-start" id="start-btn">AVVIA MOTORE</button>
     </div>
-    <div id="rocket-status">🚀 RAZZO ALATO ATTIVO! 🚀</div>
 
-    <!-- Controlli Mobile -->
-    <div class="controls-container">
-      <div class="steering">
-        <div class="btn-steer" id="btn-left">◀</div>
-        <div class="btn-steer" id="btn-right">▶</div>
-      </div>
-      <div class="pedals">
-        <div class="btn-pedal" id="btn-accel">GAS<span>▲</span></div>
-        <div class="btn-pedal" id="btn-brake">FRENO<span>▼</span></div>
-      </div>
+    <!-- Game Over Screen -->
+    <div class="overlay" id="gameover-screen" style="display: none;">
+        <h1 class="main-title" style="color: #ff5252;">INCIDENTE!</h1>
+        <p class="subtitle" id="gameover-desc">Hai urtato una Mercedes. La tua Fiat Panda ha bisogno di riparazioni!</p>
+        <button class="btn-start" id="restart-btn" style="background: linear-gradient(135deg, #ff5252, #ff793f); color: white;">RIPROVA</button>
     </div>
-  </div>
 
-<script>
-// --- CONTROLLO DISPOSITIVO MOBILE ---
-const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-if (!isMobile) {
-  document.getElementById('overlay-desc').innerHTML = "<b>ATTENZIONE:</b> Questo gioco è stato ottimizzato ed è giocabile <u>esclusivamente da dispositivi Mobile / Smartphone</u>!";
-}
+    <!-- Victory Screen -->
+    <div class="overlay" id="victory-screen">
+        <div class="victory-card">
+            <div class="banana-icon">🍌</div>
+            <h1 class="main-title" style="color: #ffd700; font-size: 28px; margin-bottom: 8px;">VITTORIA SUPREMA!</h1>
+            <p style="font-size: 14px; color: #cbd5e1; margin-bottom: 15px;">Hai superato tutte le 500 Mercedes e conquistato la <b>Banana d'Oro</b> per il tettuccio della tua Panda!</p>
+            <button class="btn-start" id="victory-btn" style="padding: 12px 30px; font-size: 16px;">GIOCA ANCORA</button>
+        </div>
+    </div>
 
-// --- SETUP SCENA 3D THREE.JS ---
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0e17);
-scene.fog = new THREE.FogExp2(0x0a0e17, 0.012);
-
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-document.body.appendChild(renderer.domElement);
-
-// Illuminazione
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-scene.add(ambientLight);
-
-const dirLight = new THREE.DirectionalLight(0xfffaed, 1.2);
-dirLight.position.set(20, 40, -10);
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.width = 1024;
-dirLight.shadow.mapSize.height = 1024;
-scene.add(dirLight);
-
-// --- CREAZIONE ASFALTO & AUTOSTRADA ---
-const roadWidth = 14;
-const roadLength = 400;
-const roadGeo = new THREE.PlaneGeometry(roadWidth, roadLength);
-const roadMat = new THREE.MeshStandardMaterial({ color: 0x1e2530, roughness: 0.8 });
-const road = new THREE.Mesh(roadGeo, roadMat);
-road.rotation.x = -Math.PI / 2;
-road.position.z = -100;
-road.receiveShadow = true;
-scene.add(road);
-
-// Strisce stradali animate
-const lineGeo = new THREE.PlaneGeometry(0.3, 4);
-const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-const roadLines = [];
-for (let i = 0; i < 25; i++) {
-  const lineLeft = new THREE.Mesh(lineGeo, lineMat);
-  lineLeft.rotation.x = -Math.PI / 2;
-  lineLeft.position.set(-2.33, 0.02, -i * 16);
-  scene.add(lineLeft);
-  roadLines.push(lineLeft);
-
-  const lineRight = new THREE.Mesh(lineGeo, lineMat);
-  lineRight.rotation.x = -Math.PI / 2;
-  lineRight.position.set(2.33, 0.02, -i * 16);
-  scene.add(lineRight);
-  roadLines.push(lineRight);
-}
-
-// Guardrail laterali
-const railGeo = new THREE.BoxGeometry(0.4, 0.8, roadLength);
-const railMat = new THREE.MeshStandardMaterial({ color: 0x8899a6, metalness: 0.8, roughness: 0.2 });
-const railL = new THREE.Mesh(railGeo, railMat);
-railL.position.set(-roadWidth / 2, 0.4, -100);
-scene.add(railL);
-const railR = new THREE.Mesh(railGeo, railMat);
-railR.position.set(roadWidth / 2, 0.4, -100);
-scene.add(railR);
-
-// --- MODELLO FIAT PANDA GRIGIA 3D ---
-function createFiatPanda() {
-  const pandaGroup = new THREE.Group();
-  
-  // Scocca Principale (Grigio Metallizzato)
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x8a929a, metalness: 0.5, roughness: 0.3 });
-  const bodyGeo = new THREE.BoxGeometry(1.8, 0.9, 3.4);
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y = 0.65;
-  body.castShadow = true;
-  pandaGroup.add(body);
-
-  // Tetto / Abitacolo Squadrato tipico Panda
-  const cabinGeo = new THREE.BoxGeometry(1.6, 0.75, 2.0);
-  const cabin = new THREE.Mesh(cabinGeo, bodyMat);
-  cabin.position.set(0, 1.35, -0.2);
-  cabin.castShadow = true;
-  pandaGroup.add(cabin);
-
-  // Vetri Scuri
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x111122, roughness: 0.1 });
-  const windshield = new THREE.Mesh(new THREE.PlaneGeometry(1.45, 0.65), glassMat);
-  windshield.position.set(0, 1.4, 0.81);
-  windshield.rotation.x = -Math.PI / 12;
-  pandaGroup.add(windshield);
-
-  // Ruote
-  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 16);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9 });
-  wheelGeo.rotateZ(Math.PI / 2);
-
-  const wheelPositions = [
-    [-0.95, 0.35, 1.1], [0.95, 0.35, 1.1],
-    [-0.95, 0.35, -1.1], [0.95, 0.35, -1.1]
-  ];
-  wheelPositions.forEach(pos => {
-    const w = new THREE.Mesh(wheelGeo, wheelMat);
-    w.position.set(...pos);
-    w.castShadow = true;
-    pandaGroup.add(w);
-  });
-
-  // Fari anteriori
-  const lightGeo = new THREE.BoxGeometry(0.35, 0.25, 0.1);
-  const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffcc });
-  const headL = new THREE.Mesh(lightGeo, lightMat); headL.position.set(-0.6, 0.7, 1.71);
-  const headR = new THREE.Mesh(lightGeo, lightMat); headR.position.set(0.6, 0.7, 1.71);
-  pandaGroup.add(headL); pandaGroup.add(headR);
-
-  // --- ALI E RAZZI LATERALI (Per Modalità Bonus) ---
-  const wingsGroup = new THREE.Group();
-  wingsGroup.name = "wingsGroup";
-  
-  // Ali bianche
-  const wingMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
-  const wingL = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.8), wingMat);
-  wingL.position.set(-1.6, 0.8, -0.2);
-  wingL.rotation.z = 0.15;
-  const wingR = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.8), wingMat);
-  wingR.position.set(1.6, 0.8, -0.2);
-  wingR.rotation.z = -0.15;
-  wingsGroup.add(wingL); wingsGroup.add(wingR);
-
-  // Razzi antincendio posteriori
-  const rocketMat = new THREE.MeshStandardMaterial({ color: 0xff3300, metalness: 0.8 });
-  const rocketGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 12);
-  const rL = new THREE.Mesh(rocketGeo, rocketMat); rL.rotation.x = Math.PI / 2; rL.position.set(-0.6, 0.8, -1.9);
-  const rR = new THREE.Mesh(rocketGeo, rocketMat); rR.rotation.x = Math.PI / 2; rR.position.set(0.6, 0.8, -1.9);
-  wingsGroup.add(rL); wingsGroup.add(rR);
-
-  // Fiamma del Razzo
-  const flameGeo = new THREE.ConeGeometry(0.22, 1.2, 12);
-  const flameMat = new THREE.MeshBasicMaterial({ color: 0x00d8ff });
-  const flameL = new THREE.Mesh(flameGeo, flameMat); flameL.rotation.x = -Math.PI / 2; flameL.position.set(-0.6, 0.8, -2.6);
-  const flameR = new THREE.Mesh(flameGeo, flameMat); flameR.rotation.x = -Math.PI / 2; flameR.position.set(0.6, 0.8, -2.6);
-  wingsGroup.add(flameL); wingsGroup.add(flameR);
-
-  wingsGroup.visible = false;
-  pandaGroup.add(wingsGroup);
-
-  return pandaGroup;
-}
-
-const panda = createFiatPanda();
-scene.add(panda);
-
-// --- MODELLO MERCEDES (Nera / Elegante) ---
-function createMercedes() {
-  const mercGroup = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0f141d, metalness: 0.8, roughness: 0.2 });
-  
-  // Scocca filante
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.75, 3.8), bodyMat);
-  body.position.y = 0.55;
-  body.castShadow = true;
-  mercGroup.add(body);
-
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.65, 2.2), bodyMat);
-  cabin.position.set(0, 1.15, -0.2);
-  mercGroup.add(cabin);
-
-  // Stella Mercedes frontale (Dettaglio)
-  const starGeo = new THREE.TorusGeometry(0.12, 0.03, 8, 12);
-  const starMat = new THREE.MeshBasicMaterial({ color: 0xeeeeee });
-  const star = new THREE.Mesh(starGeo, starMat);
-  star.position.set(0, 0.7, 1.91);
-  mercGroup.add(star);
-
-  // Ruote
-  const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.3, 16);
-  wheelGeo.rotateZ(Math.PI / 2);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-  [[-1,0.36,1.2],[1,0.36,1.2],[-1,0.36,-1.2],[1,0.36,-1.2]].forEach(pos => {
-    const w = new THREE.Mesh(wheelGeo, wheelMat);
-    w.position.set(...pos);
-    mercGroup.add(w);
-  });
-
-  return mercGroup;
-}
-
-// --- CREAZIONE PODIO E BANANA D'ORO 3D ---
-let victoryGroup = new THREE.Group();
-function buildVictoryPodium() {
-  // Podio
-  const podMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.5, roughness: 0.3 });
-  const podMesh = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4, 1.8, 32), podMat);
-  podMesh.position.y = 0.9;
-  victoryGroup.add(podMesh);
-
-  // Banana d'Oro 3D
-  const bananaGroup = new THREE.Group();
-  const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9, roughness: 0.15, emissive: 0x332200 });
-  
-  // Curvatura Banana
-  const curve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.8, -0.6, 0),
-    new THREE.Vector3(-0.4, -0.8, 0),
-    new THREE.Vector3(0.4, -0.2, 0),
-    new THREE.Vector3(0.8, 0.8, 0)
-  ]);
-  const bananaGeo = new THREE.TubeGeometry(curve, 20, 0.35, 8, false);
-  const bananaMesh = new THREE.Mesh(bananaGeo, goldMat);
-  bananaGroup.add(bananaMesh);
-  
-  bananaGroup.position.set(0, 3.8, 0);
-  bananaGroup.scale.set(1.8, 1.8, 1.8);
-  bananaGroup.name = "goldenBanana";
-  victoryGroup.add(bananaGroup);
-
-  victoryGroup.position.set(0, 0, -30);
-  victoryGroup.visible = false;
-  scene.add(victoryGroup);
-}
-buildVictoryPodium();
-
-// --- STATO E LOGICA DI GIOCO ---
-let gameRunning = false;
-let isVictory = false;
-let currentSpeed = 0;
-const maxSpeed = 1.6;
-const accelRate = 0.015;
-const brakeRate = 0.035;
-const friction = 0.008;
-
-let pandaPosX = 0;
-let passedMercedesCount = 0;
-const targetMercedes = 500;
-
-let rocketActive = false;
-let rocketTimer = 0;
-let nextRocketThreshold = 20;
-
-const mercedesList = [];
-const lanePositions = [-4.5, -1.5, 1.5, 4.5];
-
-// Input Touch
-let keys = { left: false, right: false, accel: false, brake: false };
-
-function setupTouchControls() {
-  const bindTouch = (id, keyName) => {
-    const el = document.getElementById(id);
-    const start = (e) => { e.preventDefault(); keys[keyName] = true; el.classList.add('active'); };
-    const end = (e) => { e.preventDefault(); keys[keyName] = false; el.classList.remove('active'); };
-    el.addEventListener('touchstart', start, { passive: false });
-    el.addEventListener('touchend', end, { passive: false });
-    el.addEventListener('mousedown', start);
-    el.addEventListener('mouseup', end);
-  };
-
-  bindTouch('btn-left', 'left');
-  bindTouch('btn-right', 'right');
-  bindTouch('btn-accel', 'accel');
-  bindTouch('btn-brake', 'brake');
-}
-setupTouchControls();
-
-// Generazione traffico Mercedes
-function spawnMercedes() {
-  if (mercedesList.length < 8 && !isVictory) {
-    const merc = createMercedes();
-    const lane = lanePositions[Math.floor(Math.random() * lanePositions.length)];
-    const zPos = -120 - Math.random() * 150;
-    merc.position.set(lane, 0, zPos);
-    scene.add(merc);
-    mercedesList.push(merc);
-  }
-}
-
-// Avvio Partita
-const startBtn = document.getElementById('start-btn');
-startBtn.addEventListener('click', startGame);
-startBtn.addEventListener('touchend', (e) => { e.preventDefault(); startGame(); });
-
-function startGame() {
-  document.getElementById('overlay').style.opacity = '0';
-  setTimeout(() => { document.getElementById('overlay').style.display = 'none'; }, 500);
-  document.getElementById('hud').style.display = 'block';
-
-  // Reset variabili
-  gameRunning = true;
-  isVictory = false;
-  currentSpeed = 0;
-  pandaPosX = 0;
-  passedMercedesCount = 0;
-  nextRocketThreshold = 20;
-  rocketActive = false;
-
-  document.getElementById('score-val').innerText = '0';
-  document.getElementById('rocket-count').innerText = '20';
-
-  panda.position.set(0, 0, 0);
-  panda.getObjectByName("wingsGroup").visible = false;
-  victoryGroup.visible = false;
-
-  // Pulisci Mercedes precedenti
-  mercedesList.forEach(m => scene.remove(m));
-  mercedesList.length = 0;
-}
-
-// Attivazione Bonus Razzo Alato (3 Secondi)
-function triggerRocketBonus() {
-  rocketActive = true;
-  rocketTimer = Date.now() + 3000;
-  panda.getObjectByName("wingsGroup").visible = true;
-  document.getElementById('rocket-status').style.display = 'block';
-}
-
-function deactivateRocket() {
-  rocketActive = false;
-  panda.getObjectByName("wingsGroup").visible = false;
-  document.getElementById('rocket-status').style.display = 'none';
-  panda.position.y = 0;
-}
-
-// GAME OVER (Incidente)
-function triggerGameOver() {
-  gameRunning = false;
-  document.getElementById('hud').style.display = 'none';
-  const overlay = document.getElementById('overlay');
-  overlay.style.display = 'flex';
-  overlay.style.opacity = '1';
-  document.getElementById('overlay-desc').innerHTML = `<span style="color:#ff4757; font-size:1.3rem; font-weight:900;">IMPATTO DETONANTE! 💥</span><br><br>Hai distrutto la Panda dopo aver superato <b>${passedMercedesCount}</b> Mercedes! Riprova subito.`;
-  startBtn.innerText = 'RIPROVA ORA';
-}
-
-// VITTORIA (500 Mercedes superate)
-function triggerVictory() {
-  gameRunning = false;
-  isVictory = true;
-  deactivateRocket();
-  
-  // Posiziona Podio davanti
-  victoryGroup.visible = true;
-  panda.position.set(0, 1.8, -30);
-  panda.rotation.y = Math.PI;
-
-  // Effetto Fuochi d'Artificio
-  const duration = 5 * 1000;
-  const animationEnd = Date.now() + duration;
-  const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
-
-  const interval = setInterval(function() {
-    const timeLeft = animationEnd - Date.now();
-    if (timeLeft <= 0) return clearInterval(interval);
-    const particleCount = 50 * (timeLeft / duration);
-    confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } }));
-  }, 250);
-
-  setTimeout(() => {
-    document.getElementById('hud').style.display = 'none';
-    const overlay = document.getElementById('overlay');
-    overlay.style.display = 'flex';
-    overlay.style.opacity = '1';
-    document.getElementById('overlay-desc').innerHTML = `<span style="color:#ffd700; font-size:1.4rem; font-weight:900;">IMPRESA EROICA! 🏆🍌</span><br><br>Hai superato tutte le <b>500 Mercedes</b> con la Fiat Panda! Conquistata la <b>BANANA D'ORO</b>!`;
-    startBtn.innerText = 'GIOCA ANCORA';
-  }, 4000);
-}
-
-// --- CICLO PRINCIPALE DI RENDERING (60 FPS) ---
-function animate() {
-  requestAnimationFrame(animate);
-
-  if (gameRunning) {
-    // 1. Gestione Accelerazione / Freno / Attrito
-    if (rocketActive) {
-      currentSpeed = maxSpeed * 1.8; // Velocità Spaziale Turbo
-      panda.position.y = 1.2; // La Panda vola in alto per schivare tutto!
-      
-      if (Date.now() > rocketTimer) {
-        deactivateRocket();
-      }
-    } else {
-      if (keys.accel) currentSpeed = Math.min(currentSpeed + accelRate, maxSpeed);
-      else if (keys.brake) currentSpeed = Math.max(currentSpeed - brakeRate, 0);
-      else currentSpeed = Math.max(currentSpeed - friction, 0);
-      panda.position.y = 0;
-    }
-
-    // 2. Sterzo Lateralmente
-    const steerSpeed = 0.18;
-    if (keys.left && pandaPosX > -roadWidth / 2 + 1.2) pandaPosX -= steerSpeed;
-    if (keys.right && pandaPosX < roadWidth / 2 - 1.2) pandaPosX += steerSpeed;
-
-    panda.position.x = pandaPosX;
-    panda.rotation.z = keys.left ? 0.08 : (keys.right ? -0.08 : 0);
-    panda.rotation.y = keys.left ? 0.05 : (keys.right ? -0.05 : 0);
-
-    // 3. Movimento Asfalto & Linee
-    roadLines.forEach(line => {
-      line.position.z += currentSpeed * 20;
-      if (line.position.z > 10) line.position.z -= 400;
-    });
-
-    // 4. Gestione Traffico Mercedes
-    spawnMercedes();
-    for (let i = mercedesList.length - 1; i >= 0; i--) {
-      const merc = mercedesList[i];
-      // Le Mercedes procedono più lente della Panda
-      merc.position.z += currentSpeed * 20 - 0.4;
-
-      // Check Sorpasso avvenuto
-      if (merc.position.z > panda.position.z + 4) {
-        scene.remove(merc);
-        mercedesList.splice(i, 1);
-        passedMercedesCount++;
-        
-        document.getElementById('score-val').innerText = passedMercedesCount;
-        
-        // Calcolo prossimo Razzo (Ogni 20)
-        const remainingForRocket = nextRocketThreshold - passedMercedesCount;
-        document.getElementById('rocket-count').innerText = Math.max(0, remainingForRocket);
-
-        if (passedMercedesCount >= nextRocketThreshold) {
-          nextRocketThreshold += 20;
-          triggerRocketBonus();
+    <script>
+        // Check Mobile Device
+        if (!('ontouchstart' in window) && window.innerWidth > 800) {
+            document.getElementById('desktop-warning').style.display = 'block';
         }
 
-        // Check Vittoria (500 Mercedes)
-        if (passedMercedesCount >= targetMercedes) {
-          triggerVictory();
+        // --- CONSTANTS & GAME STATE ---
+        const TARGET_CARS = 500;
+        const ROCKET_INTERVAL = 20;
+        const ROCKET_DURATION = 1.0; // Seconds
+
+        let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER, VICTORY
+        let carsPassed = 0;
+        let speed = 0; // Current forward speed
+        let maxSpeed = 0.8;
+        let baseSpeed = 0.4;
+        let acceleration = 0.015;
+        let deceleration = 0.01;
+        let pandaX = 0;
+        let pandaTargetX = 0;
+        let rocketTimer = 0;
+
+        // Input States
+        const keys = { left: false, right: false, gas: false, brake: false };
+
+        // THREE.JS Variables
+        let scene, camera, renderer;
+        let pandaMesh, wingsMesh, rocketFireMesh, goldenBananaMesh;
+        let roadMesh, roadLines = [];
+        let sceneryObjects = [];
+        let mercedesCars = [];
+        let fireworks = [];
+        let podiumGroup;
+
+        const LANES = [-3.2, 0, 3.2];
+
+        // --- INIT THREE.JS SCENE ---
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xfffaed, 0.8);
+            dirLight.position.set(20, 40, 20);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 150;
+            scene.add(dirLight);
+
+            // Build Environment & Cars
+            createRoad();
+            createPanda();
+            
+            // Set initial camera position for gameplay
+            resetCamera();
+
+            window.addEventListener('resize', onWindowResize);
         }
-        continue;
-      }
 
-      // Check Collisione (Se non attivo il razzo alato in volo)
-      if (!rocketActive) {
-        const dx = Math.abs(panda.position.x - merc.position.x);
-        const dz = Math.abs(panda.position.z - merc.position.z);
-        if (dx < 1.7 && dz < 3.0) {
-          triggerGameOver();
+        // --- PROCEDURAL MODELS ---
+
+        // 1. FIAT PANDA 3D MODEL
+        function createPanda() {
+            const pandaGroup = new THREE.Group();
+
+            // Main Body (Grey Boxy Fiat Panda Shape)
+            const bodyGeo = new THREE.BoxGeometry(2.1, 1.1, 3.6);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x8a929a, roughness: 0.3, metalness: 0.4 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.85;
+            body.castShadow = true;
+            pandaGroup.add(body);
+
+            // Roof / Glass Cabin
+            const cabinGeo = new THREE.BoxGeometry(1.9, 0.9, 2.0);
+            const cabinMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.1, metalness: 0.8 });
+            const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+            cabin.position.set(0, 1.7, -0.2);
+            cabin.castShadow = true;
+            pandaGroup.add(cabin);
+
+            // Black Bumpers (Classic Panda detail)
+            const bumperMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.8 });
+            const fBumper = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.4, 0.3), bumperMat);
+            fBumper.position.set(0, 0.5, 1.8);
+            pandaGroup.add(fBumper);
+
+            const rBumper = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.4, 0.3), bumperMat);
+            rBumper.position.set(0, 0.5, -1.8);
+            pandaGroup.add(rBumper);
+
+            // Headlights
+            const lightGeo = new THREE.BoxGeometry(0.4, 0.25, 0.1);
+            const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const hlLeft = new THREE.Mesh(lightGeo, lightMat);
+            hlLeft.position.set(-0.7, 0.8, 1.81);
+            const hlRight = hlLeft.clone();
+            hlRight.position.x = 0.7;
+            pandaGroup.add(hlLeft);
+            pandaGroup.add(hlRight);
+
+            // Wheels
+            const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+            wheelGeo.rotateZ(Math.PI / 2);
+
+            const posW = [[-1.1, 0.4, 1.1], [1.1, 0.4, 1.1], [-1.1, 0.4, -1.1], [1.1, 0.4, -1.1]];
+            posW.forEach(p => {
+                const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+                wheel.position.set(...p);
+                wheel.castShadow = true;
+                pandaGroup.add(wheel);
+            });
+
+            // --- BONUS ROCKET WITH WINGS ---
+            const rocketGroup = new THREE.Group();
+
+            // Wings
+            const wingGeo = new THREE.BoxGeometry(3.6, 0.08, 0.8);
+            const wingMat = new THREE.MeshStandardMaterial({ color: 0xff0055, metalness: 0.5 });
+            wingsMesh = new THREE.Mesh(wingGeo, wingMat);
+            wingsMesh.position.set(0, 1.2, 0);
+            rocketGroup.add(wingsMesh);
+
+            // Rocket Thruster Rear
+            const rocketGeo = new THREE.CylinderGeometry(0.25, 0.35, 1.0, 12);
+            rocketGeo.rotateX(Math.PI / 2);
+            const rocketMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.8 });
+            const thruster = new THREE.Mesh(rocketGeo, rocketMat);
+            thruster.position.set(0, 1.3, -2.1);
+            rocketGroup.add(thruster);
+
+            // Flame
+            const flameGeo = new THREE.ConeGeometry(0.35, 1.2, 12);
+            flameGeo.rotateX(-Math.PI / 2);
+            const flameMat = new THREE.MeshBasicMaterial({ color: 0xff5000 });
+            rocketFireMesh = new THREE.Mesh(flameGeo, flameMat);
+            rocketFireMesh.position.set(0, 1.3, -3.0);
+            rocketGroup.add(rocketFireMesh);
+
+            rocketGroup.visible = false; // Hidden by default
+            pandaGroup.add(rocketGroup);
+
+            // --- GOLDEN BANANA (For Trophy/Roof) ---
+            const bananaGroup = new THREE.Group();
+            const curve = new THREE.QuadraticBezierCurve3(
+                new THREE.Vector3(-0.6, 0, 0),
+                new THREE.Vector3(0, 0.5, 0),
+                new THREE.Vector3(0.6, 0.2, 0)
+            );
+            const tubeGeo = new THREE.TubeGeometry(curve, 20, 0.18, 8, false);
+            const bananaMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9, roughness: 0.1 });
+            goldenBananaMesh = new THREE.Mesh(tubeGeo, bananaMat);
+            goldenBananaMesh.position.set(0, 2.3, -0.2);
+            goldenBananaMesh.rotation.y = Math.PI / 4;
+            goldenBananaMesh.visible = false; // Hidden until victory
+            pandaGroup.add(goldenBananaMesh);
+
+            pandaMesh = pandaGroup;
+            scene.add(pandaMesh);
         }
-      }
-    }
 
-    // Update HUD Velocità
-    document.getElementById('speed-val').innerText = Math.floor(currentSpeed * 120);
+        // 2. MERCEDES CAR MODEL
+        function createMercedesMesh() {
+            const mercGroup = new THREE.Group();
 
-    // Telecamera segue la Panda
-    camera.position.set(panda.position.x * 0.4, 4.5, panda.position.z + 8);
-    camera.lookAt(panda.position.x * 0.2, 1.2, panda.position.z - 10);
+            // Sleeker, lower sedan body
+            const bodyGeo = new THREE.BoxGeometry(2.1, 0.9, 4.2);
+            const colors = [0x1e293b, 0xf8fafc, 0x0f172a, 0x475569];
+            const randColor = colors[Math.floor(Math.random() * colors.length)];
+            const bodyMat = new THREE.MeshStandardMaterial({ color: randColor, roughness: 0.2, metalness: 0.6 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.65;
+            body.castShadow = true;
+            mercGroup.add(body);
 
-  } else if (isVictory) {
-    // Animazione Rotazione Banana d'Oro nel Podio
-    const banana = victoryGroup.getObjectByName("goldenBanana");
-    if (banana) banana.rotation.y += 0.03;
+            // Cabin
+            const cabinGeo = new THREE.BoxGeometry(1.8, 0.75, 2.2);
+            const cabinMat = new THREE.MeshStandardMaterial({ color: 0x020617, metalness: 0.9, roughness: 0.1 });
+            const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+            cabin.position.set(0, 1.4, -0.2);
+            mercGroup.add(cabin);
 
-    // Telecamera Panoramica Podio
-    const time = Date.now() * 0.001;
-    camera.position.x = Math.sin(time * 0.5) * 12;
-    camera.position.z = -30 + Math.cos(time * 0.5) * 12;
-    camera.position.y = 5;
-    camera.lookAt(0, 2.5, -30);
-  }
+            // Distinct Chrome Grille Front
+            const grilleGeo = new THREE.BoxGeometry(1.4, 0.4, 0.1);
+            const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.05 });
+            const grille = new THREE.Mesh(grilleGeo, chromeMat);
+            grille.position.set(0, 0.65, 2.11);
+            mercGroup.add(grille);
 
-  renderer.render(scene, camera);
-}
+            // Red Taillights
+            const tLightGeo = new THREE.BoxGeometry(0.5, 0.2, 0.1);
+            const tLightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+            const tlL = new THREE.Mesh(tLightGeo, tLightMat);
+            tlL.position.set(-0.7, 0.7, -2.11);
+            const tlR = tlL.clone();
+            tlR.position.x = 0.7;
+            mercGroup.add(tlL);
+            mercGroup.add(tlR);
 
-// Ridimensionamento Finestra
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+            return mercGroup;
+        }
 
-animate();
-</script>
+        // 3. ROAD & ENVIRONMENT
+        function createRoad() {
+            // Road Plane
+            const roadGeo = new THREE.PlaneGeometry(12, 300);
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+            roadMesh = new THREE.Mesh(roadGeo, roadMat);
+            roadMesh.rotation.x = -Math.PI / 2;
+            roadMesh.position.z = 50;
+            roadMesh.receiveShadow = true;
+            scene.add(roadMesh);
+
+            // Road Lines
+            const lineGeo = new THREE.PlaneGeometry(0.25, 4);
+            const lineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+
+            for (let z = -80; z < 200; z += 10) {
+                [-1.6, 1.6].forEach(x => {
+                    const line = new THREE.Mesh(lineGeo, lineMat);
+                    line.rotation.x = -Math.PI / 2;
+                    line.position.set(x, 0.02, z);
+                    scene.add(line);
+                    roadLines.push(line);
+                });
+            }
+
+            // Side Grass / Terrain
+            const grassGeo = new THREE.PlaneGeometry(100, 300);
+            const grassMat = new THREE.MeshStandardMaterial({ color: 0x064e3b, roughness: 1.0 });
+            const grassL = new THREE.Mesh(grassGeo, grassMat);
+            grassL.rotation.x = -Math.PI / 2;
+            grassL.position.set(-56, -0.05, 50);
+            scene.add(grassL);
+
+            const grassR = grassL.clone();
+            grassR.position.x = 56;
+            scene.add(grassR);
+
+            // Trees along road
+            for (let z = -80; z < 200; z += 18) {
+                [-9, 9].forEach(x => {
+                    const tree = createTree();
+                    tree.position.set(x + (Math.random() - 0.5) * 2, 0, z);
+                    scene.add(tree);
+                    sceneryObjects.push(tree);
+                });
+            }
+        }
+
+        function createTree() {
+            const group = new THREE.Group();
+            const trunk = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.3, 0.4, 2),
+                new THREE.MeshStandardMaterial({ color: 0x78350f })
+            );
+            trunk.position.y = 1;
+            group.add(trunk);
+
+            const leaves = new THREE.Mesh(
+                new THREE.ConeGeometry(1.8, 4, 8),
+                new THREE.MeshStandardMaterial({ color: 0x047857 })
+            );
+            leaves.position.y = 3.5;
+            leaves.castShadow = true;
+            group.add(leaves);
+
+            return group;
+        }
+
+        // --- TRAFFIC MANAGEMENT ---
+        function spawnMercedes() {
+            if (gameState !== 'PLAYING') return;
+
+            const lane = LANES[Math.floor(Math.random() * LANES.length)];
+            const merc = createMercedesMesh();
+            // Spawn ahead of Panda
+            merc.position.set(lane, 0, pandaMesh.position.z + 100 + Math.random() * 20);
+            merc.userData = { speed: 0.15 + Math.random() * 0.1, passed: false };
+            scene.add(merc);
+            mercedesCars.push(merc);
+        }
+
+        // --- FIREWORKS SYSTEM (VICTORY) ---
+        function createFirework() {
+            const particleCount = 40;
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const velocities = [];
+
+            const startX = (Math.random() - 0.5) * 20;
+            const startY = 8 + Math.random() * 10;
+            const startZ = pandaMesh.position.z + (Math.random() - 0.5) * 10;
+
+            for (let i = 0; i < particleCount; i++) {
+                positions.push(startX, startY, startZ);
+                const p = new THREE.Vector3(
+                    (Math.random() - 0.5) * 12,
+                    (Math.random() - 0.5) * 12,
+                    (Math.random() - 0.5) * 12
+                );
+                velocities.push(p.x, p.y, p.z);
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const material = new THREE.PointsMaterial({ color: 0xff0044, size: 0.6, transparent: true, opacity: 1 });
+            const pSystem = new THREE.Points(geometry, material);
+            pSystem.userData = { velocities: velocities, life: 1.0 };
+            scene.add(pSystem);
+            fireworks.push(pSystem);
+        }
+
+        function updateFireworks(delta) {
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                const fw = fireworks[i];
+                fw.userData.life -= delta * 0.8;
+                if (fw.userData.life <= 0) {
+                    scene.remove(fw);
+                    fireworks.splice(i, 1);
+                    continue;
+                }
+                fw.material.opacity = fw.userData.life;
+                const pos = fw.geometry.attributes.position.array;
+                const v = fw.userData.velocities;
+
+                for (let j = 0; j < pos.length; j += 3) {
+                    pos[j] += v[j / 3 * 3] * delta;
+                    pos[j + 1] += v[j / 3 * 3 + 1] * delta;
+                    pos[j + 2] += v[j / 3 * 3 + 2] * delta;
+                }
+                fw.geometry.attributes.position.needsUpdate = true;
+            }
+        }
+
+        // --- PODIUM SCENE (VICTORY) ---
+        function setupVictoryPodium() {
+            podiumGroup = new THREE.Group();
+
+            // 1st Place Podium Block
+            const podGeo = new THREE.BoxGeometry(6, 3, 6);
+            const podMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, metalness: 0.5, roughness: 0.2 });
+            const podium = new THREE.Mesh(podGeo, podMat);
+            podium.position.set(0, 1.5, pandaMesh.position.z + 15);
+            podiumGroup.add(podium);
+
+            scene.add(podiumGroup);
+
+            // Move Panda onto Podium
+            pandaMesh.position.set(0, 3.0, pandaMesh.position.z + 15);
+            pandaMesh.rotation.set(0, Math.PI / 6, 0);
+
+            // Show Golden Banana
+            goldenBananaMesh.visible = true;
+
+            // Camera View on Podium
+            camera.position.set(0, 5, pandaMesh.position.z + 7);
+            camera.lookAt(pandaMesh.position.x, pandaMesh.position.y + 1, pandaMesh.position.z);
+        }
+
+        // --- INPUT CONTROLS SETUP ---
+        function setupControls() {
+            const bindTouch = (id, keyName) => {
+                const btn = document.getElementById(id);
+                const start = (e) => { e.preventDefault(); keys[keyName] = true; btn.classList.add('active'); };
+                const end = (e) => { e.preventDefault(); keys[keyName] = false; btn.classList.remove('active'); };
+                btn.addEventListener('touchstart', start);
+                btn.addEventListener('touchend', end);
+                btn.addEventListener('mousedown', start);
+                btn.addEventListener('mouseup', end);
+            };
+
+            bindTouch('btn-left', 'left');
+            bindTouch('btn-right', 'right');
+            bindTouch('btn-gas', 'gas');
+            bindTouch('btn-brake', 'brake');
+
+            // Keyboard Fallback for testing
+            window.addEventListener('keydown', e => {
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+                if (e.key === 'ArrowUp' || e.key === 'w') keys.gas = true;
+                if (e.key === 'ArrowDown' || e.key === 's') keys.brake = true;
+            });
+
+            window.addEventListener('keyup', e => {
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+                if (e.key === 'ArrowUp' || e.key === 'w') keys.gas = false;
+                if (e.key === 'ArrowDown' || e.key === 's') keys.brake = false;
+            });
+
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('restart-btn').addEventListener('click', startGame);
+            document.getElementById('victory-btn').addEventListener('click', startGame);
+        }
+
+        // --- GAME LOGIC & LOOP ---
+
+        function resetCamera() {
+            camera.position.set(0, 4, pandaMesh.position.z - 7);
+            camera.lookAt(0, 1.5, pandaMesh.position.z + 10);
+        }
+
+        function startGame() {
+            gameState = 'PLAYING';
+            carsPassed = 0;
+            speed = baseSpeed;
+            pandaX = 0;
+            rocketTimer = 0;
+
+            // Reset UI
+            document.getElementById('intro-screen').style.display = 'none';
+            document.getElementById('gameover-screen').style.display = 'none';
+            document.getElementById('victory-screen').style.display = 'none';
+            document.getElementById('hud').style.display = 'flex';
+            document.getElementById('controls-container').style.display = 'flex';
+            document.getElementById('score-val').innerHTML = `0 <span style="font-size: 14px; color: #64748b;">/ ${TARGET_CARS}</span>`;
+
+            // Clear Cars
+            mercedesCars.forEach(c => scene.remove(c));
+            mercedesCars = [];
+
+            if (podiumGroup) scene.remove(podiumGroup);
+
+            // Reset Panda
+            pandaMesh.position.set(0, 0, 0);
+            pandaMesh.rotation.set(0, 0, 0);
+            goldenBananaMesh.visible = false;
+            wingsMesh.parent.visible = false;
+
+            resetCamera();
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('controls-container').style.display = 'none';
+            document.getElementById('gameover-screen').style.display = 'flex';
+            document.getElementById('gameover-desc').innerText = `Hai superato ${carsPassed} Mercedes prima dell'impatto!`;
+        }
+
+        function triggerVictory() {
+            gameState = 'VICTORY';
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('controls-container').style.display = 'none';
+            document.getElementById('victory-screen').style.display = 'flex';
+
+            setupVictoryPodium();
+        }
+
+        function activateRocketBonus() {
+            rocketTimer = ROCKET_DURATION;
+            const banner = document.getElementById('rocket-banner');
+            banner.style.transform = 'translateX(-50%) scale(1)';
+            wingsMesh.parent.visible = true;
+
+            setTimeout(() => {
+                banner.style.transform = 'translateX(-50%) scale(0)';
+            }, 1200);
+        }
+
+        let lastTime = performance.now();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const now = performance.now();
+            const delta = Math.min((now - lastTime) / 1000, 0.1);
+            lastTime = now;
+
+            if (gameState === 'PLAYING') {
+
+                // 1. Acceleration & Speed Controls
+                if (keys.gas) {
+                    speed = Math.min(speed + acceleration, maxSpeed);
+                } else if (keys.brake) {
+                    speed = Math.max(speed - deceleration * 2, 0.1);
+                } else {
+                    // Friction/Coasting
+                    if (speed > baseSpeed) speed -= deceleration;
+                    if (speed < baseSpeed) speed += deceleration;
+                }
+
+                // 2. Rocket Bonus Handling
+                let activeSpeed = speed;
+                let isFlying = false;
+
+                if (rocketTimer > 0) {
+                    rocketTimer -= delta;
+                    activeSpeed = maxSpeed * 2.2; // Turbo speed
+                    isFlying = true;
+                    pandaMesh.position.y = 2.0; // Fly above ground
+                    rocketFireMesh.scale.set(1, 1 + Math.random() * 0.5, 1);
+
+                    if (rocketTimer <= 0) {
+                        wingsMesh.parent.visible = false;
+                    }
+                } else {
+                    pandaMesh.position.y = 0;
+                }
+
+                // Update UI Speedometer
+                document.getElementById('speed-val').innerText = Math.round(activeSpeed * 180);
+
+                // 3. Steering Logic
+                if (keys.left) pandaX -= 7.5 * delta;
+                if (keys.right) pandaX += 7.5 * delta;
+                pandaX = Math.max(-4.2, Math.min(4.2, pandaX)); // Road boundaries
+
+                pandaMesh.position.x += (pandaX - pandaMesh.position.x) * 0.2;
+                pandaMesh.rotation.z = -(pandaX - pandaMesh.position.x) * 0.15; // Lean into turns
+                pandaMesh.position.z += activeSpeed * 60 * delta;
+
+                // 4. Move Camera with Panda
+                camera.position.z = pandaMesh.position.z - 8;
+                camera.position.x = pandaMesh.position.x * 0.4;
+                camera.lookAt(pandaMesh.position.x * 0.6, 1.2, pandaMesh.position.z + 12);
+
+                // Infinite Road Loop repositioning
+                if (roadMesh.position.z < pandaMesh.position.z + 50) {
+                    roadMesh.position.z += 60;
+                }
+                roadLines.forEach(l => {
+                    if (l.position.z < pandaMesh.position.z - 10) l.position.z += 180;
+                });
+                sceneryObjects.forEach(s => {
+                    if (s.position.z < pandaMesh.position.z - 10) s.position.z += 200;
+                });
+
+                // 5. Traffic Spawning & Collision
+                if (Math.random() < 0.035 && mercedesCars.length < 8) {
+                    spawnMercedes();
+                }
+
+                for (let i = mercedesCars.length - 1; i >= 0; i--) {
+                    const merc = mercedesCars[i];
+                    merc.position.z += merc.userData.speed * 30 * delta;
+
+                    // Check if passed
+                    if (!merc.userData.passed && merc.position.z < pandaMesh.position.z - 2) {
+                        merc.userData.passed = true;
+                        carsPassed++;
+                        document.getElementById('score-val').innerHTML = `${carsPassed} <span style="font-size: 14px; color: #64748b;">/ ${TARGET_CARS}</span>`;
+
+                        // Trigger Rocket Bonus every 20 cars passed
+                        if (carsPassed > 0 && carsPassed % ROCKET_INTERVAL === 0) {
+                            activateRocketBonus();
+                        }
+
+                        // Check Victory Condition
+                        if (carsPassed >= TARGET_CARS) {
+                            triggerVictory();
+                            return;
+                        }
+                    }
+
+                    // Collision Check (AABB Bounding Box)
+                    if (!isFlying) {
+                        const dz = Math.abs(merc.position.z - pandaMesh.position.z);
+                        const dx = Math.abs(merc.position.x - pandaMesh.position.x);
+
+                        if (dz < 3.2 && dx < 1.8) {
+                            triggerGameOver();
+                            return;
+                        }
+                    }
+
+                    // Remove distant cars behind player
+                    if (merc.position.z < pandaMesh.position.z - 30) {
+                        scene.remove(merc);
+                        mercedesCars.splice(i, 1);
+                    }
+                }
+
+            } else if (gameState === 'VICTORY') {
+                // Victory Fireworks & Podium Animation
+                if (Math.random() < 0.1) {
+                    createFirework();
+                }
+                updateFireworks(delta);
+                if (goldenBananaMesh) {
+                    goldenBananaMesh.rotation.y += delta * 2;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- START APPLICATION ---
+        window.onload = () => {
+            initScene();
+            setupControls();
+            animate();
+        };
+    </script>
 </body>
 </html>
-"""
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-print("File index.html creato con successo!")
