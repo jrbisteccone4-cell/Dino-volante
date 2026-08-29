@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+html_code_v2 = """<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Panda 4x4: New York 500 Pass - Dynamic 3D Edition</title>
+  <title>Fiat Panda Rossa 3D - New York Pass 500</title>
   <style>
     * { box-sizing: border-box; touch-action: none; user-select: none; }
     body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #020617; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -13,7 +13,7 @@
     
     #score-box {
       position: absolute; top: 20px; left: 20px;
-      background: rgba(15, 23, 42, 0.85);
+      background: rgba(15, 23, 42, 0.9);
       color: #38bdf8; padding: 16px 24px; border-radius: 18px; font-weight: 800;
       font-size: 15px; border: 1px solid rgba(56, 189, 248, 0.4); backdrop-filter: blur(8px);
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
@@ -26,7 +26,7 @@
     }
 
     .btn-control {
-      position: absolute; width: 75px; height: 75px; background: rgba(15, 23, 42, 0.8);
+      position: absolute; width: 75px; height: 75px; background: rgba(15, 23, 42, 0.85);
       border-radius: 50%; color: white; font-weight: 900; font-size: 22px;
       display: flex; justify-content: center; align-items: center;
       pointer-events: auto; cursor: pointer; backdrop-filter: blur(8px);
@@ -57,12 +57,12 @@
       display: flex; flex-direction: column; justify-content: center; align-items: center;
       color: white; text-align: center; padding: 30px; pointer-events: auto;
     }
-    #overlay-screen h1 { font-size: 2.5rem; margin-bottom: 12px; color: #38bdf8; text-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
-    #overlay-screen p { font-size: 1rem; line-height: 1.7; max-width: 440px; margin-bottom: 30px; color: #94a3b8; }
+    #overlay-screen h1 { font-size: 2.3rem; margin-bottom: 12px; color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+    #overlay-screen p { font-size: 1rem; line-height: 1.7; max-width: 460px; margin-bottom: 30px; color: #94a3b8; }
     #start-btn {
       padding: 18px 50px; font-size: 1.2rem; font-weight: 900; border: none;
-      border-radius: 40px; background: linear-gradient(135deg, #0284c7, #38bdf8);
-      color: white; box-shadow: 0 10px 25px rgba(56, 189, 248, 0.4); cursor: pointer;
+      border-radius: 40px; background: linear-gradient(135deg, #dc2626, #ef4444);
+      color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); cursor: pointer;
     }
 
     #reward-banner {
@@ -77,15 +77,15 @@
 </head>
 <body>
 
-  <div id="reward-banner">⚽ PREMIO 500 MACCHINE! 🏆<br>PALLONE AZZURRO DEL NAPOLI!</div>
+  <div id="reward-banner">⚽ TRAGUARDO 500 RAGGIUNTO! 🏆<br>PALLONE AZZURRO DEL NAPOLI!</div>
 
   <div id="overlay-screen">
-    <h1 id="main-title">PANDA 4x4: NEW YORK 500</h1>
-    <p id="main-desc">Esperienza 3D completa senza bug!<br><br>
-    - Auto 3D realistiche e dinamiche in continuo movimento.<br>
-    - Razzo Volante 🚀 sbloccato ogni 20 sorpassi.<br>
-    - **Raggiungi 500 macchine evitate per vincere il Pallone del Napoli con Fuochi d'Artificio Azzurri!**</p>
-    <button id="start-btn">ENTRA IN GIOCO</button>
+    <h1 id="main-title">FIAT PANDA ROSSA 3D</h1>
+    <p id="main-desc">Modello fedele Fiat Panda Rossa (seconda serie) completo di dettagli!<br><br>
+    - Fari anteriori trasparenti, griglia con stemma Fiat e barre da tetto sportive.<br>
+    - Movimento dinamico continuo delle macchine e dello scenario senza blocchi.<br>
+    - Razzo Volante 🚀 ogni 20 sorpassi & Premio 500 Macchine col Pallone del Napoli!</p>
+    <button id="start-btn">GUIDA LA PANDA ROSSA</button>
   </div>
 
   <div id="hud">
@@ -171,10 +171,10 @@ let rocketTimer = 0;
 let hasShield = false;
 
 let inputs = { left: false, right: false, gas: false, brake: false };
-let pandaSpeed = 0;
-const MAX_SPEED = 0.65;
-const ACCEL = 0.016;
-const DECEL = 0.01;
+let pandaSpeed = 0.25; // Velocità base per garantire che l'ambiente si muova sempre
+const MAX_SPEED = 0.75;
+const ACCEL = 0.018;
+const DECEL = 0.008;
 const ROAD_WIDTH = 13;
 
 function init3D() {
@@ -185,7 +185,7 @@ function init3D() {
   scene.background = new THREE.Color(0x020617);
   scene.fog = new THREE.FogExp2(0x020617, 0.007);
 
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 180);
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
   
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -194,34 +194,34 @@ function init3D() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
-  const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.45);
+  const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.6);
   scene.add(ambientLight);
 
-  const moonLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+  const moonLight = new THREE.DirectionalLight(0xffffff, 1.2);
   moonLight.position.set(30, 60, -30);
   moonLight.castShadow = true;
   scene.add(moonLight);
 
   createRoad();
   createNYCityscape();
-  createPanda4x4();
+  createFiatPandaRossa();
   createNapoliBallReward();
 
-  camera.position.set(0, 4.2, 8.5);
-  camera.lookAt(0, 1.2, 0);
+  camera.position.set(0, 3.8, 7.8);
+  camera.lookAt(0, 1.1, -1);
 
   window.addEventListener('resize', onWindowResize);
 }
 
 function createRoad() {
-  const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, 350);
+  const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, 400);
   const roadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.4 });
   const road = new THREE.Mesh(roadGeo, roadMat);
   road.rotation.x = -Math.PI / 2;
   road.receiveShadow = true;
   scene.add(road);
 
-  for (let i = -170; i < 170; i += 12) {
+  for (let i = -200; i < 200; i += 12) {
     const dashGeo = new THREE.PlaneGeometry(0.35, 5);
     const dashMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
     [-ROAD_WIDTH/3, ROAD_WIDTH/3].forEach(xPos => {
@@ -237,7 +237,7 @@ function createNYCityscape() {
   buildings = [];
   const colors = [0x0f172a, 0x1e1b4b, 0x0284c7, 0x1e293b];
 
-  for (let z = -160; z < 160; z += 18) {
+  for (let z = -180; z < 180; z += 18) {
     [-1, 1].forEach(side => {
       const height = 45 + Math.random() * 45;
       const width = 12;
@@ -254,37 +254,124 @@ function createNYCityscape() {
   }
 }
 
-function createPanda4x4() {
+// COSTRUZIONE DETTAGLIATA FIAT PANDA ROSSA SECONDA SERIE (COME IN FOTO)
+function createFiatPandaRossa() {
   pandaGroup = new THREE.Group();
 
-  const bodyGeo = new THREE.BoxGeometry(1.65, 0.85, 2.7);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.4, metalness: 0.3 });
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y = 0.75;
+  const redMat = new THREE.MeshStandardMaterial({ color: 0xd90429, roughness: 0.2, metalness: 0.4 }); // Rosso FIAT brillante
+  const blackPlasticMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 }); // Fascioni in plastica nera
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 });
+  const silverMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8, roughness: 0.2 });
+
+  // 1. Corpo Principale (Scocca Inferiore)
+  const bodyGeo = new THREE.BoxGeometry(1.68, 0.75, 2.8);
+  const body = new THREE.Mesh(bodyGeo, redMat);
+  body.position.y = 0.65;
   body.castShadow = true;
   pandaGroup.add(body);
 
-  const cabinGeo = new THREE.BoxGeometry(1.5, 0.8, 1.6);
-  const cabinMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.1 });
-  const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-  cabin.position.set(0, 1.45, -0.2);
+  // 2. Abitacolo / Tetto Rialzato Tipico Panda
+  const cabinGeo = new THREE.BoxGeometry(1.58, 0.85, 1.75);
+  const cabin = new THREE.Mesh(cabinGeo, redMat);
+  cabin.position.set(0, 1.38, -0.15);
   cabin.castShadow = true;
   pandaGroup.add(cabin);
 
-  // Ruote 3D
-  const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.32, 24);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.8 });
-  wheelGeo.rotateZ(Math.PI / 2);
+  // 3. Parabrezza & Vetri Laterali
+  const windshieldGeo = new THREE.BoxGeometry(1.5, 0.7, 0.08);
+  const windshield = new THREE.Mesh(windshieldGeo, glassMat);
+  windshield.position.set(0, 1.42, -0.98);
+  windshield.rotation.x = 0.35; // Inclinato come nella Panda reale
+  pandaGroup.add(windshield);
 
-  [[-0.85, 0.38, 0.9], [0.85, 0.38, 0.9], [-0.85, 0.38, -0.9], [0.85, 0.38, -0.9]].forEach(pos => {
-    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-    wheel.position.set(...pos);
-    wheel.castShadow = true;
-    pandaGroup.add(wheel);
+  // Vetro Posteriore
+  const rearGlassGeo = new THREE.BoxGeometry(1.48, 0.65, 0.08);
+  const rearGlass = new THREE.Mesh(rearGlassGeo, glassMat);
+  rearGlass.position.set(0, 1.42, 0.71);
+  pandaGroup.add(rearGlass);
+
+  // 4. Parurti Anteriore & Posteriore con Griglia Panda
+  const bumperFrontGeo = new THREE.BoxGeometry(1.7, 0.3, 0.2);
+  const bumperFront = new THREE.Mesh(bumperFrontGeo, blackPlasticMat);
+  bumperFront.position.set(0, 0.42, -1.38);
+  pandaGroup.add(bumperFront);
+
+  const bumperRearGeo = new THREE.BoxGeometry(1.7, 0.32, 0.2);
+  const bumperRear = new THREE.Mesh(bumperRearGeo, blackPlasticMat);
+  bumperRear.position.set(0, 0.42, 1.38);
+  pandaGroup.add(bumperRear);
+
+  // Stemma Fiat Rotondo al Centro della Mascherina
+  const logoGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.04, 16);
+  logoGeo.rotateX(Math.PI / 2);
+  const logoMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, metalness: 0.8 });
+  const logo = new THREE.Mesh(logoGeo, logoMat);
+  logo.position.set(0, 0.65, -1.41);
+  pandaGroup.add(logo);
+
+  // Fari Anteriori Squadrati Tipici
+  [-0.6, 0.6].forEach(x => {
+    const headlightGeo = new THREE.BoxGeometry(0.32, 0.24, 0.06);
+    const headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.9, roughness: 0.1 });
+    const headlight = new THREE.Mesh(headlightGeo, headlightMat);
+    headlight.position.set(x, 0.66, -1.40);
+    pandaGroup.add(headlight);
   });
 
-  // Scudo
-  const shieldGeo = new THREE.SphereGeometry(2.1, 32, 32);
+  // Fari Posteriori Verticali Panda
+  [-0.72, 0.72].forEach(x => {
+    const tailLightGeo = new THREE.BoxGeometry(0.14, 0.55, 0.08);
+    const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const tailLight = new THREE.Mesh(tailLightGeo, tailLightMat);
+    tailLight.position.set(x, 1.2, 0.71);
+    pandaGroup.add(tailLight);
+  });
+
+  // Fasce Paracolpi Nere Laterali
+  [-0.85, 0.85].forEach(x => {
+    const sideStripGeo = new THREE.BoxGeometry(0.04, 0.12, 2.3);
+    const sideStrip = new THREE.Mesh(sideStripGeo, blackPlasticMat);
+    sideStrip.position.set(x, 0.62, 0);
+    pandaGroup.add(sideStrip);
+  });
+
+  // Barre Longitudinali Nere sul Tetto (Roof Rails)
+  [-0.65, 0.65].forEach(x => {
+    const railGeo = new THREE.BoxGeometry(0.06, 0.08, 1.6);
+    const rail = new THREE.Mesh(railGeo, blackPlasticMat);
+    rail.position.set(x, 1.84, -0.15);
+    pandaGroup.add(rail);
+  });
+
+  // Specchietti Retrovisori Neri Squadrati
+  [-0.88, 0.88].forEach(x => {
+    const mirrorGeo = new THREE.BoxGeometry(0.18, 0.14, 0.12);
+    const mirror = new THREE.Mesh(mirrorGeo, blackPlasticMat);
+    mirror.position.set(x, 1.35, -0.8);
+    pandaGroup.add(mirror);
+  });
+
+  // Ruote con Cerchi Multi-razze Bianchi/Argento (Come in Foto)
+  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.26, 24);
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+  wheelGeo.rotateZ(Math.PI / 2);
+
+  const rimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.27, 16);
+  rimGeo.rotateZ(Math.PI / 2);
+
+  [[-0.82, 0.35, 0.9], [0.82, 0.35, 0.9], [-0.82, 0.35, -0.9], [0.82, 0.35, -0.9]].forEach(pos => {
+    const wheelGroup = new THREE.Group();
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    const rim = new THREE.Mesh(rimGeo, silverMat);
+    wheelGroup.add(wheel);
+    wheelGroup.add(rim);
+    wheelGroup.position.set(...pos);
+    wheelGroup.castShadow = true;
+    pandaGroup.add(wheelGroup);
+  });
+
+  // Scudo Protettivo
+  const shieldGeo = new THREE.SphereGeometry(2.2, 32, 32);
   const shieldMat = new THREE.MeshStandardMaterial({ color: 0x10b981, transparent: true, opacity: 0.4, wireframe: true });
   shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
   shieldMesh.position.set(0, 1.0, 0);
@@ -295,45 +382,51 @@ function createPanda4x4() {
   scene.add(pandaGroup);
 }
 
-// CREAZIONE MACCHINA 3D REALISTICA ED AERODINAMICA CON RUOTE SEPARATE
+// CREAZIONE MACCHINE DEL TRAFFICO CON MODELLI E COLORI VARI (SEDAN / SUV / CITYCAR)
 function spawnTrafficCar() {
   const carGroup = new THREE.Group();
-  const colors = [0xef4444, 0x3b82f6, 0xf59e0b, 0x64748b, 0xffffff, 0x10b981];
+  const colors = [0xef4444, 0x3b82f6, 0xf59e0b, 0x64748b, 0xffffff, 0x10b981, 0x8b5cf6];
   const carColor = colors[Math.floor(Math.random() * colors.length)];
 
-  // Telaio Modellato Smussato (No Cubo Secco)
-  const bodyGeo = new THREE.BoxGeometry(1.7, 0.65, 3.2);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: carColor, roughness: 0.2, metalness: 0.5 });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: carColor, roughness: 0.2, metalness: 0.4 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1 });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+
+  // Tipo casuale: Sedan (berlina) o SUV
+  const isSUV = Math.random() > 0.5;
+  const length = isSUV ? 3.4 : 3.0;
+  const height = isSUV ? 0.8 : 0.65;
+
+  // Corpo Auto
+  const bodyGeo = new THREE.BoxGeometry(1.7, height, length);
   const carBody = new THREE.Mesh(bodyGeo, bodyMat);
-  carBody.position.y = 0.55;
+  carBody.position.y = height / 2 + 0.2;
   carBody.castShadow = true;
   carGroup.add(carBody);
 
-  // Tetto/Vetri Sagomati
-  const roofGeo = new THREE.BoxGeometry(1.45, 0.6, 1.8);
-  const roofMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1 });
-  const roof = new THREE.Mesh(roofGeo, roofMat);
-  roof.position.set(0, 1.1, -0.2);
+  // Tetto / Abitacolo Aerodinamico
+  const roofGeo = new THREE.BoxGeometry(1.45, height * 0.9, length * 0.55);
+  const roof = new THREE.Mesh(roofGeo, glassMat);
+  roof.position.set(0, height + 0.4, -0.1);
   roof.castShadow = true;
   carGroup.add(roof);
 
-  // Fari Posteriori Rossi
+  // Fari Posteriori
   [-0.6, 0.6].forEach(x => {
     const tlGeo = new THREE.BoxGeometry(0.3, 0.15, 0.05);
     const tlMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
     const tl = new THREE.Mesh(tlGeo, tlMat);
-    tl.position.set(x, 0.65, 1.61);
+    tl.position.set(x, height, length / 2 + 0.02);
     carGroup.add(tl);
   });
 
-  // Ruote 3D Separate ed animate
-  const wGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.28, 16);
-  const wMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+  // Ruote
+  const wGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.26, 16);
   wGeo.rotateZ(Math.PI / 2);
 
   const wheels = [];
-  [[-0.8, 0.32, 0.9], [0.8, 0.32, 0.9], [-0.8, 0.32, -0.9], [0.8, 0.32, -0.9]].forEach(pos => {
-    const w = new THREE.Mesh(wGeo, wMat);
+  [[-0.8, 0.32, length * 0.3], [0.8, 0.32, length * 0.3], [-0.8, 0.32, -length * 0.3], [0.8, 0.32, -length * 0.3]].forEach(pos => {
+    const w = new THREE.Mesh(wGeo, wheelMat);
     w.position.set(...pos);
     w.castShadow = true;
     carGroup.add(w);
@@ -343,24 +436,22 @@ function spawnTrafficCar() {
   const lanes = [-4.0, 0, 4.0];
   const lane = lanes[Math.floor(Math.random() * lanes.length)];
   
-  carGroup.position.set(lane, 0, -135);
+  carGroup.position.set(lane, 0, -140);
   scene.add(carGroup);
 
   trafficCars.push({
     mesh: carGroup,
     wheels: wheels,
-    speed: 0.22 + Math.random() * 0.18,
+    speed: 0.28 + Math.random() * 0.22,
     box: new THREE.Box3()
   });
 }
 
-// PALLONE DEL NAPOLI + FUOCHI D'ARTIFICIO PER IL TRAGUARDO 500
 function createNapoliBallReward() {
   const ballGeo = new THREE.SphereGeometry(2.5, 32, 32);
   const ballMat = new THREE.MeshStandardMaterial({ color: 0x00d2ff, roughness: 0.2, metalness: 0.3 });
   napoliBall = new THREE.Mesh(ballGeo, ballMat);
 
-  // Dettagli Bianchi Pallone da Calcio
   const patchGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
   const patchMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   for(let i = 0; i < 12; i++){
@@ -438,7 +529,7 @@ function setupControls() {
     if (rocketAvailable && !isRocketActive) {
       isRocketActive = true;
       rocketAvailable = false;
-      rocketTimer = 200;
+      rocketTimer = 220;
       document.getElementById('btn-rocket').style.display = 'none';
       AudioEngine.playRocket();
     }
@@ -452,19 +543,20 @@ function animate(currentTime) {
   const delta = Math.min((currentTime - lastTime) / 1000, 0.1) || 0.016;
   lastTime = currentTime;
 
+  // Gestione Velocità con risposta reattiva
   if (inputs.gas) pandaSpeed = Math.min(MAX_SPEED, pandaSpeed + ACCEL);
-  else if (inputs.brake) pandaSpeed = Math.max(0, pandaSpeed - ACCEL * 2.2);
-  else pandaSpeed = Math.max(0, pandaSpeed - DECEL);
+  else if (inputs.brake) pandaSpeed = Math.max(0.1, pandaSpeed - ACCEL * 2.5);
+  else pandaSpeed = Math.max(0.25, pandaSpeed - DECEL); // Mantiene velocità costante per la strada
 
-  if (inputs.left) pandaGroup.position.x -= 16 * delta;
-  if (inputs.right) pandaGroup.position.x += 16 * delta;
+  if (inputs.left) pandaGroup.position.x -= 15 * delta;
+  if (inputs.right) pandaGroup.position.x += 15 * delta;
 
   const maxBound = (ROAD_WIDTH / 2) - 1.2;
   pandaGroup.position.x = Math.max(-maxBound, Math.min(maxBound, pandaGroup.position.x));
 
   if (isRocketActive) {
     rocketTimer--;
-    if (pandaGroup.position.y < 6.0) pandaGroup.position.y += 15 * delta;
+    if (pandaGroup.position.y < 6.5) pandaGroup.position.y += 16 * delta;
     if (rocketTimer <= 0) {
       isRocketActive = false;
       hasShield = true;
@@ -478,74 +570,78 @@ function animate(currentTime) {
     }
   }
 
-  // MOVIMENTO AMBIENTE E TRAFFICO DINAMICO CONTINUO
-  if (pandaSpeed > 0 || trafficCars.length > 0) {
-    score += Math.round(pandaSpeed * 20);
-    document.getElementById('score-val').innerText = score;
+  // MOVIMENTO AMBIENTALE E CICLO AUTO FLUIDO
+  score += Math.round(pandaSpeed * 15);
+  document.getElementById('score-val').innerText = score;
 
-    buildings.forEach(b => {
-      b.position.z += pandaSpeed * 45;
-      if (b.position.z > 60) b.position.z -= 320;
-    });
+  buildings.forEach(b => {
+    b.position.z += pandaSpeed * 50 * delta * 60;
+    if (b.position.z > 60) b.position.z -= 320;
+  });
 
-    if (Math.random() < 0.045 && isGameRunning) spawnTrafficCar();
+  // Generazione Traffico Costante
+  if (Math.random() < 0.048 && trafficCars.length < 7) {
+    spawnTrafficCar();
+  }
 
-    const pandaBox = new THREE.Box3().setFromObject(pandaGroup);
+  const pandaBox = new THREE.Box3().setFromObject(pandaGroup);
 
-    for (let i = trafficCars.length - 1; i >= 0; i--) {
-      let car = trafficCars[i];
-      
-      // MOVIMENTO IN TEMPO REALE CONTINUO (NO FOTOGRAMMA FERMO)
-      const forwardMovement = (pandaSpeed * 45) + (car.speed * 20);
-      car.mesh.position.z += forwardMovement * delta * 60;
-      
-      // Rotazione Ruote Macchine
-      car.wheels.forEach(w => w.rotation.x += forwardMovement * 0.05);
+  for (let i = trafficCars.length - 1; i >= 0; i--) {
+    let car = trafficCars[i];
+    
+    // Movimento Macchine basato sulla velocità Panda + Velocità propria auto
+    const moveZ = (pandaSpeed * 40 + car.speed * 25) * delta;
+    car.mesh.position.z += moveZ;
+    
+    // Rotazione automatica ruote in movimento
+    car.wheels.forEach(w => w.rotation.x += moveZ * 0.1);
 
-      if (pandaGroup.position.y < 1.2) {
-        car.box.setFromObject(car.mesh);
-        if (pandaBox.intersectsBox(car.box)) {
-          if (hasShield) {
-            hasShield = false;
-            shieldMesh.visible = false;
-            document.getElementById('shield-status').style.display = 'none';
-            scene.remove(car.mesh);
-            trafficCars.splice(i, 1);
-            AudioEngine.playCrash();
-            continue;
-          } else {
-            gameOver();
-            return;
-          }
+    // Gestione collisioni
+    if (pandaGroup.position.y < 1.2) {
+      car.box.setFromObject(car.mesh);
+      if (pandaBox.intersectsBox(car.box)) {
+        if (hasShield) {
+          hasShield = false;
+          shieldMesh.visible = false;
+          document.getElementById('shield-status').style.display = 'none';
+          scene.remove(car.mesh);
+          trafficCars.splice(i, 1);
+          AudioEngine.playCrash();
+          continue;
+        } else {
+          gameOver();
+          return;
         }
       }
+    }
 
-      if (car.mesh.position.z > 15) {
-        scene.remove(car.mesh);
-        trafficCars.splice(i, 1);
-        carsPassed++;
-        document.getElementById('cars-val').innerText = carsPassed;
+    // Sorpasso Macchina completato
+    if (car.mesh.position.z > 15) {
+      scene.remove(car.mesh);
+      trafficCars.splice(i, 1);
+      carsPassed++;
+      document.getElementById('cars-val').innerText = carsPassed;
 
-        if (carsPassed > 0 && carsPassed % 20 === 0 && !isRocketActive) {
-          rocketAvailable = true;
-          document.getElementById('btn-rocket').style.display = 'block';
-        }
+      // Sblocco Razzo ogni 20 macchine
+      if (carsPassed > 0 && carsPassed % 20 === 0 && !isRocketActive) {
+        rocketAvailable = true;
+        document.getElementById('btn-rocket').style.display = 'block';
+      }
 
-        // PREMIO SPECIALI 500 MACCHINE (PALLONE NAPOLI + FUOCHI)
-        if (carsPassed >= 500 && !rewardUnlocked) {
-          rewardUnlocked = true;
-          napoliBall.visible = true;
-          document.getElementById('reward-banner').style.display = 'block';
-        }
+      // Sblocco Premio Finale 500 Macchine Evitate
+      if (carsPassed >= 500 && !rewardUnlocked) {
+        rewardUnlocked = true;
+        napoliBall.visible = true;
+        document.getElementById('reward-banner').style.display = 'block';
       }
     }
   }
 
-  // ANIMAZIONE PREMIO NAPOLI & FUOCHI D'ARTIFICIO AZZURRI
+  // Animazione Pallone del Napoli & Fuochi d'Artificio
   if (rewardUnlocked) {
     napoliBall.rotation.y += 0.02;
     napoliBall.rotation.x += 0.01;
-    if (Math.random() < 0.12) triggerFireworks();
+    if (Math.random() < 0.15) triggerFireworks();
 
     fireworks.forEach((fw, index) => {
       fw.life--;
@@ -563,7 +659,7 @@ function animate(currentTime) {
     });
   }
 
-  camera.position.x = pandaGroup.position.x * 0.4;
+  camera.position.x = pandaGroup.position.x * 0.35;
   renderer.render(scene, camera);
 }
 
@@ -582,7 +678,7 @@ function resetGame() {
   trafficCars = [];
   score = 0;
   carsPassed = 0;
-  pandaSpeed = 0;
+  pandaSpeed = 0.25;
   pandaGroup.position.set(0, 0, 0);
   rocketAvailable = false;
   isRocketActive = false;
@@ -619,4 +715,9 @@ document.getElementById('start-btn').addEventListener('click', () => {
 });
 </script>
 </body>
-</html>
+</html>"""
+
+with open("fiat_panda_rossa_3d.html", "w", encoding="utf-8") as f:
+    f.write(html_code_v2)
+
+print("Updated HTML code created successfully.")
