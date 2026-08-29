@@ -626,3 +626,77 @@ window.onload = () => {
 </script>
 </body>
 </html>
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+// Setup di base della scena
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Caricamento delle texture forniti
+const textureLoader = new THREE.TextureLoader();
+const baseColorMap = textureLoader.load('gltf_embedded_0.jpg');
+const alphaMap = textureLoader.load('gltf_embedded_1@channels=A.png');
+const normalMap = textureLoader.load('gltf_embedded_1.png');
+const roughnessMap = textureLoader.load('gltf_embedded_2.jpg');
+const metallicMap = textureLoader.load('gltf_embedded_3@channels=R.jpg');
+
+let mixer; // Gestore delle animazioni ('swimming', 'circling', 'bite')
+
+// Caricamento del modello glTF
+const loader = new GLTFLoader();
+loader.load('shark_model.gltf', (gltf) => {
+    const sharkMesh = gltf.scene;
+
+    // Assegnazione del materiale avanzato PBR con le mappe di texture
+    sharkMesh.traverse((child) => {
+        if (child.isMesh) {
+            child.material = new THREE.MeshStandardMaterial({
+                map: baseColorMap,
+                normalMap: normalMap,
+                roughnessMap: roughnessMap,
+                metalnessMap: metallicMap,
+                alphaMap: alphaMap,
+                transparent: true
+            });
+        }
+    });
+
+    scene.add(sharkMesh);
+
+    // Inizializzazione del mixer per gestire le animazioni 'swimming', 'circling', 'bite'
+    mixer = new THREE.AnimationMixer(sharkMesh);
+    if (gltf.animations.length > 0) {
+        // Riproduzione di default dell'animazione di nuoto ('swimming')
+        const swimClip = THREE.AnimationClip.findByName(gltf.animations, 'swimming');
+        if (swimClip) {
+            const action = mixer.clipAction(swimClip);
+            action.play();
+        }
+    }
+});
+
+// Illuminazione della scena
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+directionalLight.position.set(5, 10, 7.5);
+scene.add(directionalLight);
+
+camera.position.set(0, 200, 500);
+
+// Loop di rendering e aggiornamento dell'animazione
+const clock = new THREE.Clock();
+function animate() {
+    requestAnimationFrame(animate);
+
+    const delta = clock.getDelta();
+    if (mixer) mixer.update(delta);
+
+    renderer.render(scene, camera);
+}
+animate();
