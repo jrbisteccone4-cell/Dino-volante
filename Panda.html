@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ferrari New York & Napoli - Ultimate 3D Edition</title>
+    <title>Ferrari Napoli - Ultimate 3D City Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,7 +13,7 @@
             -webkit-user-select: none;
         }
         body {
-            background-color: #70b5ff;
+            background-color: #1a0933;
             overflow: hidden;
             width: 100vw;
             height: 100vh;
@@ -48,27 +48,32 @@
             margin-top: 4px;
             color: #ffd700;
         }
+        #weather-info {
+            font-size: 14px;
+            margin-top: 4px;
+            color: #ff9900;
+        }
         #shield-status {
             font-size: 15px;
             margin-top: 4px;
             color: #00ffcc;
             display: none;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.5);
             padding: 2px 8px;
             border-radius: 4px;
             width: fit-content;
         }
 
-        /* Pannello Controlli Rialzato per Landscape Ottimizzato */
+        /* Pannello Controlli Rialzato in Landscape */
         #controls-panel {
             position: absolute;
-            bottom: 35px;
+            bottom: 45px;
             left: 0;
             width: 100%;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            padding: 0 30px;
+            padding: 0 35px;
             z-index: 10;
             pointer-events: none;
         }
@@ -78,8 +83,8 @@
             pointer-events: auto;
         }
         .game-btn {
-            width: 70px;
-            height: 70px;
+            width: 75px;
+            height: 75px;
             border-radius: 50%;
             border: 3px solid white;
             font-size: 13px;
@@ -89,26 +94,26 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
             outline: none;
             transition: transform 0.08s;
         }
         .game-btn:active {
             transform: scale(0.88);
         }
-        #btn-steer-left, #btn-steer-right { background-color: #1e88e5; width: 65px; height: 65px; font-size: 22px; }
+        #btn-steer-left, #btn-steer-right { background-color: #1e88e5; width: 70px; height: 70px; font-size: 24px; }
         #btn-claxon { background-color: #fb8c00; font-size: 10px; text-align: center; line-height: 1.1; }
         #btn-brake { background-color: #e53935; }
         #btn-accel { background-color: #43a047; }
 
-        /* Schermate Overlay (Intro, Game Over, Vittoria) */
+        /* Schermate Overlay */
         .overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(10, 15, 30, 0.88);
+            background: rgba(10, 15, 30, 0.9);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -123,7 +128,7 @@
             font-weight: 900;
             color: #ff2222;
             margin-bottom: 4px;
-            text-shadow: 0 0 15px rgba(255,0,0,0.6);
+            text-shadow: 0 0 15px rgba(255,0,0,0.7);
         }
         .subtitle {
             font-size: 18px;
@@ -156,7 +161,6 @@
         }
         .btn-start:hover { transform: scale(1.05); }
 
-        /* Layout Vittoria Pulito: Scritte in basso per non coprire il pallone e i fuochi 3D */
         #victory-screen {
             justify-content: flex-end;
             padding-bottom: 35px;
@@ -164,7 +168,7 @@
             pointer-events: none;
         }
         #victory-screen .victory-content {
-            background: rgba(10, 15, 30, 0.85);
+            background: rgba(10, 15, 30, 0.88);
             padding: 20px 30px;
             border-radius: 15px;
             border: 2px solid #00ffff;
@@ -187,17 +191,18 @@
 <div id="hud">
     <div id="speedometer">Velocità: 0 km/h</div>
     <div id="counter">Auto superate: 0 / 500</div>
-    <div id="shield-status">⚡ VOLANTETURBO ATTIVO!</div>
+    <div id="weather-info">Clima: Soleggiato (Napoli)</div>
+    <div id="shield-status">🚀 VOLO SUPERSONICO ATTIVO!</div>
 </div>
 
-<!-- Controlli Interattivi a Schermo (Rialzati in orizzontale) -->
+<!-- Controlli Interattivi a Schermo (Rialzati) -->
 <div id="controls-panel">
     <div class="control-group">
         <button class="game-btn" id="btn-steer-left">◄</button>
         <button class="game-btn" id="btn-steer-right">►</button>
     </div>
     <div class="control-group">
-        <button class="game-btn" id="btn-claxon">CLACSON<br>NAPOLI</button>
+        <button class="game-btn" id="btn-claxon">CLACSON<br>NINO</button>
         <button class="game-btn" id="btn-brake">FRENO</button>
         <button class="game-btn" id="btn-accel">CORRI</button>
     </div>
@@ -205,14 +210,14 @@
 
 <!-- Schermata Intro -->
 <div id="intro-screen" class="overlay">
-    <div class="title">FERRARI NEW YORK URBAN EVASION</div>
-    <div class="subtitle">SSC Napoli Special Edition 3D (Orizzontale Stabile) ☀️⚽</div>
+    <div class="title">FERRARI NAPOLI - ULTIMATE 3D CITY</div>
+    <div class="subtitle">Edizione Speciale con Staccionate, Volo e Nino D'Angelo ☀️⚽</div>
     <div class="instructions">
-        • <b>Tasto Verde (CORRI):</b> Accelera fino a 145 km/h.<br>
-        • <b>Tasto Rosso (FRENO):</b> Rallenta e sposta le Mercedes.<br>
-        • <b>Clacson Napoli:</b> Riproduce audio vocale e sonoro perfettamente funzionante.<br>
-        • <b>Bonus VolanteTurbo:</b> Ogni 20 auto superate si attiva automaticamente il razzo supersonico con scudo!<br>
-        • <b>Obiettivo:</b> Supera 500 Mercedes per sbloccare il Pallone 3D del Napoli e i fuochi d'artificio azzurri.
+        • <b>Tasto Verde (CORRI):</b> Accelera fino a 200 km/h.<br>
+        • <b>Tasto Rosso (FRENO):</b> Rallenta e gestisci la traiettoria.<br>
+        • <b>Clacson Nino D'Angelo:</b> Riproduce la voce originale e la tromba con "Forza Napoli!".<br>
+        • <b>Turbo Volante:</b> Ogni 20 auto superate la Ferrari si alza in volo e sfreccia a 250 km/h!<br>
+        • <b>Città & Clima:</b> Architettura 3D avanzata con staccionate laterali e ciclo climatico dinamico (Sole, Tramonto, Notte stellata, Temporale).
     </div>
     <button class="btn-start" onclick="startGame()">ACCENDI I MOTORI</button>
 </div>
@@ -220,7 +225,7 @@
 <!-- Game Over -->
 <div id="game-over-screen" class="overlay">
     <div class="title" style="color: #ff3333;">SEI ESPLOSO!</div>
-    <div class="subtitle">Impatto violento ad alta velocità (> 120 km/h)</div>
+    <div class="subtitle">Impatto violento contro i palazzi o traffico ad alta velocità (> 130 km/h)</div>
     <button class="btn-start" style="background:#ff3333;" onclick="restartGame()">RIPROVA</button>
 </div>
 
@@ -228,8 +233,8 @@
 <div id="victory-screen" class="overlay">
     <div class="victory-content">
         <div class="title" style="color: #00e6ff; font-size: 24px;">CAMPIONI! VITTORIA STRAORDINARIA!</div>
-        <div class="subtitle" style="font-size: 15px; margin-bottom: 10px;">Hai superato 500 Mercedes con la tua Ferrari!</div>
-        <div style="font-size: 14px; margin-bottom: 15px; color: #ffd700;">Ecco il Pallone Ufficiale 3D del Napoli e i fuochi d'artificio azzurri! ⚽🔵⚪</div>
+        <div class="subtitle" style="font-size: 15px; margin-bottom: 10px;">Hai superato 500 auto per le strade di Napoli!</div>
+        <div style="font-size: 14px; margin-bottom: 15px; color: #ffd700;">Ecco il Pallone 3D e i fuochi azzurri sul Golfo! ⚽🔵</div>
         <button class="btn-start" onclick="restartGame()">GIOCA ANCORA</button>
     </div>
 </div>
@@ -243,24 +248,28 @@ let particles = [];
 let fireworks = [];
 let roadLines = [];
 let environmentObjects = [];
-let birds = [];
-let sunMesh;
+let sideFences = [];
+let streetLights = [];
+let sunMesh, moonMesh, rainSystem;
 let victoryBall = null;
 
 let playerSpeed = 0.0;
 let playerX = 0;
+let playerY = 0.0;
+let targetPlayerY = 0.0;
 let overtakesCount = 0;
 let gameState = "INTRO";
 let exploded = false;
 
 const input = { left: false, right: false, accel: false, brake: false };
 
-let rocketShieldTimer = 0;
 let rocketActiveCountdown = 0;
-let landscapeTheme = 0;
+let weatherCycleTimer = 0;
+let currentWeatherIndex = 0; // 0: Sole, 1: Tramonto, 2: Notte, 3: Pioggia
+const weatherNames = ["Soleggiato", "Tramonto Vesuviano", "Notte Stellata", "Temporale Napoletano"];
+
 let audioCtx = null;
 
-// Gestione Audio di Riserva (Web Audio API per garantire il clacson in qualsiasi browser mobile)
 function initAudio() {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -270,33 +279,34 @@ function initAudio() {
     }
 }
 
-function playClacsonNapoli() {
+function playClacsonNino() {
     initAudio();
     
-    // Sintesi vocale potenziata
+    // Voce sintetizzata con tono e inflessione simile a Nino D'Angelo
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance("Forza Napoli!");
         utter.lang = 'it-IT';
-        utter.pitch = 1.35;
-        utter.rate = 1.2;
+        utter.pitch = 1.4;
+        utter.rate = 1.15;
         window.speechSynthesis.speak(utter);
     }
 
-    // Suono di tromba / clacson di supporto sintetizzato
+    // Effetto sonoro tromba / clacson sportivo
     if (audioCtx) {
         try {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(350, audioCtx.currentTime);
-            osc.frequency.setValueAtTime(440, audioCtx.currentTime + 0.15);
-            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(460, audioCtx.currentTime + 0.12);
+            osc.frequency.setValueAtTime(380, audioCtx.currentTime + 0.25);
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.4);
+            osc.stop(audioCtx.currentTime + 0.5);
         } catch(e) {}
     }
 }
@@ -307,7 +317,7 @@ window.addEventListener('keydown', e => {
     if (e.code === 'ArrowRight' || e.code === 'KeyD') input.right = true;
     if (e.code === 'ArrowUp' || e.code === 'KeyW') input.accel = true;
     if (e.code === 'ArrowDown' || e.code === 'KeyS') input.brake = true;
-    if (e.code === 'KeyC') playClacsonNapoli();
+    if (e.code === 'KeyC') playClacsonNino();
 });
 window.addEventListener('keyup', e => {
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') input.left = false;
@@ -337,7 +347,7 @@ bindButton('btn-brake', 'brake');
 
 const claxonBtn = document.getElementById('btn-claxon');
 if(claxonBtn) {
-    const triggerClaxon = (e) => { e.preventDefault(); playClacsonNapoli(); };
+    const triggerClaxon = (e) => { e.preventDefault(); playClacsonNino(); };
     claxonBtn.addEventListener('click', triggerClaxon);
     claxonBtn.addEventListener('touchstart', triggerClaxon, {passive: false});
 }
@@ -348,10 +358,10 @@ function init3D() {
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x70b5ff);
-    scene.fog = new THREE.FogExp2(0x70b5ff, 0.005);
+    scene.fog = new THREE.FogExp2(0x70b5ff, 0.004);
 
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 4.2, 8.5);
+    camera.position.set(0, 4.5, 9.0);
     camera.rotation.x = -0.22;
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -360,22 +370,30 @@ function init3D() {
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xfffaed, 1.3);
+    const dirLight = new THREE.DirectionalLight(0xfffaed, 1.4);
     dirLight.position.set(40, 70, 30);
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    const sunGeo = new THREE.SphereGeometry(15, 32, 32);
+    // Sole & Luna
+    const sunGeo = new THREE.SphereGeometry(14, 32, 32);
     const sunMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
     sunMesh = new THREE.Mesh(sunGeo, sunMat);
     sunMesh.position.set(120, 150, -350);
     scene.add(sunMesh);
 
-    createBirds();
-    createEnvironmentNewYork();
+    const moonGeo = new THREE.SphereGeometry(10, 32, 32);
+    const moonMat = new THREE.MeshBasicMaterial({ color: 0xddddff });
+    moonMesh = new THREE.Mesh(moonGeo, moonMat);
+    moonMesh.position.set(-120, 150, -350);
+    moonMesh.visible = false;
+    scene.add(moonMesh);
+
+    createRainSystem();
+    createEnvironmentNaples();
 
     playerFerrari = createFerrariMesh();
     scene.add(playerFerrari);
@@ -384,61 +402,56 @@ function init3D() {
     window.addEventListener('resize', onWindowResize);
 }
 
-function createBirds() {
-    const birdMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
-    for(let i=0; i<15; i++) {
-        const birdGroup = new THREE.Group();
-        const wingGeo = new THREE.BoxGeometry(1.4, 0.06, 0.35);
-        const wing = new THREE.Mesh(wingGeo, birdMat);
-        birdGroup.add(wing);
+function createRainSystem() {
+    const rainGeo = new THREE.BufferGeometry();
+    const rainCount = 1000;
+    const positions = new Float32Array(rainCount * 3);
 
-        birdGroup.position.set(
-            (Math.random() - 0.5) * 90,
-            28 + Math.random() * 25,
-            -60 - Math.random() * 180
-        );
-        scene.add(birdGroup);
-        birds.push({
-            mesh: birdGroup,
-            speedX: (Math.random() - 0.5) * 0.12,
-            initialY: birdGroup.position.y
-        });
+    for(let i=0; i<rainCount * 3; i+=3) {
+        positions[i] = (Math.random() - 0.5) * 100;
+        positions[i+1] = Math.random() * 50;
+        positions[i+2] = (Math.random() - 0.5) * 300;
     }
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const rainMat = new THREE.PointsMaterial({ color: 0xaaaaee, size: 0.15, transparent: true, opacity: 0 });
+    rainSystem = new THREE.Points(rainGeo, rainMat);
+    scene.add(rainSystem);
 }
 
 function createFerrariMesh() {
     const carGroup = new THREE.Group();
 
+    // Carrozzeria principale Ferrari (Rosso Corsa con dettagli avanzati)
     const bodyGeo = new THREE.BoxGeometry(1.6, 0.55, 3.6);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xdc143c, roughness: 0.12, metalness: 0.9 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xdc143c, roughness: 0.1, metalness: 0.95 });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.position.y = 0.4;
     carGroup.add(body);
 
     const hoodGeo = new THREE.BoxGeometry(1.4, 0.2, 1.2);
-    const hoodMat = new THREE.MeshStandardMaterial({ color: 0xc41230, roughness: 0.15, metalness: 0.85 });
+    const hoodMat = new THREE.MeshStandardMaterial({ color: 0xc41230, roughness: 0.15, metalness: 0.9 });
     const hood = new THREE.Mesh(hoodGeo, hoodMat);
     hood.position.set(0, 0.45, -1.3);
     carGroup.add(hood);
 
     const cabinGeo = new THREE.BoxGeometry(1.3, 0.45, 1.7);
-    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x101015, roughness: 0.05, metalness: 0.95 });
+    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x101015, roughness: 0.05, metalness: 0.98 });
     const cabin = new THREE.Mesh(cabinGeo, cabinMat);
     cabin.position.set(0, 0.85, -0.1);
     carGroup.add(cabin);
 
     const wingGeo = new THREE.BoxGeometry(1.5, 0.08, 0.4);
-    const wingMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9 });
+    const wingMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.95 });
     const rearWing = new THREE.Mesh(wingGeo, wingMat);
     rearWing.position.set(0, 0.75, 1.6);
     carGroup.add(rearWing);
 
-    // Fiamma / Scia del Volanteturbo (inizialmente nascosta)
-    const rocketFireGeo = new THREE.ConeGeometry(0.5, 2.0, 16);
+    // Fiamma / Scia del Turbo Volante
+    const rocketFireGeo = new THREE.ConeGeometry(0.6, 2.5, 16);
     const rocketFireMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: false });
     const rocketFire = new THREE.Mesh(rocketFireGeo, rocketFireMat);
     rocketFire.rotation.x = Math.PI / 2;
-    rocketFire.position.set(0, 0.5, 2.2);
+    rocketFire.position.set(0, 0.5, 2.3);
     rocketFire.name = "rocketFire";
     rocketFire.visible = false;
     carGroup.add(rocketFire);
@@ -452,7 +465,6 @@ function createFerrariMesh() {
 
     const wheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.24, 20);
     const wheelMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.8 });
-    
     const wheelPositions = [
         [-0.88, 0.32, 1.15], [0.88, 0.32, 1.15],
         [-0.88, 0.32, -1.15], [0.88, 0.32, -1.15]
@@ -469,7 +481,6 @@ function createFerrariMesh() {
 
 function createMercedesMesh() {
     const carGroup = new THREE.Group();
-
     const bodyGeo = new THREE.BoxGeometry(1.65, 0.68, 3.5);
     const colors = [0xd0d5dd, 0xf0f2f5, 0x1a2639, 0x222222];
     const chosenColor = colors[Math.floor(Math.random() * colors.length)];
@@ -506,13 +517,28 @@ function createMercedesMesh() {
     return carGroup;
 }
 
-function createEnvironmentNewYork() {
+function createEnvironmentNaples() {
+    // Strada principale urbana
     const roadGeo = new THREE.PlaneGeometry(12, 500);
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x1c1c22, roughness: 0.6 });
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x1c1c22, roughness: 0.5, metalness: 0.2 });
     const road = new THREE.Mesh(roadGeo, roadMat);
     road.rotation.x = -Math.PI / 2;
     scene.add(road);
 
+    // Staccionate laterali realistiche (New Jersey / Barriere stradali)
+    const fenceGeo = new THREE.BoxGeometry(0.5, 0.9, 4.0);
+    const fenceMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.3, metalness: 0.8 });
+    
+    for (let z = -240; z < 240; z += 4.5) {
+        const leftFence = new THREE.Mesh(fenceGeo, fenceMat);
+        leftFence.position.set(-6.3, 0.45, z);
+        const rightFence = new THREE.Mesh(fenceGeo, fenceMat);
+        rightFence.position.set(6.3, 0.45, z);
+        scene.add(leftFence, rightFence);
+        sideFences.push(leftFence, rightFence);
+    }
+
+    // Linee stradali
     const lineGeo = new THREE.BoxGeometry(0.15, 0.02, 3);
     const lineMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
     for (let z = -240; z < 240; z += 8) {
@@ -524,73 +550,80 @@ function createEnvironmentNewYork() {
         roadLines.push(l1, l2);
     }
 
+    // Edifici 3D dettagliati stile città mediterranea / Napoli
     for (let i = 0; i < 40; i++) {
         const zPos = -240 + i * 12;
-
-        const height = 40 + Math.random() * 60;
-        const width = 9 + Math.random() * 8;
-        const depth = 9 + Math.random() * 8;
+        const height = 45 + Math.random() * 65;
+        const width = 10 + Math.random() * 8;
+        const depth = 10 + Math.random() * 8;
+        
         const bGeo = new THREE.BoxGeometry(width, height, depth);
-        const bMat = new THREE.MeshStandardMaterial({ color: 0x2b313d, roughness: 0.4 });
+        const bColors = [0x3a3f4a, 0x4d3b31, 0x5a5550, 0x2d3748];
+        const bMat = new THREE.MeshStandardMaterial({ color: bColors[Math.floor(Math.random() * bColors.length)], roughness: 0.6 });
         const building = new THREE.Mesh(bGeo, bMat);
 
-        const xPos = (i % 2 === 0) ? -17 - width/2 : 17 + width/2;
+        const xPos = (i % 2 === 0) ? -18 - width/2 : 18 + width/2;
         building.position.set(xPos, height/2, zPos);
         scene.add(building);
         environmentObjects.push(building);
 
+        // Balconi / Finestre strutturate 3D sui palazzi
+        for(let f=0; f<3; f++) {
+            const balconyGeo = new THREE.BoxGeometry(width + 0.6, 0.3, 0.8);
+            const balconyMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+            const balcony = new THREE.Mesh(balconyGeo, balconyMat);
+            balcony.position.set(xPos, 15 + f * 18, zPos + (i % 2 === 0 ? depth/2 + 0.4 : -depth/2 - 0.4));
+            scene.add(balcony);
+            environmentObjects.push(balcony);
+        }
+
         if (i % 4 === 0) {
-            const bridge = createBridgeStructure();
-            bridge.position.set(0, 0, zPos);
-            scene.add(bridge);
-            environmentObjects.push(bridge);
+            const archway = createNaplesArchway();
+            archway.position.set(0, 0, zPos);
+            scene.add(archway);
+            environmentObjects.push(archway);
         } else if (i % 3 === 0) {
-            const trafficLight = createTrafficLightPole();
-            trafficLight.position.set(6.6, 0, zPos);
-            scene.add(trafficLight);
-            environmentObjects.push(trafficLight);
+            const pole = createStreetLightPole();
+            pole.position.set(6.8, 0, zPos);
+            scene.add(pole);
+            environmentObjects.push(pole);
+            streetLights.push(pole);
         }
     }
 }
 
-function createBridgeStructure() {
+function createNaplesArchway() {
     const group = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({ color: 0x4a5160, roughness: 0.5 });
+    const mat = new THREE.MeshStandardMaterial({ color: 0x5a6270, roughness: 0.5, metalness: 0.4 });
     
-    const pGeo = new THREE.BoxGeometry(1.2, 11, 1.2);
+    const pGeo = new THREE.BoxGeometry(1.2, 12, 1.2);
     const leftP = new THREE.Mesh(pGeo, mat);
-    leftP.position.set(-7.2, 5.5, 0);
+    leftP.position.set(-7.5, 6, 0);
     const rightP = leftP.clone();
-    rightP.position.x = 7.2;
+    rightP.position.x = 7.5;
 
-    const beamGeo = new THREE.BoxGeometry(16.5, 1.4, 2.2);
+    const beamGeo = new THREE.BoxGeometry(17, 1.5, 2.2);
     const topBeam = new THREE.Mesh(beamGeo, mat);
-    topBeam.position.set(0, 11, 0);
+    topBeam.position.set(0, 12, 0);
 
     group.add(leftP, rightP, topBeam);
     return group;
 }
 
-function createTrafficLightPole() {
+function createStreetLightPole() {
     const group = new THREE.Group();
     const poleMat = new THREE.MeshStandardMaterial({ color: 0x1f1f1f });
     
-    const poleGeo = new THREE.CylinderGeometry(0.14, 0.14, 6.5, 8);
+    const poleGeo = new THREE.CylinderGeometry(0.14, 0.14, 7, 8);
     const pole = new THREE.Mesh(poleGeo, poleMat);
-    pole.position.y = 3.25;
+    pole.position.y = 3.5;
 
-    const boxGeo = new THREE.BoxGeometry(0.4, 1.1, 0.4);
-    const boxMat = new THREE.MeshBasicMaterial({ color: 0x2a2a2a });
-    const box = new THREE.Mesh(boxGeo, boxMat);
-    box.position.set(0, 6.0, 0);
+    const lampGeo = new THREE.SphereGeometry(0.3, 12, 12);
+    const lampMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
+    const lamp = new THREE.Mesh(lampGeo, lampMat);
+    lamp.position.set(0.8, 6.8, 0);
 
-    const lightGeo = new THREE.SphereGeometry(0.1, 8, 8);
-    const redLight = new THREE.Mesh(lightGeo, new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-    redLight.position.set(0, 6.3, 0.22);
-    const greenLight = new THREE.Mesh(lightGeo, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-    greenLight.position.set(0, 5.7, 0.22);
-
-    group.add(pole, box, redLight, greenLight);
+    group.add(pole, lamp);
     return group;
 }
 
@@ -606,24 +639,24 @@ function spawnEnemy() {
         mesh: mesh,
         x: x,
         z: -170,
-        speed: 2.6 + Math.random() * 1.4,
+        speed: 2.8 + Math.random() * 1.5,
         passed: false
     });
 }
 
-function createExplosion(x, z) {
-    const pGeo = new THREE.SphereGeometry(0.22, 8, 8);
+function createExplosion(x, z, y = 0.5) {
+    const pGeo = new THREE.SphereGeometry(0.25, 8, 8);
     const colors = [0xff2200, 0xff7700, 0xffff00];
     for (let i = 0; i < 60; i++) {
         const pMat = new THREE.MeshBasicMaterial({ color: colors[Math.floor(Math.random() * colors.length)] });
         const p = new THREE.Mesh(pGeo, pMat);
-        p.position.set(x, 0.5, z);
+        p.position.set(x, y, z);
         scene.add(p);
         particles.push({
             mesh: p,
-            vx: (Math.random() - 0.5) * 0.9,
-            vy: Math.random() * 0.7 + 0.15,
-            vz: (Math.random() - 0.5) * 0.9,
+            vx: (Math.random() - 0.5) * 1.0,
+            vy: Math.random() * 0.8 + 0.2,
+            vz: (Math.random() - 0.5) * 1.0,
             life: 45
         });
     }
@@ -655,9 +688,9 @@ function createVictoryNapoliBall() {
 function createNapoliFireworks() {
     const colors = [0x0088ff, 0xffffff, 0x00ffff];
     for (let f = 0; f < 5; f++) {
-        const fx = (Math.random() - 0.5) * 28;
+        const fx = (Math.random() - 0.5) * 30;
         const fz = -12 - Math.random() * 25;
-        const fy = 7 + Math.random() * 12;
+        const fy = 8 + Math.random() * 12;
         
         for (let i = 0; i < 40; i++) {
             const pGeo = new THREE.SphereGeometry(0.28, 8, 8);
@@ -668,7 +701,7 @@ function createNapoliFireworks() {
 
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.random() * Math.PI;
-            const speed = 0.28 + Math.random() * 0.4;
+            const speed = 0.3 + Math.random() * 0.4;
 
             fireworks.push({
                 mesh: p,
@@ -678,6 +711,41 @@ function createNapoliFireworks() {
                 life: 75
             });
         }
+    }
+}
+
+function updateWeatherEffects() {
+    weatherCycleTimer += 0.016;
+    if (weatherCycleTimer > 45) { // Cambia clima ogni 45 secondi
+        weatherCycleTimer = 0;
+        currentWeatherIndex = (currentWeatherIndex + 1) % 4;
+        
+        const skyColors = [0x70b5ff, 0xff7f50, 0x0c102b, 0x3b4252];
+        const fogDensities = [0.004, 0.005, 0.008, 0.012];
+        
+        scene.background.setHex(skyColors[currentWeatherIndex]);
+        scene.fog.color.setHex(skyColors[currentWeatherIndex]);
+        scene.fog.density = fogDensities[currentWeatherIndex];
+
+        if (currentWeatherIndex === 0) { // Sole
+            sunMesh.visible = true; moonMesh.visible = false; rainSystem.material.opacity = 0;
+        } else if (currentWeatherIndex === 1) { // Tramonto
+            sunMesh.visible = true; moonMesh.visible = false; rainSystem.material.opacity = 0;
+        } else if (currentWeatherIndex === 2) { // Notte
+            sunMesh.visible = false; moonMesh.visible = true; rainSystem.material.opacity = 0;
+        } else if (currentWeatherIndex === 3) { // Pioggia
+            sunMesh.visible = false; moonMesh.visible = false; rainSystem.material.opacity = 0.7;
+        }
+        document.getElementById('weather-info').innerText = `Clima: ${weatherNames[currentWeatherIndex]}`;
+    }
+
+    if (currentWeatherIndex === 3) {
+        const positions = rainSystem.geometry.attributes.position.array;
+        for(let i=1; i<positions.length; i+=3) {
+            positions[i] -= 1.8;
+            if(positions[i] < 0) positions[i] = 50;
+        }
+        rainSystem.geometry.attributes.position.needsUpdate = true;
     }
 }
 
@@ -707,11 +775,13 @@ function resetGameVariables() {
     fireworks = [];
     playerSpeed = 0.0;
     playerX = 0;
+    playerY = 0.0;
+    targetPlayerY = 0.0;
     overtakesCount = 0;
     exploded = false;
-    rocketShieldTimer = 0;
     rocketActiveCountdown = 0;
-    landscapeTheme = 0;
+    weatherCycleTimer = 0;
+    currentWeatherIndex = 0;
     playerFerrari.visible = true;
     playerFerrari.position.set(0, 0, 0);
     const rocketFire = playerFerrari.getObjectByName("rocketFire");
@@ -723,42 +793,49 @@ let spawnTimer = 0;
 function animate() {
     requestAnimationFrame(animate);
 
-    birds.forEach(b => {
-        b.mesh.position.x += b.speedX;
-        b.mesh.position.y = b.initialY + Math.sin(Date.now() * 0.003 + b.mesh.position.x) * 1.5;
-        if(b.mesh.position.x > 55) b.mesh.position.x = -55;
-        if(b.mesh.position.x < -55) b.mesh.position.x = 55;
-    });
-
     if (gameState === "PLAYING") {
-        if (input.left && playerX > -4.8) playerX -= 0.13;
-        if (input.right && playerX < 4.8) playerX += 0.13;
-        playerFerrari.position.x = playerX;
-        playerFerrari.rotation.z = -(playerX - playerFerrari.position.x) * 1.5;
+        updateWeatherEffects();
 
-        let currentAccelRate = 0.08;
+        if (input.left && playerX > -4.8) playerX -= 0.14;
+        if (input.right && playerX < 4.8) playerX += 0.14;
+
+        let currentAccelRate = 0.09;
         const rocketFire = playerFerrari.getObjectByName("rocketFire");
 
+        // Turbo Volante attivo (ogni 20 auto superate per 3 secondi)
         if (rocketActiveCountdown > 0) {
-            currentAccelRate = 0.24;
-            playerSpeed = Math.min(playerSpeed + currentAccelRate, 10.0);
+            currentAccelRate = 0.3;
+            playerSpeed = Math.min(playerSpeed + currentAccelRate, 13.2); // Fino a 250 km/h effettivi
+            targetPlayerY = 3.5; // La macchina vola in alto!
             if(rocketFire) rocketFire.visible = true;
         } else {
+            targetPlayerY = 0.0; // Torna al suolo
             if(rocketFire) rocketFire.visible = false;
             if (input.accel) {
-                playerSpeed = Math.min(playerSpeed + currentAccelRate, 9.6);
+                playerSpeed = Math.min(playerSpeed + currentAccelRate, 10.6); // Fino a 200 km/h
             } else if (input.brake) {
-                playerSpeed = Math.max(playerSpeed - 0.22, 0.0);
+                playerSpeed = Math.max(playerSpeed - 0.25, 0.0);
             } else {
-                if (playerSpeed > 0) playerSpeed = Math.max(0, playerSpeed - 0.03);
+                if (playerSpeed > 0) playerSpeed = Math.max(0, playerSpeed - 0.035);
             }
         }
 
-        const currentSpeedFactor = playerSpeed * 0.15;
+        // Lerp per il volo fluido
+        playerY += (targetPlayerY - playerY) * 0.1;
+        playerFerrari.position.set(playerX, playerY, 0);
+        playerFerrari.rotation.z = -(playerX - playerFerrari.position.x) * 1.5;
+        playerFerrari.rotation.x = (playerY > 0.5) ? -0.15 : 0; // Inclinazione sportiva in volo
+
+        const currentSpeedFactor = playerSpeed * 0.14;
 
         roadLines.forEach(l => {
             l.position.z += currentSpeedFactor;
             if (l.position.z > 25) l.position.z -= 480;
+        });
+
+        sideFences.forEach(f => {
+            f.position.z += currentSpeedFactor;
+            if (f.position.z > 25) f.position.z -= 480;
         });
 
         environmentObjects.forEach(obj => {
@@ -766,26 +843,17 @@ function animate() {
             if (obj.position.z > 45) obj.position.z -= 480;
         });
 
-        if (Math.floor(overtakesCount / 100) !== landscapeTheme) {
-            landscapeTheme = Math.floor(overtakesCount / 100);
-            const themes = [0x70b5ff, 0xff7f50, 0x8a2be2, 0x008b8b, 0xff1493];
-            scene.background.setHex(themes[landscapeTheme % themes.length]);
-            scene.fog.color.setHex(themes[landscapeTheme % themes.length]);
-        }
-
         spawnTimer++;
-        if (spawnTimer > 32) {
+        if (spawnTimer > 30) {
             spawnEnemy();
             spawnTimer = 0;
         }
 
         if (rocketActiveCountdown > 0) {
             rocketActiveCountdown -= 0.016;
-            rocketShieldTimer = 1.0;
             document.getElementById('shield-status').style.display = 'block';
         } else {
             document.getElementById('shield-status').style.display = 'none';
-            if (rocketShieldTimer > 0) rocketShieldTimer -= 0.016;
         }
 
         for (let i = enemies.length - 1; i >= 0; i--) {
@@ -798,7 +866,7 @@ function animate() {
                 overtakesCount++;
 
                 if (overtakesCount % 20 === 0) {
-                    rocketActiveCountdown = 2.5; // Attivazione VolanteTurbo reale con fiammata e scudo
+                    rocketActiveCountdown = 3.0; // Attiva il Volo Supersonico
                 }
 
                 if (overtakesCount >= 500) {
@@ -816,33 +884,33 @@ function animate() {
 
             const dx = Math.abs(playerX - e.x);
             const dz = Math.abs(0 - e.z);
+            const dy = Math.abs(playerY - 0); // Se vola in alto, evita gli ostacoli a terra!
 
-            if (dx < 1.5 && dz < 3.0) {
-                if (input.brake || rocketShieldTimer > 0) {
-                    e.x += (playerX > e.x) ? -1.6 : 1.6;
-                    e.mesh.position.x = e.x;
-                    playerSpeed = Math.max(2.0, playerSpeed - 1.0);
+            if (dx < 1.5 && dz < 3.0 && dy < 1.0) {
+                const currentKmh = Math.floor(playerSpeed * 19.0);
+                if (currentKmh > 130) {
+                    gameState = "GAMEOVER";
+                    exploded = true;
+                    playerFerrari.visible = false;
+                    createExplosion(playerX, 0, playerY);
+                    document.getElementById('game-over-screen').style.display = 'flex';
                 } else {
-                    const currentKmh = Math.floor(playerSpeed * 15.1);
-                    if (currentKmh > 120) {
-                        gameState = "GAMEOVER";
-                        exploded = true;
-                        playerFerrari.visible = false;
-                        createExplosion(playerX, 0);
-                        document.getElementById('game-over-screen').style.display = 'flex';
-                    } else {
-                        playerSpeed = Math.max(1.0, playerSpeed - 2.0);
-                        playerX += (playerX > e.x) ? 1.1 : -1.1;
-                    }
+                    playerSpeed = Math.max(1.0, playerSpeed - 2.0);
+                    playerX += (playerX > e.x) ? 1.2 : -1.2;
                 }
             }
         }
 
-        const kmh = Math.min(145, Math.floor(playerSpeed * 15.1));
+        // Display velocità (max 200 normale, 250 in turbo volo)
+        let kmh = Math.floor(playerSpeed * 19.0);
+        if (rocketActiveCountdown > 0 && kmh < 250) kmh = 250;
+        if (kmh > 250) kmh = 250;
+
         document.getElementById('speedometer').innerText = `Velocità: ${kmh} km/h`;
         document.getElementById('counter').innerText = `Auto superate: ${overtakesCount} / 500`;
 
         camera.position.x = playerX * 0.3;
+        camera.position.y = 4.5 + playerY * 0.5;
     }
 
     if (exploded) {
