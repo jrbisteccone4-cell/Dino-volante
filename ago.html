@@ -510,3 +510,27 @@ document.getElementById('start-btn').addEventListener('click', () => {
 </script>
 </body>
 </html>
+// === MURO RIGIDO E BEN VISIBILE AI BORDI DELLA MAPPA ===
+  const wallHeight = 6.0; // Muro alto 6 metri
+  const wallThickness = 1.0; // Spessore di 1 metro
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.5 }); // Colore mattonato chiaro
+
+  // Parete Nord
+  const wallNorth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE + wallThickness, wallHeight, wallThickness), wallMat);
+  wallNorth.position.set(0, wallHeight / 2, -FIELD_SIZE / 2);
+  scene.add(wallNorth);
+
+  // Parete Sud
+  const wallSouth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE + wallThickness, wallHeight, wallThickness), wallMat);
+  wallSouth.position.set(0, wallHeight / 2, FIELD_SIZE / 2);
+  scene.add(wallSouth);
+
+  // Parete Est
+  const wallEast = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE), wallMat);
+  wallEast.position.set(FIELD_SIZE / 2, wallHeight / 2, 0);
+  scene.add(wallEast);
+
+  // Parete Ovest
+  const wallWest = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE), wallMat);
+  wallWest.position.set(-FIELD_SIZE / 2, wallHeight / 2, 0);
+  scene.add(wallWest);
