@@ -18,6 +18,18 @@
       font-size: 14px; border: 1px solid rgba(255,215,0,0.4); backdrop-filter: blur(4px);
     }
 
+    /* NUOVO BOX ANTEPRIMA AGO (Sotto l'indicatore dei fili) */
+    #needle-preview-box {
+      position: absolute; top: 85px; left: 15px; background: rgba(0,0,0,0.75);
+      color: #ffffff; padding: 8px 12px; border-radius: 12px; font-weight: bold;
+      font-size: 12px; border: 1px solid rgba(86,204,242,0.4); backdrop-filter: blur(4px);
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+
+    #needle-preview-canvas {
+      width: 70px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 6px;
+    }
+
     #alert-msg {
       position: absolute; top: 15px; right: 15px; background: rgba(220, 20, 60, 0.9);
       color: white; padding: 12px 18px; border-radius: 8px; font-weight: bold; font-size: 14px;
@@ -86,6 +98,12 @@
       Fili Rimanenti: <span id="hay-count">1.000.000</span><br>
       Fili Rimossi: <span id="removed-count">0</span>
     </div>
+
+    <!-- BOX ANTEPRIMA AGO -->
+    <div id="needle-preview-box">
+      <span>Ago da trovare:</span>
+      <canvas id="needle-preview-canvas"></canvas>
+    </div>
     
     <div id="alert-msg">sei un napolecanaccio</div>
 
@@ -141,6 +159,7 @@ const AudioEngine = {
 };
 
 let scene, camera, renderer;
+let previewScene, previewCamera, previewRenderer, previewNeedle;
 let hayMesh, needleMesh, handMagnifierMesh;
 const TOTAL_HAY = 1000000;
 let hayRemaining = TOTAL_HAY;
@@ -172,8 +191,6 @@ function init3D() {
   scene.background = new THREE.Color(0x87ceeb);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 50);
-  
-  // Nascita del giocatore ESATTAMENTE AL CENTRO DEL CAMPO
   camera.position.set(0, 0.8, 0);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -188,41 +205,37 @@ function init3D() {
   sunLight.position.set(10, 20, 10);
   scene.add(sunLight);
 
-  // Terreno limitato ESATTAMENTE alle dimensioni dei muri
+  // Terreno
   const groundGeo = new THREE.PlaneGeometry(FIELD_SIZE, FIELD_SIZE);
   const groundMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
-  // === 4 MURI ROSSI/MATTONE ALTI E VISIBILI AI BORDI ===
-  const wallHeight = 5.0; // Muro alto 5 metri
+  // === MURI RIGIDI AI BORDI DI COLORE MATTONE ROSSO ===
+  const wallHeight = 5.0;
   const wallThickness = 0.6;
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x8b261c, roughness: 0.4 }); // Rosso mattonata scuro ben visibile
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x8b261c, roughness: 0.4 });
 
   const half = FIELD_SIZE / 2;
 
-  // Muro Nord
   const wallNorth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE, wallHeight, wallThickness), wallMat);
   wallNorth.position.set(0, wallHeight / 2, -half);
   scene.add(wallNorth);
 
-  // Muro Sud
   const wallSouth = new THREE.Mesh(new THREE.BoxGeometry(FIELD_SIZE, wallHeight, wallThickness), wallMat);
   wallSouth.position.set(0, wallHeight / 2, half);
   scene.add(wallSouth);
 
-  // Muro Est
   const wallEast = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE), wallMat);
   wallEast.position.set(half, wallHeight / 2, 0);
   scene.add(wallEast);
 
-  // Muro Ovest
   const wallWest = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE), wallMat);
   wallWest.position.set(-half, wallHeight / 2, 0);
   scene.add(wallWest);
 
-  // FILI DI FIENO DISTRIBUITI FINO AI MURI
+  // FILI DI FIENO
   const bladeGeo = new THREE.CylinderGeometry(0.003, 0.005, 0.08, 4);
   bladeGeo.translate(0, 0.04, 0);
   const bladeMat = new THREE.MeshStandardMaterial({ color: 0xd4ac0d, roughness: 0.7 });
@@ -230,7 +243,7 @@ function init3D() {
   hayMesh = new THREE.InstancedMesh(bladeGeo, bladeMat, TOTAL_HAY);
   const dummy = new THREE.Object3D();
   
-  const hayArea = half - 0.4; // Riempie quasi fino al muro
+  const hayArea = half - 0.4;
 
   for (let i = 0; i < TOTAL_HAY; i++) {
     const x = (Math.random() * 2 - 1) * hayArea;
@@ -247,7 +260,7 @@ function init3D() {
   hayMesh.instanceMatrix.needsUpdate = true;
   scene.add(hayMesh);
 
-  // AGO PICCOLO
+  // AGO PICCOLO NEL CAMPO
   const needleGeo = new THREE.CylinderGeometry(0.0012, 0.0004, 0.06, 8);
   const needleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.95, roughness: 0.1 });
   needleMesh = new THREE.Mesh(needleGeo, needleMat);
@@ -260,12 +273,36 @@ function init3D() {
   scene.add(needleMesh);
 
   createHandMagnifier();
+  initNeedlePreview();
   
   camera.rotation.order = 'YXZ';
   camera.rotation.y = yaw;
   camera.rotation.x = pitch;
 
   window.addEventListener('resize', onWindowResize);
+}
+
+// INIZIALIZZA L'ANTEPRIMA 3D DELL'AGO NELL'HUD
+function initNeedlePreview() {
+  const canvas = document.getElementById('needle-preview-canvas');
+  previewScene = new THREE.Scene();
+  
+  previewCamera = new THREE.PerspectiveCamera(45, 70 / 40, 0.1, 10);
+  previewCamera.position.set(0, 0, 0.12);
+
+  previewRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+  previewRenderer.setSize(70, 40);
+
+  const light = new THREE.DirectionalLight(0xffffff, 1.5);
+  light.position.set(1, 1, 2);
+  previewScene.add(light);
+  previewScene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+  const needleGeo = new THREE.CylinderGeometry(0.0025, 0.0008, 0.07, 12);
+  const needleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1.0, roughness: 0.1 });
+  previewNeedle = new THREE.Mesh(needleGeo, needleMat);
+  previewNeedle.rotation.z = Math.PI / 3;
+  previewScene.add(previewNeedle);
 }
 
 function createHandMagnifier() {
@@ -485,13 +522,18 @@ function animate() {
     nextPos.addScaledVector(forward, -moveVector.y * speed);
     nextPos.addScaledVector(side, moveVector.x * speed);
 
-    // LIMITI RIGIDI: IMPOSSIBILE SUPERARE I MURI (FIELD_SIZE / 2 = 6, limite a 5.5m)
     const limit = (FIELD_SIZE / 2) - 0.5;
     if (Math.abs(nextPos.x) < limit && Math.abs(nextPos.z) < limit) {
       camera.position.copy(nextPos);
     }
     
     camera.position.y = 0.8;
+  }
+
+  // Rotazione anteprima ago
+  if (previewNeedle) {
+    previewNeedle.rotation.y += 0.02;
+    previewRenderer.render(previewScene, previewCamera);
   }
 
   renderer.render(scene, camera);
