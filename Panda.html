@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Panda 4x4: New York Edition 500 Pass</title>
+  <title>Panda 4x4: New York 500 Pass - Dynamic 3D Edition</title>
   <style>
     * { box-sizing: border-box; touch-action: none; user-select: none; }
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #020617; font-family: sans-serif; }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #020617; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
 
     #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
@@ -58,18 +58,17 @@
       color: white; text-align: center; padding: 30px; pointer-events: auto;
     }
     #overlay-screen h1 { font-size: 2.5rem; margin-bottom: 12px; color: #38bdf8; text-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
-    #overlay-screen p { font-size: 1rem; line-height: 1.7; max-width: 420px; margin-bottom: 30px; color: #94a3b8; }
+    #overlay-screen p { font-size: 1rem; line-height: 1.7; max-width: 440px; margin-bottom: 30px; color: #94a3b8; }
     #start-btn {
       padding: 18px 50px; font-size: 1.2rem; font-weight: 900; border: none;
       border-radius: 40px; background: linear-gradient(135deg, #0284c7, #38bdf8);
       color: white; box-shadow: 0 10px 25px rgba(56, 189, 248, 0.4); cursor: pointer;
     }
 
-    /* PREMIO NAPOLI BANNER */
     #reward-banner {
-      position: absolute; top: 20%; width: 100%; text-align: center;
-      color: #00d2ff; font-size: 2rem; font-weight: 900; text-shadow: 0 0 20px #00d2ff;
-      display: none; z-index: 50; animation: bounce 1s infinite alternate;
+      position: absolute; top: 15%; width: 100%; text-align: center;
+      color: #00d2ff; font-size: 2rem; font-weight: 900; text-shadow: 0 0 20px #00d2ff, 0 0 40px #00d2ff;
+      display: none; z-index: 50; animation: bounce 0.8s infinite alternate;
     }
     @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-15px); } }
   </style>
@@ -78,14 +77,15 @@
 </head>
 <body>
 
-  <div id="reward-banner">🏆 PREMIO 500 MACCHINE!<br>PALLONE AZZURRO DEL NAPOLI! ⚽</div>
+  <div id="reward-banner">⚽ PREMIO 500 MACCHINE! 🏆<br>PALLONE AZZURRO DEL NAPOLI!</div>
 
   <div id="overlay-screen">
     <h1 id="main-title">PANDA 4x4: NEW YORK 500</h1>
-    <p id="main-desc">Guida la Fiat Panda 4x4 a New York con **modelli vettura 3D realistici in continuo movimento**.<br><br>
-    Ogni 20 macchine sblocchi il Razzo 🚀.<br>
-    **Raggiungi 500 macchine evitate per sbloccare il Pallone del Napoli e i Fuochi d'Artificio Azzurri!**</p>
-    <button id="start-btn">INIZIA IL VIAGGIO</button>
+    <p id="main-desc">Esperienza 3D completa senza bug!<br><br>
+    - Auto 3D realistiche e dinamiche in continuo movimento.<br>
+    - Razzo Volante 🚀 sbloccato ogni 20 sorpassi.<br>
+    - **Raggiungi 500 macchine evitate per vincere il Pallone del Napoli con Fuochi d'Artificio Azzurri!**</p>
+    <button id="start-btn">ENTRA IN GIOCO</button>
   </div>
 
   <div id="hud">
@@ -187,16 +187,17 @@ function init3D() {
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 180);
   
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
-  const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.4);
+  const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.45);
   scene.add(ambientLight);
 
-  const moonLight = new THREE.DirectionalLight(0x38bdf8, 1.0);
+  const moonLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
   moonLight.position.set(30, 60, -30);
   moonLight.castShadow = true;
   scene.add(moonLight);
@@ -214,7 +215,7 @@ function init3D() {
 
 function createRoad() {
   const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, 350);
-  const roadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
+  const roadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.4 });
   const road = new THREE.Mesh(roadGeo, roadMat);
   road.rotation.x = -Math.PI / 2;
   road.receiveShadow = true;
@@ -257,25 +258,28 @@ function createPanda4x4() {
   pandaGroup = new THREE.Group();
 
   const bodyGeo = new THREE.BoxGeometry(1.65, 0.85, 2.7);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.4 });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.4, metalness: 0.3 });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
   body.position.y = 0.75;
+  body.castShadow = true;
   pandaGroup.add(body);
 
   const cabinGeo = new THREE.BoxGeometry(1.5, 0.8, 1.6);
   const cabinMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.1 });
   const cabin = new THREE.Mesh(cabinGeo, cabinMat);
   cabin.position.set(0, 1.45, -0.2);
+  cabin.castShadow = true;
   pandaGroup.add(cabin);
 
   // Ruote 3D
   const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.32, 24);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x020617 });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.8 });
   wheelGeo.rotateZ(Math.PI / 2);
 
   [[-0.85, 0.38, 0.9], [0.85, 0.38, 0.9], [-0.85, 0.38, -0.9], [0.85, 0.38, -0.9]].forEach(pos => {
     const wheel = new THREE.Mesh(wheelGeo, wheelMat);
     wheel.position.set(...pos);
+    wheel.castShadow = true;
     pandaGroup.add(wheel);
   });
 
@@ -291,18 +295,328 @@ function createPanda4x4() {
   scene.add(pandaGroup);
 }
 
-// CREAZIONE MACCHINA 3D REALISTICA (CURVE E DETTAGLI - NO CUBI SECCI)
+// CREAZIONE MACCHINA 3D REALISTICA ED AERODINAMICA CON RUOTE SEPARATE
 function spawnTrafficCar() {
   const carGroup = new THREE.Group();
-  const colors = [0xef4444, 0x3b82f6, 0xf59e0b, 0x64748b, 0xffffff];
+  const colors = [0xef4444, 0x3b82f6, 0xf59e0b, 0x64748b, 0xffffff, 0x10b981];
   const carColor = colors[Math.floor(Math.random() * colors.length)];
 
-  // Telaio Modellato Smussato
+  // Telaio Modellato Smussato (No Cubo Secco)
   const bodyGeo = new THREE.BoxGeometry(1.7, 0.65, 3.2);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: carColor, roughness: 0.2, metalness: 0.4 });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: carColor, roughness: 0.2, metalness: 0.5 });
   const carBody = new THREE.Mesh(bodyGeo, bodyMat);
   carBody.position.y = 0.55;
+  carBody.castShadow = true;
   carGroup.add(carBody);
 
-  // Tetto/Vetri Sagomato
-  const roofGeo = new THREE.BoxGeometry(1.4
+  // Tetto/Vetri Sagomati
+  const roofGeo = new THREE.BoxGeometry(1.45, 0.6, 1.8);
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1 });
+  const roof = new THREE.Mesh(roofGeo, roofMat);
+  roof.position.set(0, 1.1, -0.2);
+  roof.castShadow = true;
+  carGroup.add(roof);
+
+  // Fari Posteriori Rossi
+  [-0.6, 0.6].forEach(x => {
+    const tlGeo = new THREE.BoxGeometry(0.3, 0.15, 0.05);
+    const tlMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const tl = new THREE.Mesh(tlGeo, tlMat);
+    tl.position.set(x, 0.65, 1.61);
+    carGroup.add(tl);
+  });
+
+  // Ruote 3D Separate ed animate
+  const wGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.28, 16);
+  const wMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+  wGeo.rotateZ(Math.PI / 2);
+
+  const wheels = [];
+  [[-0.8, 0.32, 0.9], [0.8, 0.32, 0.9], [-0.8, 0.32, -0.9], [0.8, 0.32, -0.9]].forEach(pos => {
+    const w = new THREE.Mesh(wGeo, wMat);
+    w.position.set(...pos);
+    w.castShadow = true;
+    carGroup.add(w);
+    wheels.push(w);
+  });
+
+  const lanes = [-4.0, 0, 4.0];
+  const lane = lanes[Math.floor(Math.random() * lanes.length)];
+  
+  carGroup.position.set(lane, 0, -135);
+  scene.add(carGroup);
+
+  trafficCars.push({
+    mesh: carGroup,
+    wheels: wheels,
+    speed: 0.22 + Math.random() * 0.18,
+    box: new THREE.Box3()
+  });
+}
+
+// PALLONE DEL NAPOLI + FUOCHI D'ARTIFICIO PER IL TRAGUARDO 500
+function createNapoliBallReward() {
+  const ballGeo = new THREE.SphereGeometry(2.5, 32, 32);
+  const ballMat = new THREE.MeshStandardMaterial({ color: 0x00d2ff, roughness: 0.2, metalness: 0.3 });
+  napoliBall = new THREE.Mesh(ballGeo, ballMat);
+
+  // Dettagli Bianchi Pallone da Calcio
+  const patchGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
+  const patchMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  for(let i = 0; i < 12; i++){
+    const p = new THREE.Mesh(patchGeo, patchMat);
+    const u = Math.random() * Math.PI * 2;
+    const v = Math.random() * Math.PI;
+    p.position.set(2.4 * Math.sin(v) * Math.cos(u), 2.4 * Math.sin(v) * Math.sin(u), 2.4 * Math.cos(v));
+    napoliBall.add(p);
+  }
+
+  napoliBall.position.set(0, 6, -15);
+  napoliBall.visible = false;
+  scene.add(napoliBall);
+
+  fireworksGroup = new THREE.Group();
+  scene.add(fireworksGroup);
+}
+
+function triggerFireworks() {
+  const pCount = 100;
+  const pGeo = new THREE.BufferGeometry();
+  const positions = new Float32Array(pCount * 3);
+  const velocities = [];
+
+  for(let i = 0; i < pCount; i++) {
+    positions[i*3] = (Math.random() - 0.5) * 4;
+    positions[i*3+1] = 6 + (Math.random() - 0.5) * 4;
+    positions[i*3+2] = -15 + (Math.random() - 0.5) * 4;
+
+    velocities.push({
+      x: (Math.random() - 0.5) * 0.5,
+      y: (Math.random() - 0.5) * 0.5,
+      z: (Math.random() - 0.5) * 0.5
+    });
+  }
+
+  pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const pMat = new THREE.PointsMaterial({ color: 0x00d2ff, size: 0.35 });
+  const particleSystem = new THREE.Points(pGeo, pMat);
+  
+  fireworksGroup.add(particleSystem);
+  fireworks.push({ system: particleSystem, vels: velocities, life: 80 });
+}
+
+function setupControls() {
+  const bindBtn = (id, key) => {
+    const btn = document.getElementById(id);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); inputs[key] = true; });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); inputs[key] = false; });
+    btn.addEventListener('mousedown', () => { inputs[key] = true; });
+    btn.addEventListener('mouseup', () => { inputs[key] = false; });
+  };
+
+  bindBtn('btn-left', 'left');
+  bindBtn('btn-right', 'right');
+  bindBtn('btn-gas', 'gas');
+  bindBtn('btn-brake', 'brake');
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') inputs.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd') inputs.right = true;
+    if (e.key === 'ArrowUp' || e.key === 'w') inputs.gas = true;
+    if (e.key === 'ArrowDown' || e.key === 's') inputs.brake = true;
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') inputs.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd') inputs.right = false;
+    if (e.key === 'ArrowUp' || e.key === 'w') inputs.gas = false;
+    if (e.key === 'ArrowDown' || e.key === 's') inputs.brake = false;
+  });
+
+  document.getElementById('btn-horn').addEventListener('click', () => { AudioEngine.playHorn(); });
+  document.getElementById('btn-rocket').addEventListener('click', () => {
+    if (rocketAvailable && !isRocketActive) {
+      isRocketActive = true;
+      rocketAvailable = false;
+      rocketTimer = 200;
+      document.getElementById('btn-rocket').style.display = 'none';
+      AudioEngine.playRocket();
+    }
+  });
+}
+
+function animate(currentTime) {
+  if (!isGameRunning) return;
+  requestAnimationFrame(animate);
+
+  const delta = Math.min((currentTime - lastTime) / 1000, 0.1) || 0.016;
+  lastTime = currentTime;
+
+  if (inputs.gas) pandaSpeed = Math.min(MAX_SPEED, pandaSpeed + ACCEL);
+  else if (inputs.brake) pandaSpeed = Math.max(0, pandaSpeed - ACCEL * 2.2);
+  else pandaSpeed = Math.max(0, pandaSpeed - DECEL);
+
+  if (inputs.left) pandaGroup.position.x -= 16 * delta;
+  if (inputs.right) pandaGroup.position.x += 16 * delta;
+
+  const maxBound = (ROAD_WIDTH / 2) - 1.2;
+  pandaGroup.position.x = Math.max(-maxBound, Math.min(maxBound, pandaGroup.position.x));
+
+  if (isRocketActive) {
+    rocketTimer--;
+    if (pandaGroup.position.y < 6.0) pandaGroup.position.y += 15 * delta;
+    if (rocketTimer <= 0) {
+      isRocketActive = false;
+      hasShield = true;
+      shieldMesh.visible = true;
+      document.getElementById('shield-status').style.display = 'block';
+    }
+  } else {
+    if (pandaGroup.position.y > 0) {
+      pandaGroup.position.y -= 12 * delta;
+      if (pandaGroup.position.y < 0) pandaGroup.position.y = 0;
+    }
+  }
+
+  // MOVIMENTO AMBIENTE E TRAFFICO DINAMICO CONTINUO
+  if (pandaSpeed > 0 || trafficCars.length > 0) {
+    score += Math.round(pandaSpeed * 20);
+    document.getElementById('score-val').innerText = score;
+
+    buildings.forEach(b => {
+      b.position.z += pandaSpeed * 45;
+      if (b.position.z > 60) b.position.z -= 320;
+    });
+
+    if (Math.random() < 0.045 && isGameRunning) spawnTrafficCar();
+
+    const pandaBox = new THREE.Box3().setFromObject(pandaGroup);
+
+    for (let i = trafficCars.length - 1; i >= 0; i--) {
+      let car = trafficCars[i];
+      
+      // MOVIMENTO IN TEMPO REALE CONTINUO (NO FOTOGRAMMA FERMO)
+      const forwardMovement = (pandaSpeed * 45) + (car.speed * 20);
+      car.mesh.position.z += forwardMovement * delta * 60;
+      
+      // Rotazione Ruote Macchine
+      car.wheels.forEach(w => w.rotation.x += forwardMovement * 0.05);
+
+      if (pandaGroup.position.y < 1.2) {
+        car.box.setFromObject(car.mesh);
+        if (pandaBox.intersectsBox(car.box)) {
+          if (hasShield) {
+            hasShield = false;
+            shieldMesh.visible = false;
+            document.getElementById('shield-status').style.display = 'none';
+            scene.remove(car.mesh);
+            trafficCars.splice(i, 1);
+            AudioEngine.playCrash();
+            continue;
+          } else {
+            gameOver();
+            return;
+          }
+        }
+      }
+
+      if (car.mesh.position.z > 15) {
+        scene.remove(car.mesh);
+        trafficCars.splice(i, 1);
+        carsPassed++;
+        document.getElementById('cars-val').innerText = carsPassed;
+
+        if (carsPassed > 0 && carsPassed % 20 === 0 && !isRocketActive) {
+          rocketAvailable = true;
+          document.getElementById('btn-rocket').style.display = 'block';
+        }
+
+        // PREMIO SPECIALI 500 MACCHINE (PALLONE NAPOLI + FUOCHI)
+        if (carsPassed >= 500 && !rewardUnlocked) {
+          rewardUnlocked = true;
+          napoliBall.visible = true;
+          document.getElementById('reward-banner').style.display = 'block';
+        }
+      }
+    }
+  }
+
+  // ANIMAZIONE PREMIO NAPOLI & FUOCHI D'ARTIFICIO AZZURRI
+  if (rewardUnlocked) {
+    napoliBall.rotation.y += 0.02;
+    napoliBall.rotation.x += 0.01;
+    if (Math.random() < 0.12) triggerFireworks();
+
+    fireworks.forEach((fw, index) => {
+      fw.life--;
+      const pos = fw.system.geometry.attributes.position.array;
+      for(let i=0; i<fw.vels.length; i++) {
+        pos[i*3] += fw.vels[i].x;
+        pos[i*3+1] += fw.vels[i].y;
+        pos[i*3+2] += fw.vels[i].z;
+      }
+      fw.system.geometry.attributes.position.needsUpdate = true;
+      if (fw.life <= 0) {
+        fireworksGroup.remove(fw.system);
+        fireworks.splice(index, 1);
+      }
+    });
+  }
+
+  camera.position.x = pandaGroup.position.x * 0.4;
+  renderer.render(scene, camera);
+}
+
+function gameOver() {
+  isGameRunning = false;
+  AudioEngine.playCrash();
+
+  document.getElementById('main-title').innerText = "INCIDENTE!";
+  document.getElementById('main-desc').innerHTML = `Punteggio Finale: <b>${score}</b><br>Macchine Evitate: <b>${carsPassed}</b>`;
+  document.getElementById('start-btn').innerText = "RIPROVA";
+  document.getElementById('overlay-screen').style.display = 'flex';
+}
+
+function resetGame() {
+  trafficCars.forEach(c => scene.remove(c.mesh));
+  trafficCars = [];
+  score = 0;
+  carsPassed = 0;
+  pandaSpeed = 0;
+  pandaGroup.position.set(0, 0, 0);
+  rocketAvailable = false;
+  isRocketActive = false;
+  hasShield = false;
+  rewardUnlocked = false;
+  shieldMesh.visible = false;
+  if (napoliBall) napoliBall.visible = false;
+
+  document.getElementById('score-val').innerText = "0";
+  document.getElementById('cars-val').innerText = "0";
+  document.getElementById('shield-status').style.display = 'none';
+  document.getElementById('btn-rocket').style.display = 'none';
+  document.getElementById('reward-banner').style.display = 'none';
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  document.getElementById('overlay-screen').style.display = 'none';
+  AudioEngine.init();
+  if (!scene) {
+    init3D();
+    setupControls();
+  } else {
+    resetGame();
+  }
+  isGameRunning = true;
+  lastTime = performance.now();
+  animate(lastTime);
+});
+</script>
+</body>
+</html>
