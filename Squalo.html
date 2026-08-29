@@ -1,1 +1,628 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Great White Shark 3D - Ocean Simulator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            background-color: #001122;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: fixed;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        /* HUD Telemetria e Punteggio */
+        #hud {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 5;
+        }
+        #score-display {
+            font-size: 26px;
+            color: #00ffff;
+        }
+        #stamina-display {
+            font-size: 15px;
+            margin-top: 5px;
+            color: #ffcc00;
+        }
 
+        /* Area di Controllo Touch (Landscape) */
+        #controls-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 30px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* Cursore Virtual Joystick (Sinistra) */
+        #joystick-zone {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            position: relative;
+            pointer-events: auto;
+            touch-action: none;
+        }
+        #joystick-knob {
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 230, 255, 0.8);
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            position: absolute;
+            top: 35px;
+            left: 35px;
+            box-shadow: 0 0 10px rgba(0,230,255,0.8);
+        }
+
+        /* Tasti Azione (Destra) */
+        .action-group {
+            display: flex;
+            gap: 15px;
+            pointer-events: auto;
+        }
+        .game-btn {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            border: 3px solid white;
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            outline: none;
+            transition: transform 0.08s;
+        }
+        .game-btn:active {
+            transform: scale(0.88);
+        }
+        #btn-dash { background-color: #ff9800; }
+        #btn-bite { background-color: #e53935; }
+
+        /* Overlay Intro */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 12, 27, 0.92);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            z-index: 20;
+            padding: 20px;
+        }
+        .title {
+            font-size: 34px;
+            font-weight: 900;
+            color: #00e6ff;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(0,230,255,0.6);
+        }
+        .subtitle {
+            font-size: 16px;
+            color: #ffffff;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .instructions {
+            background: rgba(255,255,255,0.08);
+            padding: 15px 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,230,255,0.3);
+            margin-bottom: 20px;
+            line-height: 1.6;
+            font-size: 13px;
+            max-width: 650px;
+            text-align: left;
+        }
+        .btn-start {
+            padding: 12px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            background: #00e6ff;
+            color: #001122;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(0,230,255,0.8);
+            transition: transform 0.2s;
+        }
+        .btn-start:hover { transform: scale(1.05); }
+    </style>
+    <!-- Three.js 3D Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<!-- HUD Telemetria -->
+<div id="hud">
+    <div id="score-display">Prede Divorate: 0</div>
+    <div id="stamina-display">Scatto: Pronto</div>
+</div>
+
+<!-- Controlli Interattivi -->
+<div id="controls-panel">
+    <!-- Cursore Direzionale Joystick (Sinistra) -->
+    <div id="joystick-zone">
+        <div id="joystick-knob"></div>
+    </div>
+    
+    <!-- Tasti Scatto e Morso (Destra) -->
+    <div class="action-group">
+        <button class="game-btn" id="btn-dash">SCATTO</button>
+        <button class="game-btn" id="btn-bite">MORDI</button>
+    </div>
+</div>
+
+<!-- Schermata Intro -->
+<div id="intro-screen" class="overlay">
+    <div class="title">GREAT WHITE SHARK 3D</div>
+    <div class="subtitle">Simulatore d'Oceano Full HD</div>
+    <div class="instructions">
+        • <b>Cursore (Sinistra):</b> Muovi lo squalo orientandolo nell'oceano.<br>
+        • <b>Visuale 360°:</b> Trascina con il dito/mouse sulla schermata per ruotare la telecamera intorno allo squalo.<br>
+        • <b>Tasto SCATTO:</b> Attiva una spinta ad alta velocità nell'acqua.<br>
+        • <b>Tasto MORDI:</b> Apri le fauci ed effettua un morso letale per divorare la fauna marina (Pesci Tropicali, Tonni, Tartarughe, Delfini, Meduse e Manta).
+    </div>
+    <button class="btn-start" onclick="startGame()">INIZIA LA CACCIA</button>
+</div>
+
+<script>
+// --- VARIABILI GLOBALI E SETUP ---
+let scene, camera, renderer;
+let sharkGroup, sharkJaws;
+let marineLife = [];
+let particles = [];
+let seaweedList = [];
+let eatenCount = 0;
+let isDashing = false;
+let dashCooldown = 0;
+let gameState = "INTRO";
+
+// Input Joystick & Camera
+let joystickVector = { x: 0, y: 0 };
+let cameraAngleX = 0;
+let cameraAngleY = 0.2;
+let isTouchingCamera = false;
+let previousTouchPos = { x: 0, y: 0 };
+
+// --- INIZIALIZZAZIONE SCENA 3D ---
+function init3D() {
+    const container = document.getElementById('canvas-container');
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x003355);
+    scene.fog = new THREE.FogExp2(0x003355, 0.012);
+
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    // Illuminazione Sottomarina
+    const ambientLight = new THREE.AmbientLight(0x005577, 1.2);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0x88ffff, 1.8);
+    sunLight.position.set(0, 100, 0);
+    sunLight.castShadow = true;
+    scene.add(sunLight);
+
+    // Costruzione Ambiente Sottomarino
+    createSeabed();
+    createUnderwaterParticles();
+    
+    // Costruzione Squalo Bianco 3D
+    sharkGroup = createGreatWhiteShark();
+    scene.add(sharkGroup);
+    sharkGroup.position.set(0, 10, 0);
+
+    // Generazione Fauna Marina
+    spawnMarineEcosystem();
+
+    // Eventi
+    setupControls();
+    window.addEventListener('resize', onWindowResize);
+}
+
+// --- CREAZIONE FONDALE MARINO ---
+function createSeabed() {
+    const bedGeo = new THREE.PlaneGeometry(300, 300, 64, 64);
+    const pos = bedGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+        const vx = pos.getX(i);
+        const vy = pos.getY(i);
+        const zNoise = Math.sin(vx * 0.1) * Math.cos(vy * 0.1) * 2.5 + Math.sin(vx * 0.05) * 3.0;
+        pos.setZ(i, zNoise);
+    }
+    bedGeo.computeVertexNormals();
+
+    const bedMat = new THREE.MeshStandardMaterial({ color: 0x113322, roughness: 0.9, metalness: 0.1 });
+    const seabed = new THREE.Mesh(bedGeo, bedMat);
+    seabed.rotation.x = -Math.PI / 2;
+    seabed.position.y = -15;
+    scene.add(seabed);
+
+    // Alghe e Vegetazione Sottomarina
+    const seaweedGeo = new THREE.CylinderGeometry(0.1, 0.3, 8, 8);
+    const seaweedMat = new THREE.MeshStandardMaterial({ color: 0x00aa44, roughness: 0.8 });
+    for (let i = 0; i < 120; i++) {
+        const seaweed = new THREE.Mesh(seaweedGeo, seaweedMat);
+        const sx = (Math.random() - 0.5) * 260;
+        const sz = (Math.random() - 0.5) * 260;
+        seaweed.position.set(sx, -11, sz);
+        seaweed.rotation.z = (Math.random() - 0.5) * 0.3;
+        scene.add(seaweed);
+        seaweedList.push(seaweed);
+    }
+}
+
+// --- PARTICELE ACQUA & BOLLE ---
+function createUnderwaterParticles() {
+    const pGeo = new THREE.SphereGeometry(0.08, 6, 6);
+    const pMat = new THREE.MeshBasicMaterial({ color: 0x88ffff, transparent: true, opacity: 0.6 });
+    for (let i = 0; i < 200; i++) {
+        const p = new THREE.Mesh(pGeo, pMat);
+        p.position.set((Math.random() - 0.5) * 200, Math.random() * 40 - 10, (Math.random() - 0.5) * 200);
+        scene.add(p);
+        particles.push(p);
+    }
+}
+
+// --- MODELLO SQUALO BIANCO 3D ---
+function createGreatWhiteShark() {
+    const shark = new THREE.Group();
+
+    // Corpo Principale
+    const bodyGeo = new THREE.ConeGeometry(1.4, 6.5, 16);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.3, metalness: 0.5 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.rotation.x = Math.PI / 2;
+    shark.add(body);
+
+    // Ventre Bianco
+    const bellyGeo = new THREE.ConeGeometry(1.35, 6.2, 16);
+    const bellyMat = new THREE.MeshStandardMaterial({ color: 0xf0f4f8, roughness: 0.4 });
+    const belly = new THREE.Mesh(bellyGeo, bellyMat);
+    belly.rotation.x = Math.PI / 2;
+    belly.position.y = -0.12;
+    shark.add(belly);
+
+    // Mascella Snodata per il Morso
+    sharkJaws = new THREE.Group();
+    const jawGeo = new THREE.BoxGeometry(0.9, 0.3, 1.2);
+    const jawMat = new THREE.MeshStandardMaterial({ color: 0xd0d8e0 });
+    const jaw = new THREE.Mesh(jawGeo, jawMat);
+    jaw.position.set(0, -0.4, -2.2);
+    sharkJaws.add(jaw);
+
+    // Denti 3D
+    const toothGeo = new THREE.ConeGeometry(0.08, 0.25, 4);
+    const toothMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for(let i = -0.3; i <= 0.3; i += 0.15) {
+        const tooth = new THREE.Mesh(toothGeo, toothMat);
+        tooth.position.set(i, 0.15, -0.4);
+        sharkJaws.add(tooth);
+    }
+    shark.add(sharkJaws);
+
+    // Pinna Dorsale Principale
+    const finGeo = new THREE.ConeGeometry(0.6, 2.2, 8);
+    const fin = new THREE.Mesh(finGeo, bodyMat);
+    fin.rotation.x = -0.6;
+    fin.position.set(0, 1.5, 0.2);
+    shark.add(fin);
+
+    // Pinne Pettorali
+    const pectoralGeo = new THREE.BoxGeometry(2.8, 0.1, 1.1);
+    const pectoral = new THREE.Mesh(pectoralGeo, bodyMat);
+    pectoral.position.set(0, -0.2, -0.5);
+    shark.add(pectoral);
+
+    // Coda Posteriore
+    const tailGeo = new THREE.ConeGeometry(0.8, 2.4, 8);
+    const tail = new THREE.Mesh(tailGeo, bodyMat);
+    tail.rotation.x = Math.PI / 2;
+    tail.position.set(0, 0.3, 3.2);
+    tail.name = "sharkTail";
+    shark.add(tail);
+
+    // Occhi
+    const eyeGeo = new THREE.SphereGeometry(0.12, 8, 8);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+    const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+    eyeL.position.set(-0.65, 0.3, -2.3);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = 0.65;
+    shark.add(eyeL, eyeR);
+
+    return shark;
+}
+
+// --- CREAZIONE SPECIE MARINE ANIMATE ---
+function spawnMarineEcosystem() {
+    const species = [
+        { type: 'TROPICAL', color: 0xffaa00, size: 0.6, speed: 0.12, count: 25 },
+        { type: 'TUNA', color: 0x2266aa, size: 1.2, speed: 0.18, count: 15 },
+        { type: 'TURTLE', color: 0x337733, size: 1.6, speed: 0.06, count: 8 },
+        { type: 'DOLPHIN', color: 0x7799bb, size: 2.2, speed: 0.22, count: 6 },
+        { type: 'MANTA', color: 0x223344, size: 3.0, speed: 0.08, count: 4 },
+        { type: 'JELLYFISH', color: 0xff66cc, size: 1.0, speed: 0.03, count: 12 }
+    ];
+
+    species.forEach(sp => {
+        for (let i = 0; i < sp.count; i++) {
+            const mesh = createCreatureMesh(sp.type, sp.color, sp.size);
+            mesh.position.set(
+                (Math.random() - 0.5) * 220,
+                Math.random() * 30 - 8,
+                (Math.random() - 0.5) * 220
+            );
+            scene.add(mesh);
+            marineLife.push({
+                mesh: mesh,
+                type: sp.type,
+                speed: sp.speed,
+                dir: new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5) * 0.2, (Math.random() - 0.5)).normalize()
+            });
+        }
+    });
+}
+
+function createCreatureMesh(type, color, size) {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
+
+    if (type === 'TURTLE') {
+        const shell = new THREE.Mesh(new THREE.SphereGeometry(size, 8, 8), mat);
+        shell.scale.set(1, 0.4, 1.3);
+        group.add(shell);
+    } else if (type === 'MANTA') {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(size * 1.8, 0.1, size), mat);
+        group.add(body);
+    } else if (type === 'JELLYFISH') {
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(size * 0.6, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.8 }));
+        group.add(cap);
+    } else {
+        const body = new THREE.Mesh(new THREE.ConeGeometry(size * 0.4, size * 2, 8), mat);
+        body.rotation.x = Math.PI / 2;
+        group.add(body);
+    }
+    return group;
+}
+
+// --- CONTROLLI E JOYSTICK ---
+function setupControls() {
+    const zone = document.getElementById('joystick-zone');
+    const knob = document.getElementById('joystick-knob');
+    let activeTouchId = null;
+
+    const handleStart = (e) => {
+        const touch = e.changedTouches ? e.changedTouches[0] : e;
+        activeTouchId = touch.identifier;
+        updateJoystick(touch);
+    };
+
+    const handleMove = (e) => {
+        if (e.changedTouches) {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === activeTouchId) {
+                    updateJoystick(e.changedTouches[i]);
+                }
+            }
+        } else {
+            updateJoystick(e);
+        }
+    };
+
+    const handleEnd = () => {
+        activeTouchId = null;
+        joystickVector = { x: 0, y: 0 };
+        knob.style.top = '35px';
+        knob.style.left = '35px';
+    };
+
+    function updateJoystick(touch) {
+        const rect = zone.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        let dx = touch.clientX - centerX;
+        let dy = touch.clientY - centerY;
+        const dist = Math.hypot(dx, dy);
+        const maxDist = 40;
+
+        if (dist > maxDist) {
+            dx = (dx / dist) * maxDist;
+            dy = (dy / dist) * maxDist;
+        }
+
+        knob.style.left = `${35 + dx}px`;
+        knob.style.top = `${35 + dy}px`;
+        joystickVector.x = dx / maxDist;
+        joystickVector.y = dy / maxDist;
+    }
+
+    zone.addEventListener('touchstart', handleStart, { passive: false });
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
+
+    // Rotazione Visuale 360° trascinando sullo schermo
+    window.addEventListener('touchstart', (e) => {
+        if (e.target.closest('#controls-panel') || e.target.closest('.overlay')) return;
+        isTouchingCamera = true;
+        previousTouchPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    });
+
+    window.addEventListener('touchmove', (e) => {
+        if (!isTouchingCamera) return;
+        const dx = e.touches[0].clientX - previousTouchPos.x;
+        const dy = e.touches[0].clientY - previousTouchPos.y;
+        cameraAngleX -= dx * 0.008;
+        cameraAngleY = Math.max(-0.5, Math.min(1.2, cameraAngleY + dy * 0.008));
+        previousTouchPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    });
+
+    window.addEventListener('touchend', () => { isTouchingCamera = false; });
+
+    // Tasti Azione
+    document.getElementById('btn-dash').addEventListener('click', activateDash);
+    document.getElementById('btn-bite').addEventListener('click', performBite);
+}
+
+function activateDash() {
+    if (dashCooldown <= 0) {
+        isDashing = true;
+        dashCooldown = 3.0; // Cooldown 3 secondi
+        setTimeout(() => { isDashing = false; }, 800);
+    }
+}
+
+function performBite() {
+    // Animazione azionamento mascella
+    sharkJaws.position.y = -0.7;
+    sharkJaws.rotation.x = 0.4;
+    setTimeout(() => {
+        sharkJaws.position.y = -0.4;
+        sharkJaws.rotation.x = 0;
+    }, 250);
+
+    // Rilevamento prede vicine da divorare
+    for (let i = marineLife.length - 1; i >= 0; i--) {
+        const creature = marineLife[i];
+        const dist = sharkGroup.position.distanceTo(creature.mesh.position);
+        if (dist < 4.5) {
+            scene.remove(creature.mesh);
+            marineLife.splice(i, 1);
+            eatenCount++;
+            document.getElementById('score-display').innerText = `Prede Divorate: ${eatenCount}`;
+            createBloodEffect(creature.mesh.position);
+        }
+    }
+}
+
+function createBloodEffect(pos) {
+    const pGeo = new THREE.SphereGeometry(0.15, 6, 6);
+    const pMat = new THREE.MeshBasicMaterial({ color: 0x990000, transparent: true, opacity: 0.8 });
+    for(let i=0; i<15; i++) {
+        const p = new THREE.Mesh(pGeo, pMat);
+        p.position.copy(pos);
+        scene.add(p);
+        setTimeout(() => scene.remove(p), 1200);
+    }
+}
+
+function startGame() {
+    document.getElementById('intro-screen').style.display = 'none';
+    gameState = "PLAYING";
+}
+
+// --- LOOP DI ANIMAZIONE E LOGICA DI GIOCO ---
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (gameState === "PLAYING") {
+        // Movimento Squalo basato su Joystick
+        const speed = isDashing ? 0.85 : 0.35;
+        if (Math.abs(joystickVector.x) > 0.1 || Math.abs(joystickVector.y) > 0.1) {
+            sharkGroup.rotation.y -= joystickVector.x * 0.05;
+            sharkGroup.position.y = Math.max(-10, Math.min(25, sharkGroup.position.y - joystickVector.y * 0.3));
+
+            const moveDir = new THREE.Vector3(0, 0, -1).applyQuaternion(sharkGroup.quaternion);
+            sharkGroup.position.add(moveDir.multiplyScalar(speed));
+
+            // Animazione Coda
+            const tail = sharkGroup.getObjectByName("sharkTail");
+            if (tail) tail.rotation.z = Math.sin(Date.now() * 0.012) * 0.4;
+        }
+
+        // Cooldown Scatto
+        if (dashCooldown > 0) {
+            dashCooldown -= 0.016;
+            document.getElementById('stamina-display').innerText = `Scatto: ${Math.ceil(dashCooldown)}s`;
+        } else {
+            document.getElementById('stamina-display').innerText = `Scatto: Pronto`;
+        }
+
+        // Movimento Fauna Marina
+        marineLife.forEach(c => {
+            c.mesh.position.addScaledVector(c.dir, c.speed);
+            if (Math.abs(c.mesh.position.x) > 130 || Math.abs(c.mesh.position.z) > 130) {
+                c.dir.negate();
+            }
+        });
+
+        // Movimento Particelle d'Acqua
+        particles.forEach(p => {
+            p.position.y += 0.02;
+            if (p.position.y > 30) p.position.y = -10;
+        });
+
+        // Gestione Visuale Telecamera a 360°
+        const camDistance = 12;
+        camera.position.x = sharkGroup.position.x + camDistance * Math.sin(sharkGroup.rotation.y + cameraAngleX) * Math.cos(cameraAngleY);
+        camera.position.z = sharkGroup.position.z + camDistance * Math.cos(sharkGroup.rotation.y + cameraAngleX) * Math.cos(cameraAngleY);
+        camera.position.y = sharkGroup.position.y + camDistance * Math.sin(cameraAngleY) + 2;
+        camera.lookAt(sharkGroup.position.x, sharkGroup.position.y + 0.5, sharkGroup.position.z);
+    }
+
+    renderer.render(scene, camera);
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+window.onload = () => {
+    init3D();
+    animate();
+};
+</script>
+</body>
+</html>
