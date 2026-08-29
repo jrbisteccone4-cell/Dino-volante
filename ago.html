@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Acutus 3D: Ultra Precision Search</title>
+  <title>Acutus 3D: Field Search</title>
   <style>
     * { box-sizing: border-box; touch-action: none; user-select: none; }
     body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
@@ -76,8 +76,8 @@
 
   <div id="intro-screen">
     <h1>ACUTUS 3D</h1>
-    <p>Esplora il tappeto di fieno compatto.<br><br>
-    Usa il **cursore a sinistra** per muoverti e **trascina lo schermo** per guardare in basso. Attiva la **lente 🔎** per ingrandire e **tocca con precisione** i fili per rimuoverli uno alla volta finché non trovi l'ago.</p>
+    <p>Esplora il campo delimitato da un alto muro di pietra.<br><br>
+    Usa il **cursore a sinistra** per muoverti e **trascina lo schermo** per orientare la visuale. Attiva la **lente 🔎** per ingrandire e **tocca un filo** per toglierlo finché non trovi l'ago.</p>
     <button id="start-btn">INIZIA LA RICERCA</button>
   </div>
 
@@ -150,8 +150,11 @@ let isMagnifierActive = false;
 let isGameRunning = false;
 let isWon = false;
 
+// Dimensione Campo Recintato da Muro Rigido (Quadrato)
+const FIELD_SIZE = 10; // Muro 10x10 metri
+
 const LOOK_SENSITIVITY = 0.002;
-let pitch = -0.5, yaw = 0; // Parte guardando verso il basso verso il fieno
+let pitch = -0.5, yaw = 0;
 let touchStartX = 0, touchStartY = 0;
 let isSwiping = false;
 
@@ -169,7 +172,7 @@ function init3D() {
   scene.background = new THREE.Color(0x87ceeb);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 50);
-  camera.position.set(0, 0.8, 0); // Posizione abbassata vicina al manto erboso/fieno
+  camera.position.set(0, 0.8, 0);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -183,28 +186,52 @@ function init3D() {
   sunLight.position.set(10, 20, 10);
   scene.add(sunLight);
 
-  // Terreno di base
-  const groundGeo = new THREE.PlaneGeometry(30, 30);
-  const groundMat = new THREE.MeshBasicMaterial({ color: 0x2d1e10 });
+  // Terreno
+  const groundGeo = new THREE.PlaneGeometry(FIELD_SIZE, FIELD_SIZE);
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
-  // FILI DI FIENO ultra-fitti, bassi e fini (Effetto Prato Compatto)
-  const bladeGeo = new THREE.CylinderGeometry(0.001, 0.002, 0.06, 3);
-  bladeGeo.translate(0, 0.03, 0); // Centra l'origine alla base del filo
+  // COSTRUZIONE MURO RIGIDO TRIDIMENSIONALE (4 Pareti di Pietra)
+  const wallHeight = 2.5;
+  const wallThickness = 0.4;
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a5a5a, roughness: 0.8 });
+
+  // Parete Nord e Sud
+  const wallGeoNS = new THREE.BoxGeometry(FIELD_SIZE + wallThickness, wallHeight, wallThickness);
+  const wallNorth = new THREE.Mesh(wallGeoNS, wallMat);
+  wallNorth.position.set(0, wallHeight / 2, -FIELD_SIZE / 2);
+  scene.add(wallNorth);
+
+  const wallSouth = new THREE.Mesh(wallGeoNS, wallMat);
+  wallSouth.position.set(0, wallHeight / 2, FIELD_SIZE / 2);
+  scene.add(wallSouth);
+
+  // Parete Est e Ovest
+  const wallGeoEW = new THREE.BoxGeometry(wallThickness, wallHeight, FIELD_SIZE);
+  const wallEast = new THREE.Mesh(wallGeoEW, wallMat);
+  wallEast.position.set(FIELD_SIZE / 2, wallHeight / 2, 0);
+  scene.add(wallEast);
+
+  const wallWest = new THREE.Mesh(wallGeoEW, wallMat);
+  wallWest.position.set(-FIELD_SIZE / 2, wallHeight / 2, 0);
+  scene.add(wallWest);
+
+  // FILI DI FIENO COMPATTI DENTRO IL MURO
+  const bladeGeo = new THREE.CylinderGeometry(0.003, 0.005, 0.08, 4);
+  bladeGeo.translate(0, 0.04, 0);
   const bladeMat = new THREE.MeshStandardMaterial({ color: 0xd4ac0d, roughness: 0.7 });
 
   hayMesh = new THREE.InstancedMesh(bladeGeo, bladeMat, TOTAL_HAY);
   const dummy = new THREE.Object3D();
   
-  // Raggio ristretto (6 metri) per rendere la densità simile a un prato compattissimo
-  const fieldRadius = 6.0;
+  const safeMargin = 0.3; // Margine interno dal muro
+  const halfField = (FIELD_SIZE / 2) - safeMargin;
+
   for (let i = 0; i < TOTAL_HAY; i++) {
-    const r = Math.sqrt(Math.random()) * fieldRadius;
-    const theta = Math.random() * Math.PI * 2;
-    const x = r * Math.cos(theta);
-    const z = r * Math.sin(theta);
+    const x = (Math.random() * 2 - 1) * halfField;
+    const z = (Math.random() * 2 - 1) * halfField;
 
     dummy.position.set(x, 0, z);
     dummy.rotation.y = Math.random() * Math.PI;
@@ -217,14 +244,14 @@ function init3D() {
   hayMesh.instanceMatrix.needsUpdate = true;
   scene.add(hayMesh);
 
-  // AGO PICCOLO NASCOSTO NEL FIENO
-  const needleGeo = new THREE.CylinderGeometry(0.0008, 0.0002, 0.05, 8);
-  const needleMat = new THREE.MeshStandardMaterial({ color: 0xf0f3f4, metalness: 0.9, roughness: 0.1 });
+  // AGO PICCOLO
+  const needleGeo = new THREE.CylinderGeometry(0.0012, 0.0004, 0.06, 8);
+  const needleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.95, roughness: 0.1 });
   needleMesh = new THREE.Mesh(needleGeo, needleMat);
   
-  const randomAngle = Math.random() * Math.PI * 2;
-  const randomDist = 0.5 + Math.random() * 1.5;
-  needlePos.set(Math.cos(randomAngle) * randomDist, 0.015, Math.sin(randomAngle) * randomDist);
+  const rx = (Math.random() * 2 - 1) * (halfField - 0.5);
+  const rz = (Math.random() * 2 - 1) * (halfField - 0.5);
+  needlePos.set(rx, 0.015, rz);
   needleMesh.position.copy(needlePos);
   needleMesh.rotation.z = Math.PI / 2;
   scene.add(needleMesh);
@@ -332,7 +359,7 @@ function updateJoystick(touch) {
   moveVector.y = dy / maxRadius;
 }
 
-// MOVIMENTO CAMERA & SELEZIONE TOCCO
+// TOUCH & SWIPE
 window.addEventListener('touchstart', (e) => {
   if (!isGameRunning || isWon) return;
   if (e.target.closest('#joystick-zone') || e.target.closest('#magnifier-btn') || e.target.closest('#alert-msg')) return;
@@ -351,7 +378,7 @@ window.addEventListener('touchmove', (e) => {
   const deltaX = touch.clientX - touchStartX;
   const deltaY = touch.clientY - touchStartY;
 
-  if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+  if (Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6) {
     isSwiping = true;
   }
 
@@ -366,7 +393,7 @@ window.addEventListener('touchmove', (e) => {
   touchStartY = touch.clientY;
 });
 
-// REMOZIONE FILO DI FIENO O AGO AL TAP
+// TAP PER RIMUOVERE IL FILO O SELEZIONARE L'AGO
 window.addEventListener('touchend', (e) => {
   if (!isGameRunning || isWon || isSwiping) return;
   if (e.target.closest('#joystick-zone') || e.target.closest('#magnifier-btn') || e.target.closest('#alert-msg')) return;
@@ -377,27 +404,29 @@ window.addEventListener('touchend', (e) => {
 
   raycaster.setFromCamera(mouse, camera);
 
-  // Check Ago
+  // 1. Controllo Ago
   const needleIntersects = raycaster.intersectObject(needleMesh);
   if (needleIntersects.length > 0) {
     triggerWin();
     return;
   }
 
-  // Check Fili di Fieno (rimozione istantanea del filo selezionato)
+  // 2. Controllo Fili di Fieno
   const hayIntersects = raycaster.intersectObject(hayMesh);
   if (hayIntersects.length > 0) {
     const instanceId = hayIntersects[0].instanceId;
-    
-    // Sposta il filo toccato fuori dalla mappa
-    const nullMatrix = new THREE.Matrix4().makeScale(0, 0, 0);
-    hayMesh.setMatrixAt(instanceId, nullMatrix);
-    hayMesh.instanceMatrix.needsUpdate = true;
+    if (instanceId !== undefined) {
+      
+      const matrix = new THREE.Matrix4();
+      matrix.makeScale(0, 0, 0);
+      hayMesh.setMatrixAt(instanceId, matrix);
+      hayMesh.instanceMatrix.needsUpdate = true;
 
-    hayRemoved++;
-    hayRemaining--;
-    document.getElementById('hay-count').innerText = hayRemaining.toLocaleString('it-IT');
-    document.getElementById('removed-count').innerText = hayRemoved.toLocaleString('it-IT');
+      hayRemoved++;
+      hayRemaining--;
+      document.getElementById('hay-count').innerText = hayRemaining.toLocaleString('it-IT');
+      document.getElementById('removed-count').innerText = hayRemoved.toLocaleString('it-IT');
+    }
   }
 });
 
@@ -448,8 +477,16 @@ function animate() {
     const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
     const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
 
-    camera.position.addScaledVector(forward, -moveVector.y * speed);
-    camera.position.addScaledVector(side, moveVector.x * speed);
+    const nextPos = camera.position.clone();
+    nextPos.addScaledVector(forward, -moveVector.y * speed);
+    nextPos.addScaledVector(side, moveVector.x * speed);
+
+    // COLLISIONE RIGIDA CON I MURI DI PIETRA
+    const limit = (FIELD_SIZE / 2) - 0.4;
+    if (Math.abs(nextPos.x) < limit && Math.abs(nextPos.z) < limit) {
+      camera.position.copy(nextPos);
+    }
+    
     camera.position.y = 0.8;
   }
 
