@@ -1,956 +1,3 @@
-html_code_v2 = """<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Fiat Panda Rossa 3D - New York Pass 500</title>
-  <style>
-    * { box-sizing: border-box; touch-action: none; user-select: none; }
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #020617; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
-
-    #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
-    
-    #score-box {
-      position: absolute; top: 20px; left: 20px;
-      background: rgba(15, 23, 42, 0.9);
-      color: #38bdf8; padding: 16px 24px; border-radius: 18px; font-weight: 800;
-      font-size: 15px; border: 1px solid rgba(56, 189, 248, 0.4); backdrop-filter: blur(8px);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    }
-    #score-box span { color: #f59e0b; font-size: 17px; }
-
-    #shield-status {
-      color: #10b981; font-size: 13px; font-weight: 900; display: none; margin-top: 5px;
-      text-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
-    }
-
-    .btn-control {
-      position: absolute; width: 75px; height: 75px; background: rgba(15, 23, 42, 0.85);
-      border-radius: 50%; color: white; font-weight: 900; font-size: 22px;
-      display: flex; justify-content: center; align-items: center;
-      pointer-events: auto; cursor: pointer; backdrop-filter: blur(8px);
-      border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-    }
-    .btn-control:active { transform: scale(0.9); background: rgba(56, 189, 248, 0.4); }
-
-    #btn-left { bottom: 30px; left: 20px; }
-    #btn-right { bottom: 30px; left: 110px; }
-    
-    #btn-brake { bottom: 30px; right: 20px; border-color: rgba(239, 68, 68, 0.8); color: #ef4444; }
-    #btn-gas { bottom: 120px; right: 20px; border-color: rgba(16, 185, 129, 0.8); color: #10b981; }
-    #btn-horn { bottom: 30px; right: 110px; border-color: rgba(245, 158, 11, 0.8); color: #f59e0b; font-size: 28px; }
-
-    #btn-rocket {
-      position: absolute; top: 20px; right: 20px; padding: 14px 26px;
-      background: linear-gradient(135deg, #f43f5e, #fb923c); color: white;
-      font-weight: 900; border-radius: 30px; border: none; font-size: 14px;
-      display: none; pointer-events: auto; cursor: pointer;
-      box-shadow: 0 0 25px rgba(244, 63, 94, 0.8); animation: pulse 0.6s infinite alternate;
-    }
-
-    @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
-
-    #overlay-screen {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100;
-      background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      color: white; text-align: center; padding: 30px; pointer-events: auto;
-    }
-    #overlay-screen h1 { font-size: 2.3rem; margin-bottom: 12px; color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
-    #overlay-screen p { font-size: 1rem; line-height: 1.7; max-width: 460px; margin-bottom: 30px; color: #94a3b8; }
-    #start-btn {
-      padding: 18px 50px; font-size: 1.2rem; font-weight: 900; border: none;
-      border-radius: 40px; background: linear-gradient(135deg, #dc2626, #ef4444);
-      color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); cursor: pointer;
-    }
-
-    #reward-banner {
-      position: absolute; top: 15%; width: 100%; text-align: center;
-      color: #00d2ff; font-size: 2rem; font-weight: 900; text-shadow: 0 0 20px #00d2ff, 0 0 40px #00d2ff;
-      display: none; z-index: 50; animation: bounce 0.8s infinite alternate;
-    }
-    @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-15px); } }
-  </style>
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-</head>
-<body>
-
-  <div id="reward-banner">⚽ TRAGUARDO 500 RAGGIUNTO! 🏆<br>PALLONE AZZURRO DEL NAPOLI!</div>
-
-  <div id="overlay-screen">
-    <h1 id="main-title">FIAT PANDA ROSSA 3D</h1>
-    <p id="main-desc">Modello fedele Fiat Panda Rossa (seconda serie) completo di dettagli!<br><br>
-    - Fari anteriori trasparenti, griglia con stemma Fiat e barre da tetto sportive.<br>
-    - Movimento dinamico continuo delle macchine e dello scenario senza blocchi.<br>
-    - Razzo Volante 🚀 ogni 20 sorpassi & Premio 500 Macchine col Pallone del Napoli!</p>
-    <button id="start-btn">GUIDA LA PANDA ROSSA</button>
-  </div>
-
-  <div id="hud">
-    <div id="score-box">
-      <div>Punteggio: <span id="score-val">0</span></div>
-      <div>Macchine Evitate: <span id="cars-val">0</span> / 500</div>
-      <div id="shield-status">🛡️ SCUDO ATTIVO</div>
-    </div>
-
-    <button id="btn-rocket">🚀 ATTIVA RAZZO!</button>
-
-    <div class="btn-control" id="btn-left">◄</div>
-    <div class="btn-control" id="btn-right">►</div>
-    <div class="btn-control" id="btn-horn">📣</div>
-    <div class="btn-control" id="btn-brake">STOP</div>
-    <div class="btn-control" id="btn-gas">GAS</div>
-  </div>
-
-  <div id="canvas-container"></div>
-
-<script>
-const AudioEngine = {
-  ctx: null,
-  init() {
-    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-  },
-  playHorn() {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance("Napoletame!");
-      utterance.lang = 'it-IT';
-      utterance.pitch = 1.2;
-      utterance.rate = 1.1;
-      utterance.volume = 1.0;
-      window.speechSynthesis.speak(utterance);
-    }
-  },
-  playCrash() {
-    if (!this.ctx) return;
-    let bufferSize = this.ctx.sampleRate * 0.4;
-    let buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    let data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
-    let noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-    let gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.7, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
-    noise.connect(gain);
-    gain.connect(this.ctx.destination);
-    noise.start();
-  },
-  playRocket() {
-    if (!this.ctx) return;
-    let osc = this.ctx.createOscillator();
-    let gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(550, this.ctx.currentTime + 2.0);
-    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 2.2);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-  }
-};
-
-let scene, camera, renderer;
-let pandaGroup, shieldMesh, napoliBall, fireworksGroup;
-let buildings = [];
-let trafficCars = [];
-let fireworks = [];
-
-let score = 0;
-let carsPassed = 0;
-let isGameRunning = false;
-let lastTime = 0;
-let rewardUnlocked = false;
-
-let rocketAvailable = false;
-let isRocketActive = false;
-let rocketTimer = 0;
-let hasShield = false;
-
-let inputs = { left: false, right: false, gas: false, brake: false };
-let pandaSpeed = 0.25; // Velocità base per garantire che l'ambiente si muova sempre
-const MAX_SPEED = 0.75;
-const ACCEL = 0.018;
-const DECEL = 0.008;
-const ROAD_WIDTH = 13;
-
-function init3D() {
-  const container = document.getElementById('canvas-container');
-  container.innerHTML = '';
-  
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x020617);
-  scene.fog = new THREE.FogExp2(0x020617, 0.007);
-
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
-  
-  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  container.appendChild(renderer.domElement);
-
-  const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.6);
-  scene.add(ambientLight);
-
-  const moonLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  moonLight.position.set(30, 60, -30);
-  moonLight.castShadow = true;
-  scene.add(moonLight);
-
-  createRoad();
-  createNYCityscape();
-  createFiatPandaRossa();
-  createNapoliBallReward();
-
-  camera.position.set(0, 3.8, 7.8);
-  camera.lookAt(0, 1.1, -1);
-
-  window.addEventListener('resize', onWindowResize);
-}
-
-function createRoad() {
-  const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, 400);
-  const roadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.4 });
-  const road = new THREE.Mesh(roadGeo, roadMat);
-  road.rotation.x = -Math.PI / 2;
-  road.receiveShadow = true;
-  scene.add(road);
-
-  for (let i = -200; i < 200; i += 12) {
-    const dashGeo = new THREE.PlaneGeometry(0.35, 5);
-    const dashMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
-    [-ROAD_WIDTH/3, ROAD_WIDTH/3].forEach(xPos => {
-      const dash = new THREE.Mesh(dashGeo, dashMat);
-      dash.rotation.x = -Math.PI / 2;
-      dash.position.set(xPos, 0.02, i);
-      scene.add(dash);
-    });
-  }
-}
-
-function createNYCityscape() {
-  buildings = [];
-  const colors = [0x0f172a, 0x1e1b4b, 0x0284c7, 0x1e293b];
-
-  for (let z = -180; z < 180; z += 18) {
-    [-1, 1].forEach(side => {
-      const height = 45 + Math.random() * 45;
-      const width = 12;
-      const bGroup = new THREE.Group();
-      const geo = new THREE.BoxGeometry(width, height, 14);
-      const mat = new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * colors.length)], roughness: 0.3 });
-      const buildingMesh = new THREE.Mesh(geo, mat);
-      bGroup.add(buildingMesh);
-
-      bGroup.position.set(side * (ROAD_WIDTH / 2 + width / 2 + 1.8), height / 2, z);
-      scene.add(bGroup);
-      buildings.push(bGroup);
-    });
-  }
-}
-
-// COSTRUZIONE DETTAGLIATA FIAT PANDA ROSSA SECONDA SERIE (COME IN FOTO)
-function createFiatPandaRossa() {
-  pandaGroup = new THREE.Group();
-
-  const redMat = new THREE.MeshStandardMaterial({ color: 0xd90429, roughness: 0.2, metalness: 0.4 }); // Rosso FIAT brillante
-  const blackPlasticMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 }); // Fascioni in plastica nera
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 });
-  const silverMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8, roughness: 0.2 });
-
-  // 1. Corpo Principale (Scocca Inferiore)
-  const bodyGeo = new THREE.BoxGeometry(1.68, 0.75, 2.8);
-  const body = new THREE.Mesh(bodyGeo, redMat);
-  body.position.y = 0.65;
-  body.castShadow = true;
-  pandaGroup.add(body);
-
-  // 2. Abitacolo / Tetto Rialzato Tipico Panda
-  const cabinGeo = new THREE.BoxGeometry(1.58, 0.85, 1.75);
-  const cabin = new THREE.Mesh(cabinGeo, redMat);
-  cabin.position.set(0, 1.38, -0.15);
-  cabin.castShadow = true;
-  pandaGroup.add(cabin);
-
-  // 3. Parabrezza & Vetri Laterali
-  const windshieldGeo = new THREE.BoxGeometry(1.5, 0.7, 0.08);
-  const windshield = new THREE.Mesh(windshieldGeo, glassMat);
-  windshield.position.set(0, 1.42, -0.98);
-  windshield.rotation.x = 0.35; // Inclinato come nella Panda reale
-  pandaGroup.add(windshield);
-
-  // Vetro Posteriore
-  const rearGlassGeo = new THREE.BoxGeometry(1.48, 0.65, 0.08);
-  const rearGlass = new THREE.Mesh(rearGlassGeo, glassMat);
-  rearGlass.position.set(0, 1.42, 0.71);
-  pandaGroup.add(rearGlass);
-
-  // 4. Parurti Anteriore & Posteriore con Griglia Panda
-  const bumperFrontGeo = new THREE.BoxGeometry(1.7, 0.3, 0.2);
-  const bumperFront = new THREE.Mesh(bumperFrontGeo, blackPlasticMat);
-  bumperFront.position.set(0, 0.42, -1.38);
-  pandaGroup.add(bumperFront);
-
-  const bumperRearGeo = new THREE.BoxGeometry(1.7, 0.32, 0.2);
-  const bumperRear = new THREE.Mesh(bumperRearGeo, blackPlasticMat);
-  bumperRear.position.set(0, 0.42, 1.38);
-  pandaGroup.add(bumperRear);
-
-  // Stemma Fiat Rotondo al Centro della Mascherina
-  const logoGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.04, 16);
-  logoGeo.rotateX(Math.PI / 2);
-  const logoMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, metalness: 0.8 });
-  const logo = new THREE.Mesh(logoGeo, logoMat);
-  logo.position.set(0, 0.65, -1.41);
-  pandaGroup.add(logo);
-
-  // Fari Anteriori Squadrati Tipici
-  [-0.6, 0.6].forEach(x => {
-    const headlightGeo = new THREE.BoxGeometry(0.32, 0.24, 0.06);
-    const headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.9, roughness: 0.1 });
-    const headlight = new THREE.Mesh(headlightGeo, headlightMat);
-    headlight.position.set(x, 0.66, -1.40);
-    pandaGroup.add(headlight);
-  });
-
-  // Fari Posteriori Verticali Panda
-  [-0.72, 0.72].forEach(x => {
-    const tailLightGeo = new THREE.BoxGeometry(0.14, 0.55, 0.08);
-    const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-    const tailLight = new THREE.Mesh(tailLightGeo, tailLightMat);
-    tailLight.position.set(x, 1.2, 0.71);
-    pandaGroup.add(tailLight);
-  });
-
-  // Fasce Paracolpi Nere Laterali
-  [-0.85, 0.85].forEach(x => {
-    const sideStripGeo = new THREE.BoxGeometry(0.04, 0.12, 2.3);
-    const sideStrip = new THREE.Mesh(sideStripGeo, blackPlasticMat);
-    sideStrip.position.set(x, 0.62, 0);
-    pandaGroup.add(sideStrip);
-  });
-
-  // Barre Longitudinali Nere sul Tetto (Roof Rails)
-  [-0.65, 0.65].forEach(x => {
-    const railGeo = new THREE.BoxGeometry(0.06, 0.08, 1.6);
-    const rail = new THREE.Mesh(railGeo, blackPlasticMat);
-    rail.position.set(x, 1.84, -0.15);
-    pandaGroup.add(rail);
-  });
-
-  // Specchietti Retrovisori Neri Squadrati
-  [-0.88, 0.88].forEach(x => {
-    const mirrorGeo = new THREE.BoxGeometry(0.18, 0.14, 0.12);
-    const mirror = new THREE.Mesh(mirrorGeo, blackPlasticMat);
-    mirror.position.set(x, 1.35, -0.8);
-    pandaGroup.add(mirror);
-  });
-
-  // Ruote con Cerchi Multi-razze Bianchi/Argento (Come in Foto)
-  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.26, 24);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
-  wheelGeo.rotateZ(Math.PI / 2);
-
-  const rimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.27, 16);
-  rimGeo.rotateZ(Math.PI / 2);
-
-  [[-0.82, 0.35, 0.9], [0.82, 0.35, 0.9], [-0.82, 0.35, -0.9], [0.82, 0.35, -0.9]].forEach(pos => {
-    const wheelGroup = new THREE.Group();
-    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-    const rim = new THREE.Mesh(rimGeo, silverMat);
-    wheelGroup.add(wheel);
-    wheelGroup.add(rim);
-    wheelGroup.position.set(...pos);
-    wheelGroup.castShadow = true;
-    pandaGroup.add(wheelGroup);
-  });
-
-  // Scudo Protettivo
-  const shieldGeo = new THREE.SphereGeometry(2.2, 32, 32);
-  const shieldMat = new THREE.MeshStandardMaterial({ color: 0x10b981, transparent: true, opacity: 0.4, wireframe: true });
-  shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
-  shieldMesh.position.set(0, 1.0, 0);
-  shieldMesh.visible = false;
-  pandaGroup.add(shieldMesh);
-
-  pandaGroup.position.set(0, 0, 0);
-  scene.add(pandaGroup);
-}
-
-// CREAZIONE MACCHINE DEL TRAFFICO CON MODELLI E COLORI VARI (SEDAN / SUV / CITYCAR)
-function spawnTrafficCar() {
-  const carGroup = new THREE.Group();
-  const colors = [0xef4444, 0x3b82f6, 0xf59e0b, 0x64748b, 0xffffff, 0x10b981, 0x8b5cf6];
-  const carColor = colors[Math.floor(Math.random() * colors.length)];
-
-  const bodyMat = new THREE.MeshStandardMaterial({ color: carColor, roughness: 0.2, metalness: 0.4 });
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1 });
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-
-  // Tipo casuale: Sedan (berlina) o SUV
-  const isSUV = Math.random() > 0.5;
-  const length = isSUV ? 3.4 : 3.0;
-  const height = isSUV ? 0.8 : 0.65;
-
-  // Corpo Auto
-  const bodyGeo = new THREE.BoxGeometry(1.7, height, length);
-  const carBody = new THREE.Mesh(bodyGeo, bodyMat);
-  carBody.position.y = height / 2 + 0.2;
-  carBody.castShadow = true;
-  carGroup.add(carBody);
-
-  // Tetto / Abitacolo Aerodinamico
-  const roofGeo = new THREE.BoxGeometry(1.45, height * 0.9, length * 0.55);
-  const roof = new THREE.Mesh(roofGeo, glassMat);
-  roof.position.set(0, height + 0.4, -0.1);
-  roof.castShadow = true;
-  carGroup.add(roof);
-
-  // Fari Posteriori
-  [-0.6, 0.6].forEach(x => {
-    const tlGeo = new THREE.BoxGeometry(0.3, 0.15, 0.05);
-    const tlMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-    const tl = new THREE.Mesh(tlGeo, tlMat);
-    tl.position.set(x, height, length / 2 + 0.02);
-    carGroup.add(tl);
-  });
-
-  // Ruote
-  const wGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.26, 16);
-  wGeo.rotateZ(Math.PI / 2);
-
-  const wheels = [];
-  [[-0.8, 0.32, length * 0.3], [0.8, 0.32, length * 0.3], [-0.8, 0.32, -length * 0.3], [0.8, 0.32, -length * 0.3]].forEach(pos => {
-    const w = new THREE.Mesh(wGeo, wheelMat);
-    w.position.set(...pos);
-    w.castShadow = true;
-    carGroup.add(w);
-    wheels.push(w);
-  });
-
-  const lanes = [-4.0, 0, 4.0];
-  const lane = lanes[Math.floor(Math.random() * lanes.length)];
-  
-  carGroup.position.set(lane, 0, -140);
-  scene.add(carGroup);
-
-  trafficCars.push({
-    mesh: carGroup,
-    wheels: wheels,
-    speed: 0.28 + Math.random() * 0.22,
-    box: new THREE.Box3()
-  });
-}
-
-function createNapoliBallReward() {
-  const ballGeo = new THREE.SphereGeometry(2.5, 32, 32);
-  const ballMat = new THREE.MeshStandardMaterial({ color: 0x00d2ff, roughness: 0.2, metalness: 0.3 });
-  napoliBall = new THREE.Mesh(ballGeo, ballMat);
-
-  const patchGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
-  const patchMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  for(let i = 0; i < 12; i++){
-    const p = new THREE.Mesh(patchGeo, patchMat);
-    const u = Math.random() * Math.PI * 2;
-    const v = Math.random() * Math.PI;
-    p.position.set(2.4 * Math.sin(v) * Math.cos(u), 2.4 * Math.sin(v) * Math.sin(u), 2.4 * Math.cos(v));
-    napoliBall.add(p);
-  }
-
-  napoliBall.position.set(0, 6, -15);
-  napoliBall.visible = false;
-  scene.add(napoliBall);
-
-  fireworksGroup = new THREE.Group();
-  scene.add(fireworksGroup);
-}
-
-function triggerFireworks() {
-  const pCount = 100;
-  const pGeo = new THREE.BufferGeometry();
-  const positions = new Float32Array(pCount * 3);
-  const velocities = [];
-
-  for(let i = 0; i < pCount; i++) {
-    positions[i*3] = (Math.random() - 0.5) * 4;
-    positions[i*3+1] = 6 + (Math.random() - 0.5) * 4;
-    positions[i*3+2] = -15 + (Math.random() - 0.5) * 4;
-
-    velocities.push({
-      x: (Math.random() - 0.5) * 0.5,
-      y: (Math.random() - 0.5) * 0.5,
-      z: (Math.random() - 0.5) * 0.5
-    });
-  }
-
-  pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const pMat = new THREE.PointsMaterial({ color: 0x00d2ff, size: 0.35 });
-  const particleSystem = new THREE.Points(pGeo, pMat);
-  
-  fireworksGroup.add(particleSystem);
-  fireworks.push({ system: particleSystem, vels: velocities, life: 80 });
-}
-
-function setupControls() {
-  const bindBtn = (id, key) => {
-    const btn = document.getElementById(id);
-    btn.addEventListener('touchstart', (e) => { e.preventDefault(); inputs[key] = true; });
-    btn.addEventListener('touchend', (e) => { e.preventDefault(); inputs[key] = false; });
-    btn.addEventListener('mousedown', () => { inputs[key] = true; });
-    btn.addEventListener('mouseup', () => { inputs[key] = false; });
-  };
-
-  bindBtn('btn-left', 'left');
-  bindBtn('btn-right', 'right');
-  bindBtn('btn-gas', 'gas');
-  bindBtn('btn-brake', 'brake');
-
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft' || e.key === 'a') inputs.left = true;
-    if (e.key === 'ArrowRight' || e.key === 'd') inputs.right = true;
-    if (e.key === 'ArrowUp' || e.key === 'w') inputs.gas = true;
-    if (e.key === 'ArrowDown' || e.key === 's') inputs.brake = true;
-  });
-
-  window.addEventListener('keyup', (e) => {
-    if (e.key === 'ArrowLeft' || e.key === 'a') inputs.left = false;
-    if (e.key === 'ArrowRight' || e.key === 'd') inputs.right = false;
-    if (e.key === 'ArrowUp' || e.key === 'w') inputs.gas = false;
-    if (e.key === 'ArrowDown' || e.key === 's') inputs.brake = false;
-  });
-
-  document.getElementById('btn-horn').addEventListener('click', () => { AudioEngine.playHorn(); });
-  document.getElementById('btn-rocket').addEventListener('click', () => {
-    if (rocketAvailable && !isRocketActive) {
-      isRocketActive = true;
-      rocketAvailable = false;
-      rocketTimer = 220;
-      document.getElementById('btn-rocket').style.display = 'none';
-      AudioEngine.playRocket();
-    }
-  });
-}
-
-function animate(currentTime) {
-  if (!isGameRunning) return;
-  requestAnimationFrame(animate);
-
-  const delta = Math.min((currentTime - lastTime) / 1000, 0.1) || 0.016;
-  lastTime = currentTime;
-
-  // Gestione Velocità con risposta reattiva
-  if (inputs.gas) pandaSpeed = Math.min(MAX_SPEED, pandaSpeed + ACCEL);
-  else if (inputs.brake) pandaSpeed = Math.max(0.1, pandaSpeed - ACCEL * 2.5);
-  else pandaSpeed = Math.max(0.25, pandaSpeed - DECEL); // Mantiene velocità costante per la strada
-
-  if (inputs.left) pandaGroup.position.x -= 15 * delta;
-  if (inputs.right) pandaGroup.position.x += 15 * delta;
-
-  const maxBound = (ROAD_WIDTH / 2) - 1.2;
-  pandaGroup.position.x = Math.max(-maxBound, Math.min(maxBound, pandaGroup.position.x));
-
-  if (isRocketActive) {
-    rocketTimer--;
-    if (pandaGroup.position.y < 6.5) pandaGroup.position.y += 16 * delta;
-    if (rocketTimer <= 0) {
-      isRocketActive = false;
-      hasShield = true;
-      shieldMesh.visible = true;
-      document.getElementById('shield-status').style.display = 'block';
-    }
-  } else {
-    if (pandaGroup.position.y > 0) {
-      pandaGroup.position.y -= 12 * delta;
-      if (pandaGroup.position.y < 0) pandaGroup.position.y = 0;
-    }
-  }
-
-  // MOVIMENTO AMBIENTALE E CICLO AUTO FLUIDO
-  score += Math.round(pandaSpeed * 15);
-  document.getElementById('score-val').innerText = score;
-
-  buildings.forEach(b => {
-    b.position.z += pandaSpeed * 50 * delta * 60;
-    if (b.position.z > 60) b.position.z -= 320;
-  });
-
-  // Generazione Traffico Costante
-  if (Math.random() < 0.048 && trafficCars.length < 7) {
-    spawnTrafficCar();
-  }
-
-  const pandaBox = new THREE.Box3().setFromObject(pandaGroup);
-
-  for (let i = trafficCars.length - 1; i >= 0; i--) {
-    let car = trafficCars[i];
-    
-    // Movimento Macchine basato sulla velocità Panda + Velocità propria auto
-    const moveZ = (pandaSpeed * 40 + car.speed * 25) * delta;
-    car.mesh.position.z += moveZ;
-    
-    // Rotazione automatica ruote in movimento
-    car.wheels.forEach(w => w.rotation.x += moveZ * 0.1);
-
-    // Gestione collisioni
-    if (pandaGroup.position.y < 1.2) {
-      car.box.setFromObject(car.mesh);
-      if (pandaBox.intersectsBox(car.box)) {
-        if (hasShield) {
-          hasShield = false;
-          shieldMesh.visible = false;
-          document.getElementById('shield-status').style.display = 'none';
-          scene.remove(car.mesh);
-          trafficCars.splice(i, 1);
-          AudioEngine.playCrash();
-          continue;
-        } else {
-          gameOver();
-          return;
-        }
-      }
-    }
-
-    // Sorpasso Macchina completato
-    if (car.mesh.position.z > 15) {
-      scene.remove(car.mesh);
-      trafficCars.splice(i, 1);
-      carsPassed++;
-      document.getElementById('cars-val').innerText = carsPassed;
-
-      // Sblocco Razzo ogni 20 macchine
-      if (carsPassed > 0 && carsPassed % 20 === 0 && !isRocketActive) {
-        rocketAvailable = true;
-        document.getElementById('btn-rocket').style.display = 'block';
-      }
-
-      // Sblocco Premio Finale 500 Macchine Evitate
-      if (carsPassed >= 500 && !rewardUnlocked) {
-        rewardUnlocked = true;
-        napoliBall.visible = true;
-        document.getElementById('reward-banner').style.display = 'block';
-      }
-    }
-  }
-
-  // Animazione Pallone del Napoli & Fuochi d'Artificio
-  if (rewardUnlocked) {
-    napoliBall.rotation.y += 0.02;
-    napoliBall.rotation.x += 0.01;
-    if (Math.random() < 0.15) triggerFireworks();
-
-    fireworks.forEach((fw, index) => {
-      fw.life--;
-      const pos = fw.system.geometry.attributes.position.array;
-      for(let i=0; i<fw.vels.length; i++) {
-        pos[i*3] += fw.vels[i].x;
-        pos[i*3+1] += fw.vels[i].y;
-        pos[i*3+2] += fw.vels[i].z;
-      }
-      fw.system.geometry.attributes.position.needsUpdate = true;
-      if (fw.life <= 0) {
-        fireworksGroup.remove(fw.system);
-        fireworks.splice(index, 1);
-      }
-    });
-  }
-
-  camera.position.x = pandaGroup.position.x * 0.35;
-  renderer.render(scene, camera);
-}
-
-function gameOver() {
-  isGameRunning = false;
-  AudioEngine.playCrash();
-
-  document.getElementById('main-title').innerText = "INCIDENTE!";
-  document.getElementById('main-desc').innerHTML = `Punteggio Finale: <b>${score}</b><br>Macchine Evitate: <b>${carsPassed}</b>`;
-  document.getElementById('start-btn').innerText = "RIPROVA";
-  document.getElementById('overlay-screen').style.display = 'flex';
-}
-
-function resetGame() {
-  trafficCars.forEach(c => scene.remove(c.mesh));
-  trafficCars = [];
-  score = 0;
-  carsPassed = 0;
-  pandaSpeed = 0.25;
-  pandaGroup.position.set(0, 0, 0);
-  rocketAvailable = false;
-  isRocketActive = false;
-  hasShield = false;
-  rewardUnlocked = false;
-  shieldMesh.visible = false;
-  if (napoliBall) napoliBall.visible = false;
-
-  document.getElementById('score-val').innerText = "0";
-  document.getElementById('cars-val').innerText = "0";
-  document.getElementById('shield-status').style.display = 'none';
-  document.getElementById('btn-rocket').style.display = 'none';
-  document.getElementById('reward-banner').style.display = 'none';
-}
-
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-document.getElementById('start-btn').addEventListener('click', () => {
-  document.getElementById('overlay-screen').style.display = 'none';
-  AudioEngine.init();
-  if (!scene) {
-    init3D();
-    setupControls();
-  } else {
-    resetGame();
-  }
-  isGameRunning = true;
-  lastTime = performance.now();
-  animate(lastTime);
-});
-</script>
-</body>
-</html>"""
-
-with open("fiat_panda_rossa_3d.html", "w", encoding="utf-8") as f:
-    f.write(html_code_v2)
-
-print("Updated HTML code created successfully.")
-import pygame
-import random
-import sys
-
-# Inizializzazione di Pygame
-pygame.init()
-
-# Dimensioni dello schermo
-WIDTH, HEIGHT = 800, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Corsa Auto - Stile Mercedes")
-
-# Colori
-ROAD_COLOR = (40, 40, 40)
-GRASS_COLOR = (30, 120, 30)
-WHITE = (255, 255, 255)
-YELLOW = (255, 215, 0)
-RED = (200, 0, 0)
-ORANGE = (255, 140, 0)
-
-# Impostazioni gioco
-FPS = 60
-clock = pygame.time.Clock()
-
-# Limite di velocità per cui l'impatto causa l'esplosione
-SPEED_THRESHOLD = 7.0
-
-def draw_mercedes_car(surface, x, y, width, height, color, is_player=False):
-    """Disegna un'auto dallo stile elegante tipo Mercedes con carrozzeria curata."""
-    # Ombra sotto l'auto
-    shadow_surface = pygame.Surface((width + 8, height + 8), pygame.SRCALPHA)
-    pygame.draw.rect(shadow_surface, (0, 0, 0, 80), (0, 0, width + 8, height + 8), border_radius=10)
-    surface.blit(shadow_surface, (x - 4, y - 4))
-
-    # Corpo principale della carrozzeria
-    car_rect = pygame.Rect(x, y, width, height)
-    pygame.draw.rect(surface, color, car_rect, border_radius=12)
-
-    # Dettagli carrozzeria (Highlights cromati / contorni)
-    pygame.draw.rect(surface, (220, 220, 220), car_rect, width=2, border_radius=12)
-
-    # Tettuccio / Parabrezza
-    glass_color = (100, 180, 220) if is_player else (50, 50, 60)
-    windshield = pygame.Rect(x + 5, y + int(height * 0.25), width - 10, int(height * 0.35))
-    pygame.draw.rect(surface, glass_color, windshield, border_radius=6)
-    pygame.draw.rect(surface, (180, 180, 180), windshield, width=1, border_radius=6)
-
-    # Griglia frontale stile Mercedes (In alto per i nemici, in basso per il giocatore se va verso l'alto)
-    grid_y = y + 4 if not is_player else y + height - 10
-    grid_rect = pygame.Rect(x + 8, grid_y, width - 16, 6)
-    pygame.draw.rect(surface, (200, 200, 200), grid_rect, border_radius=2)
-    # Stemma centrale
-    pygame.draw.circle(surface, (255, 255, 255), (x + width // 2, grid_y + 3), 3)
-
-    # Fari anteriore e posteriore
-    headlight_color = (255, 255, 200)
-    taillight_color = (220, 0, 0)
-    
-    if is_player:
-        # Fari davanti (in alto)
-        pygame.draw.rect(surface, headlight_color, (x + 3, y + 2, 8, 4), border_radius=2)
-        pygame.draw.rect(surface, headlight_color, (x + width - 11, y + 2, 8, 4), border_radius=2)
-        # Fari dietro (in basso)
-        pygame.draw.rect(surface, taillight_color, (x + 4, y + height - 5, 8, 3))
-        pygame.draw.rect(surface, taillight_color, (x + width - 12, y + height - 5, 8, 3))
-    else:
-        # Fari davanti (in basso per nemici che scendono)
-        pygame.draw.rect(surface, headlight_color, (x + 3, y + height - 6, 8, 4), border_radius=2)
-        pygame.draw.rect(surface, headlight_color, (x + width - 11, y + height - 6, 8, 4), border_radius=2)
-        # Fari dietro (in alto)
-        pygame.draw.rect(surface, taillight_color, (x + 4, y + 2, 8, 3))
-        pygame.draw.rect(surface, taillight_color, (x + width - 12, y + 2, 8, 3))
-
-def draw_explosion(surface, x, y):
-    """Effetto visivo dell'esplosione in caso di impatto ad alta velocità."""
-    for _ in range(25):
-        rx = x + random.randint(-30, 30)
-        ry = y + random.randint(-30, 30)
-        radius = random.randint(10, 25)
-        color = random.choice([RED, ORANGE, YELLOW])
-        pygame.draw.circle(surface, color, (rx, ry), radius)
-
-class Player:
-    def __init__(self):
-        self.width = 45
-        self.height = 80
-        self.x = WIDTH // 2 - self.width // 2
-        self.y = HEIGHT - 120
-        self.speed = 5.0
-        self.color = (20, 20, 20)  # Mercedes Nero Metallizzato
-
-    def move(self, keys):
-        if keys[pygame.K_LEFT] and self.x > 180:
-            self.x -= 6
-        if keys[pygame.K_RIGHT] and self.x < WIDTH - 180 - self.width:
-            self.x += 6
-        if keys[pygame.K_UP]:
-            self.speed = min(self.speed + 0.1, 12.0)  # Accelerazione
-        elif keys[pygame.K_DOWN]:
-            self.speed = max(self.speed - 0.15, 2.0)   # Frenata / Guida lenta
-        else:
-            # Decelerazione naturale verso velocità base
-            if self.speed > 5.0:
-                self.speed -= 0.05
-            elif self.speed < 5.0:
-                self.speed += 0.05
-
-    def draw(self, surface):
-        draw_mercedes_car(surface, self.x, self.y, self.width, self.height, self.color, is_player=True)
-
-class EnemyCar:
-    def __init__(self):
-        self.width = 45
-        self.height = 80
-        self.x = random.choice([200, 320, 440, 560])
-        self.y = -100
-        self.base_speed = random.uniform(3.0, 5.0)
-        # Colori carrozzeria di classe stile Mercedes
-        self.color = random.choice([
-            (190, 195, 198), # Argento Metallizzato
-            (240, 240, 245), # Bianco Perlato
-            (15, 30, 60),    # Blu Notte
-            (70, 0, 15)      # Rosso Corsa Scuro
-        ])
-
-    def update(self, player_speed):
-        self.y += self.base_speed + (player_speed - 5.0)
-
-    def draw(self, surface):
-        draw_mercedes_car(surface, self.x, self.y, self.width, self.height, self.color, is_player=False)
-
-def main():
-    player = Player()
-    enemies = []
-    spawn_timer = 0
-    road_offset = 0
-    font = pygame.font.SysFont("Arial", 22, bold=True)
-    game_over = False
-    exploded = False
-
-    while True:
-        clock.tick(FPS)
-        keys = pygame.key.get_pressed()
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if game_over and event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
-                    main()
-
-        if not game_over:
-            player.move(keys)
-
-            # Movimento stradale
-            road_offset = (road_offset + player.speed) % 40
-
-            # Generazione auto nemiche
-            spawn_timer += 1
-            if spawn_timer > 60:
-                enemies.append(EnemyCar())
-                spawn_timer = 0
-
-            # Aggiornamento auto
-            player_rect = pygame.Rect(player.x, player.y, player.width, player.height)
-            for enemy in enemies[:]:
-                enemy.update(player.speed)
-                
-                # Rimozione auto fuori schermo
-                if enemy.y > HEIGHT + 100:
-                    enemies.remove(enemy)
-                    continue
-
-                # Gestione collisione
-                enemy_rect = pygame.Rect(enemy.x, enemy.y, enemy.width, enemy.height)
-                if player_rect.colliderect(enemy_rect):
-                    if player.speed > SPEED_THRESHOLD:
-                        # Corri troppo veloce: l'auto esplode!
-                        game_over = True
-                        exploded = True
-                    else:
-                        # Guida lenta: l'incidente viene evitato / spinta senza esplosione
-                        if player.x < enemy.x:
-                            player.x -= 5
-                        else:
-                            player.x += 5
-
-        # --- DISEGNO A SCHERMO ---
-        # Sfondo e Strada
-        screen.fill(GRASS_COLOR)
-        pygame.draw.rect(screen, ROAD_COLOR, (160, 0, 480, HEIGHT))
-        pygame.draw.rect(screen, WHITE, (155, 0, 10, HEIGHT))
-        pygame.draw.rect(screen, WHITE, (635, 0, 10, HEIGHT))
-
-        # Strisce mezzeria
-        for y in range(-40, HEIGHT, 40):
-            pygame.draw.rect(screen, YELLOW, (395, y + int(road_offset), 10, 20))
-
-        # Disegno nemici e giocatore
-        for enemy in enemies:
-            enemy.draw(screen)
-
-        if not (game_over and exploded):
-            player.draw(screen)
-        else:
-            # Effetto esplosione
-            draw_explosion(screen, player.x + player.width // 2, player.y + player.height // 2)
-
-        # HUD / Interfaccia
-        speed_kmh = int(player.speed * 18)
-        speed_text = font.render(f"Velocità: {speed_kmh} km/h", True, WHITE)
-        screen.blit(speed_text, (20, 20))
-
-        status_color = RED if player.speed > SPEED_THRESHOLD else (0, 255, 0)
-        status_txt = "PERICOLO ESPLOSIONE!" if player.speed > SPEED_THRESHOLD else "Velocità Sicura"
-        status_surface = font.render(status_txt, True, status_color)
-        screen.blit(status_surface, (20, 50))
-
-        if game_over:
-            over_font = pygame.font.SysFont("Arial", 36, bold=True)
-            msg = over_font.render("IMPATTO AD ALTA VELOCITÀ! AUTO ESPLOSA!", True, RED)
-            restart_msg = font.render("Premi 'R' per ripartire", True, WHITE)
-            screen.blit(msg, (WIDTH // 2 - msg.get_width() // 2, HEIGHT // 2 - 30))
-            screen.blit(restart_msg, (WIDTH // 2 - restart_msg.get_width() // 2, HEIGHT // 2 + 20))
-
-        pygame.display.flip()
-
-if __name__ == "__main__":
-    main()
 import pygame
 import random
 import sys
@@ -961,16 +8,17 @@ pygame.init()
 # Dimensioni Schermo
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Mercedes Racing - Highway Challenge")
+pygame.display.set_caption("MERCEDES HYPERDRIVE: URBAN EVASION")
 
 # Colori
-ROAD_COLOR = (45, 45, 48)
-GRASS_COLOR = (34, 139, 34)
+ROAD_COLOR = (35, 35, 38)
+GRASS_COLOR = (20, 100, 35)
 WHITE = (255, 255, 255)
 YELLOW = (255, 215, 0)
 RED = (220, 20, 60)
 ORANGE = (255, 140, 0)
-DARK_GRAY = (20, 20, 20)
+DARK_GRAY = (25, 25, 28)
+CYAN = (0, 230, 255)
 
 # Impostazioni Gioco
 FPS = 60
@@ -980,44 +28,44 @@ clock = pygame.time.Clock()
 ROAD_LEFT = 160
 ROAD_RIGHT = 640
 
-# Soglia di velocità per esplosione (valore interno Pygame)
-SPEED_THRESHOLD = 7.0
+# Soglia di velocità per esplosione (Valore interno Pygame)
+SPEED_THRESHOLD = 7.5
 
 def draw_mercedes_car(surface, x, y, width, height, color, is_player=False):
-    """Disegna un'auto stile Mercedes con finiture e dettagli stilizzati."""
+    """Disegna un'auto dallo stile elegante tipo Mercedes con carrozzeria favolosa."""
     ix, iy = int(x), int(y)
     
-    # Ombra sotto l'auto
+    # Ombra della carrozzeria
     shadow_surf = pygame.Surface((width + 6, height + 6), pygame.SRCALPHA)
-    pygame.draw.rect(shadow_surf, (0, 0, 0, 70), (0, 0, width + 6, height + 6), border_radius=10)
+    pygame.draw.rect(shadow_surf, (0, 0, 0, 80), (0, 0, width + 6, height + 6), border_radius=12)
     surface.blit(shadow_surf, (ix - 3, iy - 3))
 
-    # Carrozzeria Principale
+    # Corpo principale auto
     car_rect = pygame.Rect(ix, iy, width, height)
-    pygame.draw.rect(surface, color, car_rect, border_radius=10)
+    pygame.draw.rect(surface, color, car_rect, border_radius=12)
 
-    # Profilo Cromato (Contorno)
-    pygame.draw.rect(surface, (200, 200, 205), car_rect, width=2, border_radius=10)
+    # Profilo metallizzato / cromato
+    pygame.draw.rect(surface, (210, 210, 215), car_rect, width=2, border_radius=12)
 
     # Parabrezza e Tettuccio
-    glass_color = (135, 206, 235) if is_player else (60, 65, 75)
+    glass_color = (120, 210, 255) if is_player else (50, 55, 65)
     windshield = pygame.Rect(ix + 5, iy + int(height * 0.25), width - 10, int(height * 0.35))
-    pygame.draw.rect(surface, glass_color, windshield, border_radius=5)
-    pygame.draw.rect(surface, (180, 180, 180), windshield, width=1, border_radius=5)
+    pygame.draw.rect(surface, glass_color, windshield, border_radius=6)
+    pygame.draw.rect(surface, (180, 180, 180), windshield, width=1, border_radius=6)
 
     # Griglia Mercedes e Stemma
     grid_y = iy + height - 8 if is_player else iy + 3
     grid_rect = pygame.Rect(ix + 6, grid_y, width - 12, 5)
-    pygame.draw.rect(surface, (210, 210, 210), grid_rect, border_radius=2)
+    pygame.draw.rect(surface, (220, 220, 220), grid_rect, border_radius=2)
     
-    # Stella Mercedes (Centro Griglia)
+    # Stemma centrale (Stella Mercedes)
     center_x = ix + width // 2
     center_y = grid_y + 2
     pygame.draw.circle(surface, (255, 255, 255), (center_x, center_y), 3)
 
-    # Fari Anteriore e Posteriore
+    # Fari anteriore e posteriore
     headlight = (255, 255, 220)
-    taillight = (255, 0, 0)
+    taillight = (255, 20, 20)
     
     if is_player:
         pygame.draw.rect(surface, headlight, (ix + 3, iy + 2, 8, 4), border_radius=2)
@@ -1031,11 +79,11 @@ def draw_mercedes_car(surface, x, y, width, height, color, is_player=False):
         pygame.draw.rect(surface, taillight, (ix + width - 12, iy + 2, 8, 3))
 
 def draw_explosion(surface, x, y):
-    """Effetto grafico esplosione per imatatti ad alta velocità."""
-    for _ in range(30):
-        rx = int(x + random.randint(-35, 35))
-        ry = int(y + random.randint(-35, 35))
-        radius = random.randint(8, 24)
+    """Effetto speciale di esplosione in caso di scontro ad alta velocità."""
+    for _ in range(35):
+        rx = int(x + random.randint(-40, 40))
+        ry = int(y + random.randint(-40, 40))
+        radius = random.randint(8, 26)
         color = random.choice([RED, ORANGE, YELLOW])
         pygame.draw.circle(surface, color, (rx, ry), radius)
 
@@ -1049,15 +97,15 @@ class Player:
         self.color = DARK_GRAY
 
     def move(self, keys):
-        # Movimento laterale con contenimento entro le righe bianche
+        # Movimento laterale entro i limiti della strada
         if keys[pygame.K_LEFT] and self.x > ROAD_LEFT + 10:
             self.x -= 6.0
         if keys[pygame.K_RIGHT] and self.x < ROAD_RIGHT - self.width - 10:
             self.x += 6.0
 
-        # Controlli accelerazione / frenata
+        # Controlli di accelerazione e decelerazione
         if keys[pygame.K_UP]:
-            self.speed = min(self.speed + 0.1, 12.0)
+            self.speed = min(self.speed + 0.1, 13.0)
         elif keys[pygame.K_DOWN]:
             self.speed = max(self.speed - 0.15, 2.0)
         else:
@@ -1076,16 +124,16 @@ class EnemyCar:
     def __init__(self):
         self.width = 44
         self.height = 80
-        lanes = [200, 310, 420, 530]
+        lanes = [190, 310, 430, 540]
         self.x = float(random.choice(lanes))
         self.y = -100.0
         self.base_speed = random.uniform(3.0, 4.5)
-        # Colori classici Mercedes
+        # Palette colori stile Mercedes
         self.color = random.choice([
             (195, 200, 205), # Argento Iridio
             (245, 245, 250), # Bianco Polare
             (20, 35, 65),    # Blu Cavansite
-            (80, 10, 20)     # Rosso Designo
+            (75, 10, 20)     # Rosso Designo
         ])
 
     def update(self, player_speed):
@@ -1097,7 +145,51 @@ class EnemyCar:
     def get_rect(self):
         return pygame.Rect(int(self.x), int(self.y), self.width, self.height)
 
+def show_intro_screen():
+    """Schermata iniziale innovativa con titolo di gioco aggiornato."""
+    intro = True
+    font_title = pygame.font.SysFont("Arial", 36, bold=True)
+    font_sub = pygame.font.SysFont("Arial", 20, bold=True)
+    
+    while intro:
+        clock.tick(FPS)
+        screen.fill((15, 15, 20))
+
+        # Disegno elemento grafico decorativo
+        pygame.draw.rect(screen, CYAN, (WIDTH // 2 - 250, 120, 500, 4), border_radius=2)
+        
+        title_surf = font_title.render("MERCEDES HYPERDRIVE", True, WHITE)
+        subtitle_surf = font_title.render("URBAN EVASION", True, CYAN)
+        start_surf = font_sub.render("PREMI 'SPAZIO' PER AVVIARE I MOTORI", True, YELLOW)
+        
+        info_1 = font_sub.render("• Frecce SU/GIÙ: Accelera / Frena", True, WHITE)
+        info_2 = font_sub.render("• Frecce SINISTRA/DESTRA: Sterza", True, WHITE)
+        info_3 = font_sub.render("• Attento: A bassa velocità eviti l'impatto!", True, (100, 255, 100))
+        info_4 = font_sub.render("• Ad alta velocità l'impatto causa l'ESPLOSIONE!", True, RED)
+
+        screen.blit(title_surf, (WIDTH // 2 - title_surf.get_width() // 2, 140))
+        screen.blit(subtitle_surf, (WIDTH // 2 - subtitle_surf.get_width() // 2, 185))
+        
+        screen.blit(info_1, (WIDTH // 2 - 200, 270))
+        screen.blit(info_2, (WIDTH // 2 - 200, 305))
+        screen.blit(info_3, (WIDTH // 2 - 200, 340))
+        screen.blit(info_4, (WIDTH // 2 - 200, 375))
+        
+        screen.blit(start_surf, (WIDTH // 2 - start_surf.get_width() // 2, 470))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    intro = False
+
 def main():
+    show_intro_screen()
+
     player = Player()
     enemies = []
     spawn_timer = 0
@@ -1124,7 +216,7 @@ def main():
             # Scorrimento asfalto
             road_offset = (road_offset + player.speed) % 40
 
-            # Generazione Nemici
+            # Generazione auto avversarie
             spawn_timer += 1
             if spawn_timer > 55:
                 enemies.append(EnemyCar())
@@ -1132,7 +224,7 @@ def main():
 
             player_rect = player.get_rect()
 
-            # Aggiornamento e Risoluzione Collisioni
+            # Gestione movimento ed eliminazione bug collisioni
             for enemy in enemies[:]:
                 enemy.update(player.speed)
 
@@ -1144,61 +236,61 @@ def main():
 
                 if player_rect.colliderect(enemy_rect):
                     if player.speed > SPEED_THRESHOLD:
-                        # ALTA VELOCITÀ -> ESPLOSIONE
+                        # ALTA VELOCITÀ: Esplosione e Game Over
                         game_over = True
                         exploded = True
                     else:
-                        # BASSA VELOCITÀ -> RISOLUZIONE FISICA URTO (No Incidente/Esplosione)
+                        # BASSA VELOCITÀ: Urto controllato (No incidente/esplosione)
                         if player.x < enemy.x:
                             player.x = float(enemy.x - player.width - 4)
                         else:
                             player.x = float(enemy.x + enemy.width + 4)
 
-                        # Mantiene il giocatore all'interno della carreggiata
+                        # Mantiene l'auto nei limiti della strada dopo la spinta
                         player.x = max(float(ROAD_LEFT + 10), min(player.x, float(ROAD_RIGHT - player.width - 10)))
                         
-                        # Rallentamento controllato post-contatto
+                        # Riduzione graduale della velocità post-contatto
                         player.speed = max(2.0, player.speed - 0.4)
 
         # --- DISEGNO ---
         screen.fill(GRASS_COLOR)
 
-        # Pista Asphalt
+        # Asfalto e Corsie
         pygame.draw.rect(screen, ROAD_COLOR, (ROAD_LEFT, 0, ROAD_RIGHT - ROAD_LEFT, HEIGHT))
         pygame.draw.rect(screen, WHITE, (ROAD_LEFT - 5, 0, 10, HEIGHT))
         pygame.draw.rect(screen, WHITE, (ROAD_RIGHT - 5, 0, 10, HEIGHT))
 
-        # Linee di corsia tratteggiate
+        # Strisce tratteggiate
         for y in range(-40, HEIGHT, 40):
             pygame.draw.rect(screen, YELLOW, (315, int(y + road_offset), 8, 20))
             pygame.draw.rect(screen, YELLOW, (475, int(y + road_offset), 8, 20))
 
-        # Auto Nemiche
+        # Auto nemiche
         for enemy in enemies:
             enemy.draw(screen)
 
-        # Giocatore o Esplosione
+        # Disegno Giocatore o Esplosione
         if not (game_over and exploded):
             player.draw(screen)
         else:
             draw_explosion(screen, player.x + player.width / 2, player.y + player.height / 2)
 
-        # Telemetria & HUD
+        # HUD / Interfaccia utente
         speed_kmh = int(player.speed * 15)
         speed_text = font.render(f"Velocità: {speed_kmh} km/h", True, WHITE)
         screen.blit(speed_text, (20, 20))
 
         if player.speed > SPEED_THRESHOLD:
-            status_txt = font.render("ATTENZIONE: VELOCITÀ ELEVATA!", True, RED)
+            status_txt = font.render("RISCHIO ESPLOSIONE!", True, RED)
         else:
-            status_txt = font.render("Velocità Sicura (No Esplosioni)", True, (50, 255, 50))
+            status_txt = font.render("Velocità Sicura", True, (50, 255, 50))
         screen.blit(status_txt, (20, 50))
 
-        # Schermata Game Over
+        # Schermata di Game Over
         if game_over:
             over_font = pygame.font.SysFont("Arial", 32, bold=True)
-            msg = over_font.render("ESPLOSIONE AD ALTA VELOCITÀ!", True, RED)
-            restart_msg = font.render("Premi 'R' per Ripartire", True, WHITE)
+            msg = over_font.render("IMPATTO AD ALTA VELOCITÀ!", True, RED)
+            restart_msg = font.render("Premi 'R' per Riavviare", True, WHITE)
             screen.blit(msg, (WIDTH // 2 - msg.get_width() // 2, HEIGHT // 2 - 30))
             screen.blit(restart_msg, (WIDTH // 2 - restart_msg.get_width() // 2, HEIGHT // 2 + 20))
 
