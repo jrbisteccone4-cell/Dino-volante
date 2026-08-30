@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Teletrasporto e Animazioni</title>
+    <title>3D Game - Versione Stabile</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -41,7 +41,6 @@
         .btn-action:active { transform: scale(0.9); }
         #btn-cam { bottom: 30px; right: 20px; background: #007acc; }
         #btn-jump { bottom: 110px; right: 20px; background: #28a745; }
-        #btn-teleport { bottom: 30px; right: 100px; background: #9c27b0; font-size: 10px; }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -53,12 +52,11 @@
         STATO: <span id="status-text">AVVIO...</span><br>
         POS: X:<span id="posX">0</span> Y:<span id="posY">0</span> Z:<span id="posZ">0</span>
     </div>
-    <div id="status-log">Inizializzazione...</div>
+    <div id="status-log">Tocca il portale nella Mappa 1 per andare alla Mappa 2</div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-jump" class="btn-action">SALTA</div>
     <div id="btn-cam" class="btn-action">VISTA</div>
-    <div id="btn-teleport" class="btn-action">MAPPA 2</div>
 
     <script>
         function log(msg) { 
@@ -69,6 +67,7 @@
         let scene, camera, renderer, playerGroup, characterMesh, mapMesh;
         let currentMapFile = 'mappa.glb'; 
         let mixer = null;
+        let walkAction = null;
 
         const clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
@@ -81,11 +80,11 @@
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
+        let portalObject = null; // Oggetto portale interattivo
 
-        // Coordinate di spawn precise per evitare fluttuazioni o compenetrazioni
         const mapSpawnPoints = {
             'mappa.glb': { x: 0, y: 0, z: 0 },
-            'mappa2.glb': { x: -89.5, y: 0.5, z: -4.6 }
+            'mappa2.glb': { x: -89.5, y: 0.0, z: -4.6 }
         };
 
         function init() {
@@ -98,13 +97,19 @@
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+            // Illuminazione forte e diffusa per evitare che il personaggio diventi nero
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            mainLight.position.set(10, 20, 10);
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+            hemiLight.position.set(0, 20, 0);
+            scene.add(hemiLight);
+
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            mainLight.position.set(10, 30, 10);
             scene.add(mainLight);
 
             loadCharacter();
@@ -126,6 +131,10 @@
                     if (mapMesh) {
                         scene.remove(mapMesh);
                     }
+                    if (portalObject) {
+                        scene.remove(portalObject);
+                        portalObject = null;
+                    }
 
                     mapMesh = gltf.scene;
                     collidableObjects = [];
@@ -135,6 +144,8 @@
                         if (child.isMesh) {
                             if (child.material) {
                                 child.material.side = THREE.DoubleSide;
+                                child.material.roughness = 0.8;
+                                child.material.metalness = 0.1;
                             }
                             collidableObjects.push(child);
                         }
@@ -143,17 +154,23 @@
                     const spawn = mapSpawnPoints[filename] || { x: 0, y: 0, z: 0 };
                     playerPos.set(spawn.x, spawn.y, spawn.z);
 
-                    // Aggiorna etichetta del tasto teletrasporto in base alla mappa corrente
-                    const btnTeleport = document.getElementById('btn-teleport');
+                    // Crea il portale interattivo solo nella prima mappa
                     if (filename === 'mappa.glb') {
-                        btnTeleport.innerText = "MAPPA 2";
-                    } else {
-                        btnTeleport.innerText = "MAPPA 1";
+                        const portalGeometry = new THREE.CylinderGeometry(0.8, 0.8, 2.5, 32);
+                        const portalMaterial = new THREE.MeshBasicMaterial({ 
+                            color: 0x00ffcc, 
+                            transparent: true, 
+                            opacity: 0.6,
+                            wireframe: false
+                        });
+                        portalObject = new THREE.Mesh(portalGeometry, portalMaterial);
+                        portalObject.position.set(0, 1.25, 3); // Posizionato davanti allo spawn
+                        scene.add(portalObject);
                     }
 
                     isMapLoaded = true; 
                     document.getElementById('status-text').innerText = "PRONTO";
-                    log("Mappa caricata con successo!");
+                    log(filename === 'mappa.glb' ? "Tocca il cilindro verde/azzurro per la Mappa 2" : "Mappa 2 caricata");
                 } catch (err) {
                     log("Errore script: " + err.message);
                     console.error(err);
@@ -174,8 +191,13 @@
 
                 characterMesh.traverse((child) => {
                     if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
+                        child.castShadow = false; // Disattivato per evitare ombre nere improvvise sul modello
+                        child.receiveShadow = false;
+                        if (child.material) {
+                            child.material.roughness = 0.6;
+                            child.material.metalness = 0.2;
+                            child.material.needsUpdate = true;
+                        }
                     }
                 });
 
@@ -185,20 +207,20 @@
                 const scaleFactor = targetHeight / (size.y || 1);
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
+                // Allineamento perfetto dei piedi sul piano Y=0
                 const updatedBox = new THREE.Box3().setFromObject(characterMesh);
                 characterMesh.position.y = -updatedBox.min.y;
 
                 playerGroup.add(characterMesh);
 
-                // Configura l'animazione in loop continuo per evitare l'effetto statico/fluttuante
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(characterMesh);
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.setLoop(THREE.LoopRepeat);
-                    action.play();
-                    log("Animazione in loop avviata!");
-                } else {
+                    walkAction = mixer.clipAction(gltf.animations[0]);
+                    walkAction.setLoop(THREE.LoopRepeat);
+                    walkAction.stop(); // Parte fermo per evitare fluttuazioni statiche
                     log("Personaggio pronto!");
+                } else {
+                    log("Personaggio pronto (senza animazioni)");
                 }
             }, undefined, (error) => {
                 log("Errore: personaggio.glb non trovato!");
@@ -217,8 +239,23 @@
             window.addEventListener('touchstart', (e) => {
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const touch = e.changedTouches[i];
-                    const rect = container.getBoundingClientRect();
+                    
+                    // Controllo se il giocatore ha toccato il portale per teletrasportarsi
+                    if (portalObject && currentMapFile === 'mappa.glb') {
+                        const mouse = new THREE.Vector2(
+                            (touch.clientX / window.innerWidth) * 2 - 1,
+                            -(touch.clientY / window.innerHeight) * 2 + 1
+                        );
+                        raycaster.setFromCamera(mouse, camera);
+                        const hits = raycaster.intersectObject(portalObject);
+                        if (hits.length > 0) {
+                            currentMapFile = 'mappa2.glb';
+                            loadMap(currentMapFile);
+                            return;
+                        }
+                    }
 
+                    const rect = container.getBoundingClientRect();
                     if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
                         touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
                         if (joystickTouchId === null) {
@@ -289,14 +326,6 @@
                 e.preventDefault();
                 cameraMode = (cameraMode + 1) % 2;
             }, { passive: false });
-
-            // Tasto di teletrasporto tra le mappe
-            document.getElementById('btn-teleport').addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                if (!isMapLoaded) return; 
-                currentMapFile = (currentMapFile === 'mappa.glb') ? 'mappa2.glb' : 'mappa.glb';
-                loadMap(currentMapFile);
-            }, { passive: false });
         }
 
         function canMoveTo(targetPos) {
@@ -326,8 +355,6 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            if (mixer) mixer.update(delta);
-
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             const speed = 0.04; 
 
@@ -348,7 +375,19 @@
                 let nextZ = playerPos.clone();
                 nextZ.z += moveDir.z;
                 if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
+
+                // Avvia l'animazione solo quando si cammina
+                if (walkAction && !walkAction.isRunning()) {
+                    walkAction.play();
+                }
+            } else {
+                // Ferma l'animazione quando è fermo per evitare fluttuazioni
+                if (walkAction && walkAction.isRunning()) {
+                    walkAction.stop();
+                }
             }
+
+            if (mixer) mixer.update(delta);
 
             if (playerGroup) {
                 playerGroup.position.copy(playerPos);
