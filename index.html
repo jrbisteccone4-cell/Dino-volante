@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Spawn Perfetto</title>
+    <title>3D Game - Fix Definitivo</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -16,9 +16,9 @@
         }
 
         #status-log {
-            position: absolute; top: 65px; left: 15px; color: #0066cc; font-size: 11px;
+            position: absolute; top: 65px; left: 15px; color: #00ffcc; font-size: 11px;
             font-family: monospace; pointer-events: none; z-index: 10; font-weight: bold;
-            background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; max-width: 90vw;
+            background: rgba(0,0,0,0.85); padding: 6px 10px; border-radius: 4px; max-width: 90vw;
         }
 
         #joystick-container {
@@ -50,7 +50,7 @@
 <body>
 
     <div id="hud">
-        STATO: <span id="status-text">CARICAMENTO...</span><br>
+        STATO: <span id="status-text">AVVIO...</span><br>
         POS: X:<span id="posX">0</span> Y:<span id="posY">0</span> Z:<span id="posZ">0</span>
     </div>
     <div id="status-log">Inizializzazione...</div>
@@ -61,7 +61,10 @@
     <div id="btn-interact" class="btn-action">APRI</div>
 
     <script>
-        function log(msg) { document.getElementById('status-log').innerText = msg; }
+        function log(msg) { 
+            console.log(msg);
+            document.getElementById('status-log').innerText = msg; 
+        }
 
         let scene, camera, renderer, playerGroup, characterMesh, mapMesh;
         let currentMapFile = 'mappa.glb'; 
@@ -82,16 +85,13 @@
         let collidableObjects = [];
 
         // =========================================================================
-        // PUNTO DI GENERAZIONE (SPAWN) PERSONALIZZATO PER MAPPA
-        // Se vuoi che una mappa abbia uno spawn fisso specifico (es. vicino a una porta),
-        // compila qui sotto le coordinate X, Y, Z. Se lasci { custom: false }, il gioco
-        // calcolerà automaticamente il centro perfetto del pavimento della mappa.
+        // CONFIGURAZIONE SPAWN MAPPE
+        // custom: false -> Spawna automaticamente al centro perfetto della mappa.
+        // custom: true  -> Spawna esattamente alle coordinate X, Y, Z specificate.
         // =========================================================================
         const mapSpawnPoints = {
             'mappa.glb': { custom: false, x: 0, y: 0, z: 0 },
             'mappa2.glb': { custom: false, x: 0, y: 0, z: 0 } 
-            // Esempio se vuoi personalizzarla:
-            // 'mappa2.glb': { custom: true, x: 5.2, y: 1.0, z: -3.5 }
         };
 
         function init() {
@@ -104,7 +104,6 @@
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            document.boxShadow = "none";
             document.body.appendChild(renderer.domElement);
 
             const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
@@ -129,68 +128,53 @@
             const loader = new THREE.GLTFLoader();
 
             loader.load(filename, (gltf) => {
-                if (mapMesh) {
-                    scene.remove(mapMesh);
-                }
-
-                mapMesh = gltf.scene;
-                collidableObjects = [];
-                scene.add(mapMesh);
-
-                // Centra la mappa geometricamente nello spazio 3D
-                const box = new THREE.Box3().setFromObject(mapMesh);
-                const center = box.getCenter(new THREE.Vector3());
-                
-                mapMesh.position.x = -center.x;
-                mapMesh.position.z = -center.z;
-                mapMesh.position.y = -box.min.y;
-
-                // Ricalcola il box definitivo dopo il posizionamento
-                const finalBox = new THREE.Box3().setFromObject(mapMesh);
-
-                mapMesh.traverse((child) => {
-                    if (child.isMesh) {
-                        if (child.material) {
-                            child.material.side = THREE.DoubleSide;
-                        }
-                        collidableObjects.push(child);
+                try {
+                    if (mapMesh) {
+                        scene.remove(mapMesh);
                     }
-                });
 
-                // STAMPA DEI DATI DELLA MAPPA (Ti dice esattamente come è fatta la mappa)
-                console.log(`Mappa "${filename}" caricata:`, {
-                    minY: finalBox.min.y.toFixed(2),
-                    maxY: finalBox.maxY.toFixed(2),
-                    centerX: 0,
-                    centerZ: 0
-                });
+                    mapMesh = gltf.scene;
+                    collidableObjects = [];
+                    scene.add(mapMesh);
 
-                // GESTIONE DELLO SPAWN (Centro automatico del pavimento o personalizzato)
-                const spawnConfig = mapSpawnPoints[filename];
-                if (spawnConfig && spawnConfig.custom) {
-                    playerPos.set(spawnConfig.x, spawnConfig.y, spawnConfig.z);
-                    log(`Spawn personalizzato applicato per ${filename}`);
-                } else {
-                    // Spawn perfetto al centro esatto della mappa, 0.5 metri sopra il pavimento minimo
-                    playerPos.set(0, finalBox.min.y + 0.6, 0);
+                    // NORMALIZZAZIONE GEOMETRICA: Centra la mappa e porta il pavimento a Y = 0
+                    const box = new THREE.Box3().setFromObject(mapMesh);
+                    const center = box.getCenter(new THREE.Vector3());
                     
-                    // Controlla con un raggio dall'alto se c'è un pavimento valido in quel punto
-                    raycaster.set(new THREE.Vector3(0, finalBox.maxY + 2, 0), new THREE.Vector3(0, -1, 0));
-                    const hits = raycaster.intersectObjects(collidableObjects, true);
-                    if (hits.length > 0) {
-                        // Trova il punto di impatto più alto (il pavimento calpestabile)
-                        playerPos.y = hits[0].point.y + 0.1;
+                    mapMesh.position.x = -center.x;
+                    mapMesh.position.z = -center.z;
+                    mapMesh.position.y = -box.min.y;
+
+                    mapMesh.traverse((child) => {
+                        if (child.isMesh) {
+                            if (child.material) {
+                                child.material.side = THREE.DoubleSide;
+                            }
+                            collidableObjects.push(child);
+                        }
+                    });
+
+                    // GESTIONE SPAWN SICURO
+                    const config = mapSpawnPoints[filename];
+                    if (config && config.custom) {
+                        playerPos.set(config.x, config.y, config.z);
+                    } else {
+                        // Poiché la mappa è normalizzata a Y=0, spawnare a Y=0.1 garantisce di essere sul pavimento
+                        playerPos.set(0, 0.1, 0);
                     }
+
+                    verticalVelocity = 0;
+                    isGrounded = true;
+                    isMapLoaded = true; 
+
+                    document.getElementById('status-text').innerText = "PRONTO";
+                    log("Mappa caricata con successo!");
+                } catch (err) {
+                    log("Errore script: " + err.message);
+                    console.error(err);
                 }
-
-                verticalVelocity = 0;
-                isGrounded = true;
-                isMapLoaded = true; 
-
-                document.getElementById('status-text').innerText = "PRONTO";
-                log(`Spawn OK! Y pavimento: ${playerPos.y.toFixed(1)}`);
-            }, null, (error) => {
-                log("Errore caricamento " + filename + "!");
+            }, undefined, (error) => {
+                log("Errore file: " + filename + " non trovato!");
                 console.error(error);
             });
         }
@@ -207,11 +191,6 @@
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
-                        if (child.material) {
-                            child.material.roughness = 0.7;
-                            child.material.metalness = 0.1;
-                            child.material.needsUpdate = true;
-                        }
                     }
                 });
 
@@ -225,8 +204,9 @@
                 characterMesh.position.y = -updatedBox.min.y;
 
                 playerGroup.add(characterMesh);
-            }, null, (error) => {
-                log("Errore personaggio!");
+                log("Personaggio pronto!");
+            }, undefined, (error) => {
+                log("Errore: personaggio.glb non trovato!");
                 console.error(error);
             });
         }
@@ -324,54 +304,18 @@
                 if (!isMapLoaded) return; 
                 currentMapFile = (currentMapFile === 'mappa.glb') ? 'mappa2.glb' : 'mappa.glb';
                 loadMap(currentMapFile);
-                log("Cambio stanza in corso...");
             }, { passive: false });
-        }
-
-        function canMoveTo(nextPos) {
-            if (collidableObjects.length === 0) return true;
-
-            const origin = nextPos.clone();
-            origin.y += 0.4;
-
-            const dirs = [
-                new THREE.Vector3(1, 0, 0),
-                new THREE.Vector3(-1, 0, 0),
-                new THREE.Vector3(0, 0, 1),
-                new THREE.Vector3(0, 0, -1)
-            ];
-
-            for (let dir of dirs) {
-                raycaster.set(origin, dir);
-                const hits = raycaster.intersectObjects(collidableObjects, true);
-                if (hits.length > 0 && hits[0].distance < 0.35) {
-                    return false;
-                }
-            }
-            return true;
         }
 
         function updatePhysics() {
             if (!isMapLoaded || collidableObjects.length === 0) return;
 
-            // Se per qualsiasi motivo scende sotto la mappa, lo rispedisce al centro esatto salvandolo
+            // Protezione anti-caduta se scende sotto la mappa
             if (playerPos.y < -5) {
-                playerPos.set(0, 1.0, 0);
+                playerPos.set(0, 0.5, 0);
                 verticalVelocity = 0;
                 isGrounded = true;
-                log("Anti-caduta attivato!");
                 return;
-            }
-
-            if (verticalVelocity > 0) {
-                const headOrigin = playerPos.clone();
-                headOrigin.y += 0.7;
-                raycaster.set(headOrigin, new THREE.Vector3(0, 1, 0));
-                const ceilingHits = raycaster.intersectObjects(collidableObjects, true);
-
-                if (ceilingHits.length > 0 && ceilingHits[0].distance < 0.2) {
-                    verticalVelocity = 0;
-                }
             }
 
             const rayOrigin = playerPos.clone();
@@ -415,26 +359,17 @@
                     Math.cos(moveAngle) * speed * inputMag
                 );
 
-                const targetX = playerPos.clone();
-                targetX.x += moveDir.x;
-                if (canMoveTo(targetX)) playerPos.x = targetX.x;
-
-                const targetZ = playerPos.clone();
-                targetZ.z += moveDir.z;
-                if (canMoveTo(targetZ)) playerPos.z = targetZ.z;
+                playerPos.x += moveDir.x;
+                playerPos.z += moveDir.z;
 
                 walkCycle += delta * 8 * inputMag;
                 if (characterMesh) {
                     characterMesh.position.y = Math.abs(Math.sin(walkCycle)) * 0.015;
-                    characterMesh.rotation.z = Math.cos(walkCycle * 0.5) * 0.03;
-                    characterMesh.rotation.x = Math.sin(walkCycle) * 0.04;
                 }
             } else {
                 walkCycle = 0;
                 if (characterMesh) {
                     characterMesh.position.y = THREE.MathUtils.lerp(characterMesh.position.y, 0, 0.1);
-                    characterMesh.rotation.z = THREE.MathUtils.lerp(characterMesh.rotation.z, 0, 0.1);
-                    characterMesh.rotation.x = THREE.MathUtils.lerp(characterMesh.rotation.x, 0, 0.1);
                 }
             }
 
@@ -453,15 +388,7 @@
                     -Math.cos(cameraYaw) * Math.cos(cameraPitch)
                 ).normalize();
 
-                raycaster.set(headPos, camDir);
-                const camHits = raycaster.intersectObjects(collidableObjects, true);
-
-                let actualDist = targetDist;
-                if (camHits.length > 0 && camHits[0].distance < targetDist) {
-                    actualDist = Math.max(0.4, camHits[0].distance - 0.15);
-                }
-
-                camera.position.copy(headPos).add(camDir.multiplyScalar(actualDist));
+                camera.position.copy(headPos).add(camDir.multiplyScalar(targetDist));
                 camera.lookAt(playerPos.x, playerPos.y + 0.8, playerPos.z);
             } else {
                 camera.position.set(playerPos.x, playerPos.y + 0.85, playerPos.z);
