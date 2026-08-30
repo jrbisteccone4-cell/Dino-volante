@@ -94,14 +94,7 @@
         }
     </style>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/examples/jsm/loaders/GLTFLoader.js": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js"
-            }
-        }
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
@@ -116,12 +109,10 @@
     <div id="btn-dash" class="btn-action">SCATTO</div>
     <div id="btn-bite" class="btn-action">MORDI</div>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-
+    <script>
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x011326);
+        scene.fog = new THREE.FogExp2(0x011326, 0.012);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         
@@ -130,7 +121,7 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
+        const ambientLight = new THREE.AmbientLight(0xdff0ff, 1.5);
         scene.add(ambientLight);
 
         const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
@@ -147,48 +138,27 @@
         const sharkContainer = new THREE.Group();
         scene.add(sharkContainer);
 
-        let mixer = null;
-        const clock = new THREE.Clock();
+        // Costruzione dello squalo 3D
+        const bodyGeo = new THREE.ConeGeometry(1.2, 5, 8);
+        bodyGeo.rotateX(Math.PI / 2);
+        const sharkMat = new THREE.MeshPhongMaterial({ color: 0x4a6984, flatShading: true });
+        const sharkBody = new THREE.Mesh(bodyGeo, sharkMat);
+        sharkContainer.add(sharkBody);
 
-        const loader = new GLTFLoader();
+        const finGeo = new THREE.ConeGeometry(0.4, 1.5, 4);
+        finGeo.rotateX(Math.PI / 3);
+        const fin = new THREE.Mesh(finGeo, sharkMat);
+        fin.position.set(0, 0.8, 0.5);
+        sharkContainer.add(fin);
 
-        loader.load(
-            './Squalo%20che%20nuota.glb',
-            (gltf) => {
-                const loadedMesh = gltf.scene;
-
-                const box = new THREE.Box3().setFromObject(loadedMesh);
-                const size = box.getSize(new THREE.Vector3());
-                const maxDim = Math.max(size.x, size.y, size.z);
-                
-                if (maxDim > 0) {
-                    const targetScale = 6 / maxDim;
-                    loadedMesh.scale.set(targetScale, targetScale, targetScale);
-                }
-
-                const center = box.getCenter(new THREE.Vector3());
-                loadedMesh.position.sub(center.multiplyScalar(loadedMesh.scale.x));
-
-                sharkContainer.add(loadedMesh);
-
-                if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(loadedMesh);
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.play();
-                }
-            },
-            undefined,
-            (err) => {
-                console.error("Errore caricamento modello:", err);
-                const fallbackGeo = new THREE.ConeGeometry(1, 4, 8);
-                fallbackGeo.rotateX(Math.PI / 2);
-                const fallbackMat = new THREE.MeshBasicMaterial({ color: 0x00aaff });
-                sharkContainer.add(new THREE.Mesh(fallbackGeo, fallbackMat));
-            }
-        );
+        const tailGeo = new THREE.ConeGeometry(0.3, 1.8, 4);
+        const tail = new THREE.Mesh(tailGeo, sharkMat);
+        tail.position.set(0, 0, 2.8);
+        tail.rotation.x = Math.PI / 4;
+        sharkContainer.add(tail);
 
         const preyList = [];
-        const preyGeo = new THREE.ConeGeometry(0.4, 1.2, 6);
+        const preyGeo = new THREE.ConeGeometry(0.3, 1.0, 6);
         preyGeo.rotateX(Math.PI / 2);
 
         for (let i = 0; i < 70; i++) {
@@ -314,9 +284,6 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-
-            if (mixer) mixer.update(delta);
 
             const speed = isDashing ? 0.45 : 0.22;
 
