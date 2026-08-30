@@ -135,8 +135,12 @@
                 
                 scene.add(mapMesh);
 
-                // Posizionamento diretto al centro con Y = 0 (floor standard dopo la normalizzazione della mappa)
-                playerPos.set(0, 0.1, 0);
+                // Configurazione specifica dell'altezza di spawn per ciascuna mappa
+                if (filename === 'mappa.glb') {
+                    playerPos.set(0, 2.9, 0);
+                } else {
+                    playerPos.set(0, 0.1, 0);
+                }
 
                 verticalVelocity = 0;
                 isGrounded = true;
