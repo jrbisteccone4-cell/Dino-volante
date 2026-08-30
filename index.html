@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Shark Simulator HD</title>
+    <title>Great White Shark 3D Ocean Simulator</title>
     <style>
         * {
             box-sizing: border-box;
@@ -25,6 +25,7 @@
             height: 100%;
         }
 
+        /* HUD Overlay */
         #hud {
             position: absolute;
             top: 15px;
@@ -37,6 +38,7 @@
             z-index: 10;
         }
 
+        /* Joystick Virtuale (Sinistra) */
         #joystick-container {
             position: absolute;
             bottom: 30px;
@@ -60,6 +62,7 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
+        /* Pulsanti d'Azione (Destra) */
         .btn-action {
             position: absolute;
             width: 70px;
@@ -118,7 +121,7 @@
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-        // 1. SCENA & RENDERER ALTA DEFINIZIONE
+        // 1. SCENA E RENDERER
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x011326);
         scene.fog = new THREE.FogExp2(0x011326, 0.012);
@@ -127,27 +130,14 @@
         
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio); // Massima nitidezza dello schermo
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.2;
         document.body.appendChild(renderer.domElement);
 
-        // 2. AMBIENTE LUMINOSO E RIFLESSI (ENVIRONMENT MAP SIMULATA)
-        const pmremGenerator = new THREE.PMREMGenerator(renderer);
-        pmremGenerator.compileEquirectangularShader();
-
-        const roomScene = new THREE.Scene();
-        roomScene.background = new THREE.Color(0x205072);
-        const envLight = new THREE.DirectionalLight(0xffffff, 3);
-        envLight.position.set(0, 10, 0);
-        roomScene.add(envLight);
-        
-        const envMap = pmremGenerator.fromScene(roomScene).texture;
-        scene.environment = envMap;
-
-        // Luci dirette
-        const ambientLight = new THREE.AmbientLight(0xdff0ff, 1.2);
+        // 2. ILLUMINAZIONE MARINA
+        const ambientLight = new THREE.AmbientLight(0xdff0ff, 1.5);
         scene.add(ambientLight);
 
         const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -162,7 +152,7 @@
         seabed.position.y = -30;
         scene.add(seabed);
 
-        // 4. CARICAMENTO MODELLO CON OTTIMIZZAZIONE TEXTURE PBR
+        // 4. CONTENITORE E CARICAMENTO SQUALO 3D (.GLB)
         const sharkContainer = new THREE.Group();
         scene.add(sharkContainer);
 
@@ -171,27 +161,26 @@
         const clock = new THREE.Clock();
 
         const loader = new GLTFLoader();
+        
+        // Carica il file dello squalo
+        const modelPath = './Squalo%20che%20nuota.glb';
+
         loader.load(
-            './Squalo che nuota.glb',
+            modelPath,
             (gltf) => {
                 sharkMesh = gltf.scene;
-                
-                // Forza l'alta qualità delle texture su ogni parte del modello 3D
-                sharkMesh.traverse((child) => {
-                    if (child.isMesh) {
-                        child.material.envMapIntensity = 1.5;
-                        child.material.needsUpdate = true;
 
-                        if (child.material.map) {
-                            child.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
-                            child.material.map.minFilter = THREE.LinearMipmapLinearFilter;
-                            child.material.map.magFilter = THREE.LinearFilter;
-                            child.material.map.needsUpdate = true;
-                        }
+                // Ottimizzazione delle texture del modello
+                sharkMesh.traverse((child) => {
+                    if (child.isMesh && child.material.map) {
+                        child.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                        child.material.map.minFilter = THREE.LinearMipmapLinearFilter;
+                        child.material.map.magFilter = THREE.LinearFilter;
+                        child.material.needsUpdate = true;
                     }
                 });
 
-                // Auto-scalatura delle dimensioni
+                // Calcola e adatta automaticamente la dimensione dello squalo
                 const box = new THREE.Box3().setFromObject(sharkMesh);
                 const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
@@ -203,15 +192,20 @@
 
                 sharkContainer.add(sharkMesh);
 
+                // Attiva l'animazione di nuoto
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(sharkMesh);
                     const action = mixer.clipAction(gltf.animations[0]);
                     action.play();
                 }
+            },
+            undefined,
+            (error) => {
+                console.error("Errore durante il caricamento del file 3D:", error);
             }
         );
 
-        // 5. PREDE MARINE
+        // 5. PREDE MARIN
         const preyList = [];
         const preyGeo = new THREE.ConeGeometry(0.3, 1, 6);
         preyGeo.rotateX(Math.PI / 2);
