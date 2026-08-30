@@ -78,16 +78,21 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
+            // Luce globale omogenea senza punti ciechi
+            const ambientLight = new THREE.AmbientLight(0xffffff, 3.0);
             scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
-            dirLight.position.set(20, 50, 20);
-            scene.add(dirLight);
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 2.0);
+            dirLight1.position.set(20, 50, 20);
+            scene.add(dirLight1);
+
+            const dirLight2 = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight2.position.set(-20, -50, -20);
+            scene.add(dirLight2);
 
             // Fondale marino
             const seabedGeo = new THREE.PlaneGeometry(800, 800);
-            const seabedMat = new THREE.MeshPhongMaterial({ color: 0x07202e });
+            const seabedMat = new THREE.MeshBasicMaterial({ color: 0x07202e });
             const seabed = new THREE.Mesh(seabedGeo, seabedMat);
             seabed.rotation.x = -Math.PI / 2;
             seabed.position.y = -40;
@@ -99,7 +104,7 @@
             // Modello di emergenza temporaneo
             buildFallbackShark();
 
-            // Caricamento e riposizionamento di squalo.glb
+            // Caricamento e pulizia forzata di squalo.glb
             tryLoadGLB();
 
             // Creazione Prede
@@ -151,7 +156,7 @@
             loader.load('./squalo.glb', (gltf) => {
                 log("File squalo.glb caricato con successo!");
                 
-                // Rimuove la forma temporanea
+                // Rimuove lo squalo temporaneo
                 while(sharkContainer.children.length > 0) { 
                     sharkContainer.remove(sharkContainer.children[0]); 
                 }
@@ -159,33 +164,36 @@
 
                 const loadedMesh = gltf.scene;
 
-                // Correzione materiali e visibilità
+                // Forzo la visibilità di tutte le parti 3D del modello
                 loadedMesh.traverse((child) => {
                     if (child.isMesh) {
+                        child.visible = true;
                         if (child.material) {
                             child.material.side = THREE.DoubleSide;
+                            child.material.transparent = false;
+                            child.material.opacity = 1.0;
                             child.material.needsUpdate = true;
                         }
                     }
                 });
 
-                // Calcolo e ri-centramento esatto
+                // Reset rigido del posizionamento e del centro geometrico
                 const box = new THREE.Box3().setFromObject(loadedMesh);
-                const size = box.getSize(new THREE.Vector3());
                 const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
 
-                loadedMesh.position.x += (loadedMesh.position.x - center.x);
-                loadedMesh.position.y += (loadedMesh.position.y - center.y);
-                loadedMesh.position.z += (loadedMesh.position.z - center.z);
+                loadedMesh.position.set(-center.x, -center.y, -center.z);
 
-                // Scala automatica
                 const maxDim = Math.max(size.x, size.y, size.z);
                 if (maxDim > 0) {
-                    const scaleFactor = 8 / maxDim;
+                    const scaleFactor = 6 / maxDim;
                     loadedMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 }
 
-                sharkContainer.add(loadedMesh);
+                // Inserisco il modello dentro un gruppo isolato per pulire la trasformazione
+                const modelWrapper = new THREE.Group();
+                modelWrapper.add(loadedMesh);
+                sharkContainer.add(modelWrapper);
 
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(loadedMesh);
