@@ -117,7 +117,8 @@
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-
+        // DEVE DIVENTARE COSÌ:
+        loader.load('./scene.gltf', (gltf) => {
         // 1. SCENA E RENDERER
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x011326);
