@@ -163,7 +163,6 @@
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
-                // CORRETTO: Forziamo la modifica del colore anche in presenza di texture map
                 characterMesh.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = false; 
@@ -171,11 +170,7 @@
                         if (child.material) {
                             child.material.roughness = 0.5;
                             child.material.metalness = 0.1;
-                            
-                            // Se il materiale usa una texture, color tint potrebbe non funzionare direttamente 
-                            // a meno di impostare correttamente il colore di base o usare un filtro vertex/fragment.
-                            // Qui applichiamo una colorazione diretta compatibile:
-                            child.material.color.setHex(0xff5733); // Esempio: Rosso/Arancione vivo per testare il cambio colore
+                            child.material.color.setHex(0xff5733); // Modifica il colore qui se desideri una tonalità diversa
                             child.material.needsUpdate = true;
                         }
                     }
@@ -196,7 +191,7 @@
                     mixer = new THREE.AnimationMixer(characterMesh);
                     walkAction = mixer.clipAction(gltf.animations[0]);
                     walkAction.setLoop(THREE.LoopRepeat);
-                    walkAction.play(); // Avviamo l'azione e gestiamo il peso/crossfade anziché stopparla bruscamente
+                    walkAction.play();
                     walkAction.weight = 0;
                     log("Personaggio e texture pronti!");
                 } else {
@@ -320,10 +315,12 @@
             const delta = clock.getDelta();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
-            // Velocità e movimento fluido senza scatti anomali
-            const currentSpeed = 0.04 * inputMag; 
+            
+            if (isMapLoaded && inputMag > 0.05) {
+                const isRunning = inputMag > 0.75;
+                const baseSpeed = isRunning ? 0.065 : 0.032;
+                const currentSpeed = baseSpeed * inputMag;
 
-            if (isMapLoaded && inputMag > 0.1) {
                 const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
                 playerRotation = moveAngle;
 
@@ -341,14 +338,17 @@
                 nextZ.z += moveDir.z;
                 if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
 
-                // Gestione fluida dell'animazione per evitare lo strisciamento
                 if (walkAction) {
-                    walkAction.weight = THREE.MathUtils.lerp(walkAction.weight, 1.0, 0.1);
-                    walkAction.timeScale = 1.0 + (inputMag * 0.5);
+                    walkAction.weight = THREE.MathUtils.lerp(walkAction.weight, 1.0, 0.15);
+                    walkAction.timeScale = isRunning ? 1.6 : 0.95;
+                    if (!walkAction.isRunning()) walkAction.play();
                 }
             } else {
                 if (walkAction) {
-                    walkAction.weight = THREE.MathUtils.lerp(walkAction.weight, 0.0, 0.1);
+                    walkAction.weight = THREE.MathUtils.lerp(walkAction.weight, 0.0, 0.15);
+                    if (walkAction.weight < 0.05 && walkAction.isRunning()) {
+                        walkAction.stop();
+                    }
                 }
             }
 
