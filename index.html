@@ -78,14 +78,14 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.8);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
             scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
             dirLight.position.set(20, 50, 20);
             scene.add(dirLight);
 
-            // Fondale
+            // Fondale marino
             const seabedGeo = new THREE.PlaneGeometry(800, 800);
             const seabedMat = new THREE.MeshPhongMaterial({ color: 0x07202e });
             const seabed = new THREE.Mesh(seabedGeo, seabedMat);
@@ -96,10 +96,10 @@
             sharkContainer = new THREE.Group();
             scene.add(sharkContainer);
 
-            // Modello di emergenza 3D immediato
+            // Modello di emergenza temporaneo
             buildFallbackShark();
 
-            // Tenta il caricamento del file squalo.glb
+            // Caricamento e riposizionamento di squalo.glb
             tryLoadGLB();
 
             // Creazione Prede
@@ -150,23 +150,41 @@
             
             loader.load('./squalo.glb', (gltf) => {
                 log("File squalo.glb caricato con successo!");
+                
+                // Rimuove la forma temporanea
                 while(sharkContainer.children.length > 0) { 
                     sharkContainer.remove(sharkContainer.children[0]); 
                 }
                 tailGroup = null;
 
                 const loadedMesh = gltf.scene;
+
+                // Correzione materiali e visibilità
+                loadedMesh.traverse((child) => {
+                    if (child.isMesh) {
+                        if (child.material) {
+                            child.material.side = THREE.DoubleSide;
+                            child.material.needsUpdate = true;
+                        }
+                    }
+                });
+
+                // Calcolo e ri-centramento esatto
                 const box = new THREE.Box3().setFromObject(loadedMesh);
                 const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+
+                loadedMesh.position.x += (loadedMesh.position.x - center.x);
+                loadedMesh.position.y += (loadedMesh.position.y - center.y);
+                loadedMesh.position.z += (loadedMesh.position.z - center.z);
+
+                // Scala automatica
                 const maxDim = Math.max(size.x, size.y, size.z);
-                
                 if (maxDim > 0) {
-                    const targetScale = 6 / maxDim;
-                    loadedMesh.scale.set(targetScale, targetScale, targetScale);
+                    const scaleFactor = 8 / maxDim;
+                    loadedMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 }
 
-                const center = box.getCenter(new THREE.Vector3());
-                loadedMesh.position.sub(center.multiplyScalar(loadedMesh.scale.x));
                 sharkContainer.add(loadedMesh);
 
                 if (gltf.animations && gltf.animations.length > 0) {
