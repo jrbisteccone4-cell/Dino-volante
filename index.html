@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Great White Shark 3D Ocean Simulator</title>
+    <title>3D Shark Simulator</title>
     <style>
         * {
             box-sizing: border-box;
@@ -117,9 +117,7 @@
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-        // DEVE DIVENTARE COSÌ:
-        loader.load('./scene.gltf', (gltf) => {
-        // 1. SCENA E RENDERER
+
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x011326);
         scene.fog = new THREE.FogExp2(0x011326, 0.012);
@@ -134,7 +132,6 @@
         renderer.toneMappingExposure = 1.2;
         document.body.appendChild(renderer.domElement);
 
-        // 2. ILLUMINAZIONE MARINA
         const ambientLight = new THREE.AmbientLight(0xdff0ff, 1.8);
         scene.add(ambientLight);
 
@@ -142,7 +139,6 @@
         sunLight.position.set(30, 100, 30);
         scene.add(sunLight);
 
-        // 3. FONDALE MARINO
         const seabedGeo = new THREE.PlaneGeometry(600, 600, 32, 32);
         const seabedMat = new THREE.MeshStandardMaterial({ color: 0x0f2a1d, roughness: 0.9 });
         const seabed = new THREE.Mesh(seabedGeo, seabedMat);
@@ -150,7 +146,6 @@
         seabed.position.y = -30;
         scene.add(seabed);
 
-        // 4. CONTENITORE E CARICAMENTO SQUALO 3D
         const sharkContainer = new THREE.Group();
         scene.add(sharkContainer);
 
@@ -160,13 +155,20 @@
 
         const loader = new GLTFLoader();
 
-        // Caricamento con il nuovo nome file "squalo.glb"
         loader.load(
-            './squalo.glb',
+            'scene.gltf',
             (gltf) => {
                 sharkMesh = gltf.scene;
 
-                // Calcolo automatico della scala ottimale
+                sharkMesh.traverse((child) => {
+                    if (child.isMesh && child.material && child.material.map) {
+                        child.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                        child.material.map.minFilter = THREE.LinearMipmapLinearFilter;
+                        child.material.map.magFilter = THREE.LinearFilter;
+                        child.material.needsUpdate = true;
+                    }
+                });
+
                 const box = new THREE.Box3().setFromObject(sharkMesh);
                 const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
@@ -176,13 +178,11 @@
                     sharkMesh.scale.set(targetScale, targetScale, targetScale);
                 }
 
-                // Centra la maglia del modello nel contenitore
                 const center = box.getCenter(new THREE.Vector3());
                 sharkMesh.position.sub(center.multiplyScalar(sharkMesh.scale.x));
 
                 sharkContainer.add(sharkMesh);
 
-                // Attiva l'animazione se presente nel file 3D
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(sharkMesh);
                     const action = mixer.clipAction(gltf.animations[0]);
@@ -191,11 +191,10 @@
             },
             undefined,
             (error) => {
-                console.error("Errore caricamento squalo.glb:", error);
+                console.error("Errore caricamento scene.gltf:", error);
             }
         );
 
-        // 5. PREDE MARINE
         const preyList = [];
         const preyGeo = new THREE.ConeGeometry(0.3, 1, 6);
         preyGeo.rotateX(Math.PI / 2);
@@ -213,7 +212,6 @@
             preyList.push(fish);
         }
 
-        // 6. CONTROLLI DI GIOCO
         let moveInput = { x: 0, y: 0 };
         let isDashing = false;
         let score = 0;
@@ -282,7 +280,6 @@
             }
         });
 
-        // Rotazione Visuale 360°
         let cameraAngleYaw = 0;
         let cameraAnglePitch = 0.2;
         let isDraggingCam = false;
@@ -308,7 +305,6 @@
 
         window.addEventListener('pointerup', () => isDraggingCam = false);
 
-        // 7. ANIMAZIONE
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
