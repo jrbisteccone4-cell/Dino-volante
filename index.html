@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Game - Textures Originali e Animazioni</title>
+    <title>3D Game - Movimento e Tonalità Corretta</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
@@ -61,7 +61,6 @@
         function log(msg) { document.getElementById('status-log').innerText = msg; }
 
         let scene, camera, renderer, playerGroup, characterMesh, mapMesh;
-        let mixer, animationsMap = new Map();
         const clock = new THREE.Clock();
         
         let moveInput = { x: 0, y: 0 };
@@ -72,7 +71,10 @@
         let verticalVelocity = 0;
         let isGrounded = true;
         let cameraMode = 0;
-        let currentAction = "";
+
+        let walkCycle = 0;
+        let leftLegBone = null, rightLegBone = null;
+        let leftArmBone = null, rightArmBone = null;
 
         const raycaster = new THREE.Raycaster();
         const collidableObjects = [];
@@ -86,13 +88,13 @@
 
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25)); // Bilanciato per evitare scatti
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
+            const ambientLight = new THREE.AmbientLight(0xfff5ea, 1.8);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            const mainLight = new THREE.DirectionalLight(0xffebd2, 1.1);
             mainLight.position.set(10, 30, 10);
             scene.add(mainLight);
 
@@ -157,28 +159,36 @@
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
-                // RIPRISTINO DELLE TEXTURES ORIGINALI
+                // TONALITÀ PELLE CARNICINA E NATURALE DALLO SCREENSHOT
+                const skinMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xf2cfbe, // Tono pelle caldo, vivace ed umano
+                    roughness: 0.5,
+                    metalness: 0.05
+                });
+
                 characterMesh.traverse((child) => {
                     if (child.isMesh) {
+                        // Mantiene vestiti/capelli scuri e applica la pelle al corpo
+                        if (!child.material || child.material.color.getHex() > 0xaaaaaa) {
+                            child.material = skinMaterial;
+                        }
+
                         child.castShadow = true;
                         child.receiveShadow = true;
-                        if (child.material) {
-                            child.material.needsUpdate = true;
+                    }
+
+                    if (child.isBone || child.type === "Bone") {
+                        const name = child.name.toLowerCase();
+                        if (name.includes("leg") || name.includes("thigh") || name.includes("hip")) {
+                            if (name.includes("l") || name.includes("left")) leftLegBone = child;
+                            if (name.includes("r") || name.includes("right")) rightLegBone = child;
+                        }
+                        if (name.includes("arm") || name.includes("shoulder")) {
+                            if (name.includes("l") || name.includes("left")) leftArmBone = child;
+                            if (name.includes("r") || name.includes("right")) rightArmBone = child;
                         }
                     }
                 });
-
-                // GESTIONE ANIMAZIONI INTERNE AL FILE GLB
-                if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(characterMesh);
-                    gltf.animations.forEach((clip) => {
-                        animationsMap.set(clip.name.toLowerCase(), mixer.clipAction(clip));
-                    });
-
-                    // Avvia la prima animazione disponibile
-                    const firstAnim = gltf.animations[0].name.toLowerCase();
-                    switchAnimation(firstAnim);
-                }
 
                 const box = new THREE.Box3().setFromObject(characterMesh);
                 const size = box.getSize(new THREE.Vector3());
@@ -196,26 +206,6 @@
             }, null, (error) => {
                 console.error(error);
             });
-        }
-
-        function switchAnimation(name) {
-            if (!mixer || currentAction === name) return;
-            
-            let actionToPlay = null;
-            for (let [key, action] of animationsMap.entries()) {
-                if (key.includes(name)) {
-                    actionToPlay = action;
-                    break;
-                }
-            }
-
-            if (actionToPlay) {
-                if (currentAction && animationsMap.has(currentAction)) {
-                    animationsMap.get(currentAction).fadeOut(0.2);
-                }
-                actionToPlay.reset().fadeIn(0.2).play();
-                currentAction = name;
-            }
         }
 
         function setupControls() {
@@ -296,7 +286,7 @@
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (isGrounded) {
-                    verticalVelocity = 0.14;
+                    verticalVelocity = 0.13;
                     isGrounded = false;
                 }
             }, { passive: false });
@@ -330,9 +320,11 @@
             return true;
         }
 
+        // SALTO E PAVIMENTO FLUIDO SENZA LAG
         function updatePhysics() {
             if (collidableObjects.length === 0) return;
 
+            // Controllo Soffitto
             if (verticalVelocity > 0) {
                 const headOrigin = playerPos.clone();
                 headOrigin.y += 0.7;
@@ -344,15 +336,16 @@
                 }
             }
 
+            // Raycast di supporto per appoggio costante al pavimento
             const rayOrigin = playerPos.clone();
-            rayOrigin.y += 0.5;
+            rayOrigin.y += 0.4;
             raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
 
             const floorHits = raycaster.intersectObjects(collidableObjects, true);
 
             if (floorHits.length > 0) {
                 const floorY = floorHits[0].point.y;
-                if (playerPos.y <= floorY + 0.05 && verticalVelocity <= 0) {
+                if (playerPos.y <= floorY + 0.08 && verticalVelocity <= 0) {
                     playerPos.y = floorY;
                     verticalVelocity = 0;
                     isGrounded = true;
@@ -370,7 +363,7 @@
             }
 
             if (!isGrounded) {
-                verticalVelocity -= 0.009;
+                verticalVelocity -= 0.008; // Gravità alleggerita per evitare micro-lag di rendering
                 playerPos.y += verticalVelocity;
             }
         }
@@ -378,8 +371,6 @@
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-
-            if (mixer) mixer.update(delta);
 
             updatePhysics();
 
@@ -404,9 +395,26 @@
                 targetZ.z += moveDir.z;
                 if (canMoveTo(targetZ)) playerPos.z = targetZ.z;
 
-                switchAnimation("walk");
+                // MOVIMENTO PASSO/GAMBE SUL TERRENO
+                walkCycle += delta * 10 * inputMag;
+
+                if (leftLegBone && rightLegBone) {
+                    leftLegBone.rotation.x = Math.sin(walkCycle) * 0.4;
+                    rightLegBone.rotation.x = -Math.sin(walkCycle) * 0.4;
+                }
+                if (leftArmBone && rightArmBone) {
+                    leftArmBone.rotation.x = -Math.sin(walkCycle) * 0.3;
+                    rightArmBone.rotation.x = Math.sin(walkCycle) * 0.3;
+                }
+
+                if (characterMesh) {
+                    characterMesh.position.y = Math.abs(Math.sin(walkCycle)) * 0.015;
+                }
             } else {
-                switchAnimation("idle");
+                walkCycle = 0;
+                if (leftLegBone) leftLegBone.rotation.x = THREE.MathUtils.lerp(leftLegBone.rotation.x, 0, 0.1);
+                if (rightLegBone) rightLegBone.rotation.x = THREE.MathUtils.lerp(rightLegBone.rotation.x, 0, 0.1);
+                if (characterMesh) characterMesh.position.y = THREE.MathUtils.lerp(characterMesh.position.y, 0, 0.1);
             }
 
             if (playerGroup) {
@@ -414,6 +422,7 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
+            // CAMERA ANTI-COMPENETRAZIONE PARETI
             if (cameraMode === 0) {
                 const targetDist = 2.0;
                 const headPos = playerPos.clone().add(new THREE.Vector3(0, 0.8, 0));
