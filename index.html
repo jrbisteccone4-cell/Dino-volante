@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Shark Game</title>
+    <title>3D Shark Ocean Game</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #011326; font-family: sans-serif; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #02182b; font-family: sans-serif; }
         canvas { display: block; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 1; }
 
         #hud {
@@ -21,7 +21,7 @@
 
         #joystick-container {
             position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px;
-            background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 50%; touch-action: none; z-index: 10;
         }
         #joystick-knob {
@@ -46,7 +46,7 @@
 <body>
 
     <div id="hud">Punti: <span id="score">0</span> | Prede Divorate: <span id="eaten">0</span></div>
-    <div id="status-log">Inizializzazione...</div>
+    <div id="status-log">Inizializzazione oceano...</div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-dash" class="btn-action">SCATTO</div>
@@ -67,32 +67,39 @@
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x011326);
-            scene.fog = new THREE.FogExp2(0x011326, 0.005);
-
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
             
+            // Nebbia oceanica e sfondo blu mare profondo
+            const oceanColor = 0x0a4b6e;
+            scene.background = new THREE.Color(oceanColor);
+            scene.fog = new THREE.FogExp2(oceanColor, 0.012);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 3.0);
+            // Illuminazione marina a 360 gradi
+            const ambientLight = new THREE.AmbientLight(0xdff0ff, 2.5);
             scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
-            dirLight.position.set(50, 100, 50);
-            scene.add(dirLight);
+            const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+            sunLight.position.set(0, 100, 0);
+            scene.add(sunLight);
 
-            const seabedGeo = new THREE.PlaneGeometry(1000, 1000);
-            const seabedMat = new THREE.MeshPhongMaterial({ color: 0x07202e });
-            const seabed = new THREE.Mesh(seabedGeo, seabedMat);
-            seabed.rotation.x = -Math.PI / 2;
-            seabed.position.y = -60;
-            scene.add(seabed);
+            const fillLight = new THREE.DirectionalLight(0x0088aa, 1.5);
+            fillLight.position.set(0, -50, 0);
+            scene.add(fillLight);
+
+            // Creazione ambiente marino (fondale e vegetazione)
+            createOceanFloor();
 
             sharkContainer = new THREE.Group();
             scene.add(sharkContainer);
+
+            // Posizione iniziale della telecamera per inquadrare lo squalo al centro
+            camera.position.set(0, 4, 18);
 
             loadGLTFModel();
             createPreys();
@@ -102,29 +109,71 @@
             animate();
         }
 
+        function createOceanFloor() {
+            // Terreno sabbioso
+            const floorGeo = new THREE.PlaneGeometry(600, 600, 64, 64);
+            const pos = floorGeo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const vx = pos.getX(i);
+                const vy = pos.getY(i);
+                const zNoise = Math.sin(vx * 0.05) * Math.cos(vy * 0.05) * 3.0;
+                pos.setZ(i, zNoise);
+            }
+            floorGeo.computeVertexNormals();
+
+            const floorMat = new THREE.MeshPhongMaterial({
+                color: 0x2c5a45,
+                emissive: 0x051b24,
+                shininess: 10,
+                flatShading: true
+            });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -25;
+            scene.add(floor);
+
+            // Alghe e rocce sul fondale
+            const weedGeo = new THREE.CylinderGeometry(0.1, 0.4, 8, 5);
+            const weedMat = new THREE.MeshLambertMaterial({ color: 0x117744 });
+            for (let i = 0; i < 120; i++) {
+                const weed = new THREE.Mesh(weedGeo, weedMat);
+                weed.position.set(
+                    (Math.random() - 0.5) * 400,
+                    -21,
+                    (Math.random() - 0.5) * 400
+                );
+                weed.rotation.z = (Math.random() - 0.5) * 0.4;
+                scene.add(weed);
+            }
+        }
+
         function loadGLTFModel() {
-            log("Caricamento scene.gltf...");
+            log("Caricamento squalo 3D...");
             const loader = new THREE.GLTFLoader();
             
             loader.load('./scene.gltf', (gltf) => {
-                log("Squalo caricato con successo!");
+                log("Squalo pronto!");
                 const loadedMesh = gltf.scene;
 
                 loadedMesh.traverse((child) => {
                     if (child.isMesh) {
                         child.material.side = THREE.DoubleSide;
+                        child.material.transparent = false;
+                        child.material.opacity = 1.0;
                     }
                 });
 
+                // Centra e ridimensiona perfettamente lo squalo
                 const box = new THREE.Box3().setFromObject(loadedMesh);
-                const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
 
                 loadedMesh.position.sub(center);
 
                 const maxDim = Math.max(size.x, size.y, size.z);
                 if (maxDim > 0) {
-                    const scaleFactor = 10 / maxDim;
+                    const targetSize = 7.0; // Dimensione ideale al centro dello schermo
+                    const scaleFactor = targetSize / maxDim;
                     loadedMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 }
 
@@ -138,23 +187,23 @@
             }, 
             undefined, 
             (err) => {
-                log("Errore nel caricamento del file.");
+                log("Errore nel caricamento del file 3D.");
             });
         }
 
         function createPreys() {
-            const preyGeo = new THREE.ConeGeometry(0.6, 2.0, 6);
+            const preyGeo = new THREE.ConeGeometry(0.5, 1.8, 6);
             preyGeo.rotateX(Math.PI / 2);
 
-            for (let i = 0; i < 60; i++) {
-                const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+            for (let i = 0; i < 70; i++) {
+                const mat = new THREE.MeshPhongMaterial({ color: 0xffaa00, emissive: 0x442200 });
                 const fish = new THREE.Mesh(preyGeo, mat);
                 fish.position.set(
-                    (Math.random() - 0.5) * 300,
-                    Math.random() * 40 - 20,
-                    (Math.random() - 0.5) * 300
+                    (Math.random() - 0.5) * 250,
+                    Math.random() * 30 - 10,
+                    (Math.random() - 0.5) * 250
                 );
-                fish.userData = { speed: Math.random() * 0.1 + 0.05 };
+                fish.userData = { speed: Math.random() * 0.12 + 0.06 };
                 scene.add(fish);
                 preyList.push(fish);
             }
@@ -225,7 +274,7 @@
                 const sharkPos = sharkContainer.position;
                 for (let i = preyList.length - 1; i >= 0; i--) {
                     const prey = preyList[i];
-                    if (prey.position.distanceTo(sharkPos) < 12.0) {
+                    if (prey.position.distanceTo(sharkPos) < 10.0) {
                         scene.remove(prey);
                         preyList.splice(i, 1);
                         score += 100;
@@ -245,13 +294,13 @@
 
             if (mixer) mixer.update(delta);
 
-            const speed = isDashing ? 0.5 : 0.25;
+            const speed = isDashing ? 0.5 : 0.22;
 
             if (Math.hypot(moveInput.x, moveInput.y) > 0.05) {
-                targetYaw -= moveInput.x * 0.04;
-                targetPitch = THREE.MathUtils.clamp(targetPitch - moveInput.y * 0.03, -0.6, 0.6);
+                targetYaw -= moveInput.x * 0.035;
+                targetPitch = THREE.MathUtils.clamp(targetPitch - moveInput.y * 0.025, -0.5, 0.5);
             } else {
-                targetPitch = THREE.MathUtils.lerp(targetPitch, 0, 0.02);
+                targetPitch = THREE.MathUtils.lerp(targetPitch, 0, 0.03);
             }
 
             currentYaw = THREE.MathUtils.lerp(currentYaw, targetYaw, 0.08);
@@ -263,12 +312,16 @@
 
             const moveDir = new THREE.Vector3(0, 0, -1).applyQuaternion(sharkContainer.quaternion);
             sharkContainer.position.addScaledVector(moveDir, speed);
-            sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -50, 30);
+            sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -20, 15);
 
-            const camOffset = new THREE.Vector3(0, 8, 30).applyQuaternion(sharkContainer.quaternion);
-            camera.position.copy(sharkContainer.position).add(camOffset);
-            camera.lookAt(sharkContainer.position);
+            // Inquadratura perfetta: lo squalo rimane fisso al centro dello schermo
+            const offset = new THREE.Vector3(0, 3.5, 14).applyQuaternion(sharkContainer.quaternion);
+            camera.position.copy(sharkContainer.position).add(offset);
+            
+            const lookTarget = sharkContainer.position.clone().add(new THREE.Vector3(0, 1, 0));
+            camera.lookAt(lookTarget);
 
+            // Movimento dei pesci
             preyList.forEach(prey => prey.translateZ(prey.userData.speed));
 
             renderer.render(scene, camera);
