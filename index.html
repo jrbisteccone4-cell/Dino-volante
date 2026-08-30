@@ -105,7 +105,7 @@
             animate();
         }
 
-        function loadMap(filename, customSpawn = null) {
+        function loadMap(filename) {
             log("Caricamento " + filename + "...");
             const loader = new THREE.GLTFLoader();
 
@@ -135,29 +135,16 @@
                 
                 scene.add(mapMesh);
 
-                if (customSpawn) {
-                    playerPos.copy(customSpawn);
-                } else {
-                    spawnPlayerSafely();
-                }
+                // Posiziona il player in modo sicuro all'interno della nuova mappa
+                playerPos.set(0, 0.1, 0);
+                verticalVelocity = 0;
+                isGrounded = true;
 
                 log("Mappa pronta!");
             }, null, (error) => {
                 log("Errore caricamento mappa!");
                 console.error(error);
             });
-        }
-
-        function spawnPlayerSafely() {
-            playerPos.set(0, 20, 0);
-            raycaster.set(playerPos, new THREE.Vector3(0, -1, 0));
-            const hits = raycaster.intersectObjects(collidableObjects, true);
-
-            if (hits.length > 0) {
-                playerPos.y = hits[0].point.y;
-            } else {
-                playerPos.set(0, 0, 0);
-            }
         }
 
         function loadCharacter() {
