@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Pomni 3D - White Room</title>
+    <title>3D Character - White Room</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #e0e0e0; font-family: sans-serif; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #e0e0e0; font-family: sans-serif; touch-action: none; }
         canvas { display: block; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 1; }
 
         #hud {
             position: absolute; top: 15px; left: 15px; color: #333; font-size: 14px; font-weight: bold;
-            font-family: monospace; pointer-events: none; z-index: 10; background: rgba(255,255,255,0.7);
-            padding: 8px 12px; border-radius: 8px;
+            font-family: monospace; pointer-events: none; z-index: 10; background: rgba(255,255,255,0.8);
+            padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         }
 
         #status-log {
@@ -21,23 +21,24 @@
         }
 
         #joystick-container {
-            position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px;
-            background: rgba(0, 0, 0, 0.15); border: 2px solid rgba(0, 0, 0, 0.3);
-            border-radius: 50%; touch-action: none; z-index: 10;
+            position: absolute; bottom: 35px; left: 35px; width: 130px; height: 130px;
+            background: rgba(0, 0, 0, 0.2); border: 3px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%; touch-action: none; z-index: 10; backdrop-filter: blur(4px);
         }
         #joystick-knob {
-            position: absolute; top: 35px; left: 35px; width: 50px; height: 50px;
-            background: #222; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none;
+            position: absolute; top: 40px; left: 40px; width: 50px; height: 50px;
+            background: #222; border: 2px solid #fff; border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4); pointer-events: none;
         }
 
         .btn-action {
             position: absolute; width: 75px; height: 75px; border-radius: 50%;
-            border: 2px solid rgba(0, 0, 0, 0.3); color: white; font-weight: bold; font-size: 13px;
-            display: flex; align-items: center; justify-content: center; touch-action: manipulation;
-            z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.5); color: white; font-weight: bold; font-size: 14px;
+            display: flex; align-items: center; justify-content: center; touch-action: none;
+            z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer;
         }
-        .btn-action:active { transform: scale(0.9); }
-        #btn-cam { bottom: 35px; right: 30px; background: #007acc; }
+        .btn-action:active { transform: scale(0.92); }
+        #btn-cam { bottom: 35px; right: 35px; background: #007acc; }
         #btn-jump { bottom: 125px; right: 35px; background: #28a745; }
     </style>
 
@@ -70,6 +71,7 @@
         let verticalVelocity = 0;
         let isGrounded = true;
         let cameraMode = 0;
+        let walkCycle = 0;
 
         function init() {
             scene = new THREE.Scene();
@@ -85,8 +87,7 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
 
-            // Luci diffuse per valorizzare il modello 3D
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
             scene.add(ambientLight);
 
             const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -101,8 +102,7 @@
             createRoom();
             loadCharacter();
 
-            setupJoystick();
-            setupButtons();
+            setupControls();
 
             animate();
         }
@@ -110,7 +110,6 @@
         function createRoom() {
             const roomSize = 80;
 
-            // Pavimento metallico riflettente
             const canvas = document.createElement('canvas');
             canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d');
@@ -138,7 +137,6 @@
             floor.receiveShadow = true;
             scene.add(floor);
 
-            // Stanza Bianca
             const wallMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.9 });
             const wallGeo = new THREE.PlaneGeometry(roomSize, 30);
             
@@ -152,34 +150,46 @@
             playerGroup = new THREE.Group();
             scene.add(playerGroup);
 
-            log("Download personaggio.glb...");
+            log("Caricamento personaggio.glb...");
             const loader = new THREE.GLTFLoader();
 
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
-                // Calcolo automatico di altezza e posizionamento al suolo
+                // Calcolo preciso del punto d'appoggio per non farlo fluttuare
                 const box = new THREE.Box3().setFromObject(characterMesh);
                 const size = box.getSize(new THREE.Vector3());
-                const targetHeight = 3.0; // Altezza desiderata
+                const targetHeight = 2.8;
                 const scaleFactor = targetHeight / (size.y || 1);
                 
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 
-                // Riallinea i piedi a terra
+                // Posiziona esattamente la pianta dei piedi sul pavimento (Y = 0)
                 const updatedBox = new THREE.Box3().setFromObject(characterMesh);
                 characterMesh.position.y = -updatedBox.min.y;
+
+                // Tonalità della pelle più scura
+                const darkSkinColor = new THREE.Color(0x8d5b4c);
 
                 characterMesh.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
+
+                        // Applica la tonalità della pelle se il nome del materiale corrisponde
+                        if (child.material) {
+                            const matName = (child.material.name || "").toLowerCase();
+                            const meshName = (child.name || "").toLowerCase();
+                            if (matName.includes('skin') || matName.includes('pelle') || meshName.includes('head') || meshName.includes('body')) {
+                                child.material = child.material.clone();
+                                child.material.color.lerp(darkSkinColor, 0.45);
+                            }
+                        }
                     }
                 });
 
                 playerGroup.add(characterMesh);
 
-                // Gestione animazioni del modello (se presenti nel file)
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(characterMesh);
                     idleAction = mixer.clipAction(gltf.animations[0]);
@@ -192,38 +202,37 @@
                 }
 
                 document.getElementById('status-text').innerText = "PRONTO";
-                log("Pomni caricata con successo!");
+                log("Personaggio pronto!");
             }, 
             (xhr) => {
                 if (xhr.lengthComputable) {
                     const percent = Math.round((xhr.loaded / xhr.total) * 100);
-                    log(`Caricamento Pomni: ${percent}%`);
-                } else {
-                    log("Scaricamento modello in corso...");
+                    log(`Caricamento: ${percent}%`);
                 }
             }, 
             (error) => {
-                log("Errore: impossibile caricare 'personaggio.glb'");
+                log("Errore caricamento file .glb");
                 console.error(error);
             });
         }
 
-        function setupJoystick() {
+        function setupControls() {
             const container = document.getElementById('joystick-container');
             const knob = document.getElementById('joystick-knob');
-            let active = false, center = { x: 0, y: 0 }, touchId = null;
+            let active = false, touchId = null, center = { x: 0, y: 0 };
 
-            function start(e) {
+            function startJoystick(e) {
+                e.preventDefault();
                 if (active) return;
                 const touch = e.changedTouches ? e.changedTouches[0] : e;
                 if (e.changedTouches) touchId = touch.identifier;
                 const rect = container.getBoundingClientRect();
                 center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
                 active = true;
-                move(e);
+                moveJoystick(e);
             }
 
-            function move(e) {
+            function moveJoystick(e) {
                 if (!active) return;
                 let touch = null;
                 if (e.touches) {
@@ -235,7 +244,7 @@
 
                 const dx = touch.clientX - center.x;
                 const dy = touch.clientY - center.y;
-                const maxDist = 40;
+                const maxDist = 45;
                 const dist = Math.min(Math.hypot(dx, dy), maxDist);
                 const angle = Math.atan2(dy, dx);
 
@@ -244,29 +253,48 @@
                 moveInput.y = (Math.sin(angle) * dist) / maxDist;
             }
 
-            function end() {
+            function endJoystick(e) {
                 if (!active) return;
+                if (e.changedTouches) {
+                    let released = false;
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === touchId) released = true;
+                    }
+                    if (!released) return;
+                }
                 active = false; touchId = null;
                 knob.style.transform = `translate(0px, 0px)`;
                 moveInput = { x: 0, y: 0 };
             }
 
-            container.addEventListener('touchstart', start, { passive: false });
-            window.addEventListener('touchmove', move, { passive: false });
-            window.addEventListener('touchend', end);
-            container.addEventListener('mousedown', start);
-            window.addEventListener('mousemove', move);
-            window.addEventListener('mouseup', end);
-        }
+            container.addEventListener('touchstart', startJoystick, { passive: false });
+            window.addEventListener('touchmove', moveJoystick, { passive: false });
+            window.addEventListener('touchend', endJoystick);
+            window.addEventListener('touchcancel', endJoystick);
 
-        function setupButtons() {
-            document.getElementById('btn-jump').addEventListener('click', () => {
-                if (isGrounded) { verticalVelocity = 0.22; isGrounded = false; }
-            });
+            container.addEventListener('mousedown', startJoystick);
+            window.addEventListener('mousemove', moveJoystick);
+            window.addEventListener('mouseup', endJoystick);
 
-            document.getElementById('btn-cam').addEventListener('click', () => {
+            // Tasti Azione con evento Touch flessibile per evitare bug
+            const jumpBtn = document.getElementById('btn-jump');
+            const camBtn = document.getElementById('btn-cam');
+
+            const handleJump = (e) => {
+                e.preventDefault();
+                if (isGrounded) { verticalVelocity = 0.20; isGrounded = false; }
+            };
+
+            const handleCam = (e) => {
+                e.preventDefault();
                 cameraMode = (cameraMode + 1) % 2;
-            });
+            };
+
+            jumpBtn.addEventListener('touchstart', handleJump, { passive: false });
+            jumpBtn.addEventListener('click', handleJump);
+
+            camBtn.addEventListener('touchstart', handleCam, { passive: false });
+            camBtn.addEventListener('click', handleCam);
         }
 
         function animate() {
@@ -276,17 +304,25 @@
             if (mixer) mixer.update(delta);
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
-            const speed = 0.16;
+            // Velocità bilanciata per un passo elegante
+            const speed = 0.12;
 
             if (inputMag > 0.1) {
                 const targetAngle = Math.atan2(-moveInput.x, -moveInput.y);
                 let diff = targetAngle - playerRotation;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                playerRotation += diff * 0.15;
+                playerRotation += diff * 0.12;
 
                 playerPos.x += Math.sin(playerRotation) * speed * inputMag;
                 playerPos.z += Math.cos(playerRotation) * speed * inputMag;
+
+                // Oscillazione e camminata femminile
+                walkCycle += delta * 8;
+                if (characterMesh) {
+                    characterMesh.rotation.z = Math.sin(walkCycle) * 0.04;
+                    characterMesh.rotation.x = Math.cos(walkCycle * 2) * 0.02;
+                }
 
                 if (walkAction && idleAction && walkAction !== idleAction) {
                     if (!walkAction.isRunning()) {
@@ -295,6 +331,11 @@
                     }
                 }
             } else {
+                if (characterMesh) {
+                    characterMesh.rotation.z = THREE.MathUtils.lerp(characterMesh.rotation.z, 0, 0.1);
+                    characterMesh.rotation.x = THREE.MathUtils.lerp(characterMesh.rotation.x, 0, 0.1);
+                }
+
                 if (walkAction && idleAction && walkAction !== idleAction) {
                     if (walkAction.isRunning()) {
                         walkAction.stop();
@@ -324,14 +365,14 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
-            // Telecamera
+            // Telecamera fluida
             if (cameraMode === 0) {
-                camera.position.set(playerPos.x, playerPos.y + 4.5, playerPos.z + 9);
-                camera.lookAt(playerPos.x, playerPos.y + 2.0, playerPos.z);
+                camera.position.set(playerPos.x, playerPos.y + 4.2, playerPos.z + 8.5);
+                camera.lookAt(playerPos.x, playerPos.y + 1.8, playerPos.z);
             } else {
-                const headPos = new THREE.Vector3(0, 2.8, -0.2).applyQuaternion(playerGroup.quaternion);
+                const headPos = new THREE.Vector3(0, 2.5, -0.2).applyQuaternion(playerGroup.quaternion);
                 camera.position.copy(playerPos).add(headPos);
-                const lookTarget = new THREE.Vector3(0, 2.8, -5).applyQuaternion(playerGroup.quaternion);
+                const lookTarget = new THREE.Vector3(0, 2.5, -5).applyQuaternion(playerGroup.quaternion);
                 camera.lookAt(playerPos.clone().add(lookTarget));
             }
 
