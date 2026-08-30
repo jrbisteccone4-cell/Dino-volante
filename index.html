@@ -15,7 +15,7 @@
         }
 
         #status-log {
-            position: absolute; top: 40px; left: 15px; color: #00ffcc; font-size: 12px;
+            position: absolute; top: 40px; left: 15px; color: #00ffcc; font-size: 13px;
             font-family: monospace; z-index: 10; pointer-events: none;
         }
 
@@ -46,7 +46,7 @@
 <body>
 
     <div id="hud">Punti: <span id="score">0</span> | Prede Divorate: <span id="eaten">0</span></div>
-    <div id="status-log">Inizializzazione oceano...</div>
+    <div id="status-log">Inizializzazione grafica...</div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-dash" class="btn-action">SCATTO</div>
@@ -59,7 +59,7 @@
 
         let scene, camera, renderer, sharkContainer;
         let mixer = null;
-        let tempSharkMesh = null;
+        let tempShark = null;
         const clock = new THREE.Clock();
         const preyList = [];
         let moveInput = { x: 0, y: 0 };
@@ -68,8 +68,6 @@
 
         function init() {
             scene = new THREE.Scene();
-            
-            // Nebbia oceanica e sfondo blu mare profondo
             const oceanColor = 0x0a4b6e;
             scene.background = new THREE.Color(oceanColor);
             scene.fog = new THREE.FogExp2(oceanColor, 0.012);
@@ -81,7 +79,6 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.body.appendChild(renderer.domElement);
 
-            // Illuminazione marina a 360 gradi
             const ambientLight = new THREE.AmbientLight(0xdff0ff, 2.5);
             scene.add(ambientLight);
 
@@ -89,130 +86,98 @@
             sunLight.position.set(0, 100, 0);
             scene.add(sunLight);
 
-            const fillLight = new THREE.DirectionalLight(0x0088aa, 1.5);
-            fillLight.position.set(0, -50, 0);
-            scene.add(fillLight);
-
-            // Creazione ambiente marino (fondale e vegetazione)
             createOceanFloor();
+            createPreys();
 
             sharkContainer = new THREE.Group();
             scene.add(sharkContainer);
 
-            // Modello temporaneo dello squalo in attesa del file 3D
-            const tempGeo = new THREE.ConeGeometry(1, 4, 8);
-            tempGeo.rotateX(Math.PI / 2);
-            const tempMat = new THREE.MeshPhongMaterial({ color: 0x888888 });
-            tempSharkMesh = new THREE.Mesh(tempGeo, tempMat);
-            sharkContainer.add(tempSharkMesh);
+            // Modello provvisorio per giocare subito
+            const bodyGeo = new THREE.ConeGeometry(1.2, 5, 8);
+            bodyGeo.rotateX(Math.PI / 2);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: 0x6688aa });
+            tempShark = new THREE.Mesh(bodyGeo, bodyMat);
+            sharkContainer.add(tempShark);
 
-            // Posizione iniziale della telecamera
-            camera.position.set(0, 4, 18);
-
-            loadGLTFModel();
-            createPreys();
             setupJoystick();
             setupButtons();
 
-            log("Oceano generato!");
             animate();
+            loadGLTFModel();
         }
 
         function createOceanFloor() {
-            // Terreno sabbioso
             const floorGeo = new THREE.PlaneGeometry(600, 600, 32, 32);
             const pos = floorGeo.attributes.position;
             for (let i = 0; i < pos.count; i++) {
-                const vx = pos.getX(i);
-                const vy = pos.getY(i);
-                const zNoise = Math.sin(vx * 0.05) * Math.cos(vy * 0.05) * 3.0;
-                pos.setZ(i, zNoise);
+                pos.setZ(i, Math.sin(pos.getX(i) * 0.05) * Math.cos(pos.getY(i) * 0.05) * 3.0);
             }
             floorGeo.computeVertexNormals();
 
-            const floorMat = new THREE.MeshPhongMaterial({
-                color: 0x2c5a45,
-                emissive: 0x051b24,
-                shininess: 10,
-                flatShading: true
-            });
+            const floorMat = new THREE.MeshPhongMaterial({ color: 0x2c5a45, flatShading: true });
             const floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
             floor.position.y = -25;
             scene.add(floor);
 
-            // Alghe e rocce sul fondale
             const weedGeo = new THREE.CylinderGeometry(0.1, 0.4, 8, 5);
             const weedMat = new THREE.MeshLambertMaterial({ color: 0x117744 });
-            for (let i = 0; i < 120; i++) {
+            for (let i = 0; i < 100; i++) {
                 const weed = new THREE.Mesh(weedGeo, weedMat);
-                weed.position.set(
-                    (Math.random() - 0.5) * 400,
-                    -21,
-                    (Math.random() - 0.5) * 400
-                );
-                weed.rotation.z = (Math.random() - 0.5) * 0.4;
+                weed.position.set((Math.random() - 0.5) * 400, -21, (Math.random() - 0.5) * 400);
                 scene.add(weed);
             }
         }
 
         function loadGLTFModel() {
-            log("Caricamento squalo 3D...");
+            log("Download squalo.glb in corso...");
             const loader = new THREE.GLTFLoader();
             
-            loader.load('./scene.gltf', (gltf) => {
-                log("Squalo 3D caricato con successo!");
-                
-                // Rimuove lo squalo temporaneo grigio
-                if (tempSharkMesh) {
-                    sharkContainer.remove(tempSharkMesh);
-                }
+            loader.load('./squalo.glb', 
+                (gltf) => {
+                    log("Squalo 3D pronto!");
+                    if (tempShark) sharkContainer.remove(tempShark);
 
-                const loadedMesh = gltf.scene;
+                    const loadedMesh = gltf.scene;
+                    const box = new THREE.Box3().setFromObject(loadedMesh);
+                    const size = box.getSize(new THREE.Vector3());
+                    const center = box.getCenter(new THREE.Vector3());
 
-                loadedMesh.traverse((child) => {
-                    if (child.isMesh) {
-                        child.material.side = THREE.DoubleSide;
-                        child.material.transparent = false;
-                        child.material.opacity = 1.0;
+                    loadedMesh.position.sub(center);
+
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    if (maxDim > 0) {
+                        const scaleFactor = 7.0 / maxDim;
+                        loadedMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
                     }
-                });
 
-                // Centra e ridimensiona lo squalo
-                const box = new THREE.Box3().setFromObject(loadedMesh);
-                const size = box.getSize(new THREE.Vector3());
-                const center = box.getCenter(new THREE.Vector3());
+                    sharkContainer.add(loadedMesh);
 
-                loadedMesh.position.sub(center);
-
-                const maxDim = Math.max(size.x, size.y, size.z);
-                if (maxDim > 0) {
-                    const targetSize = 7.0;
-                    const scaleFactor = targetSize / maxDim;
-                    loadedMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        mixer = new THREE.AnimationMixer(loadedMesh);
+                        mixer.clipAction(gltf.animations[0]).play();
+                    }
+                },
+                (xhr) => {
+                    if (xhr.total > 0) {
+                        const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                        log("Caricamento squalo: " + percent + "%");
+                    } else {
+                        log("Scaricati: " + (xhr.loaded / 1024 / 1024).toFixed(1) + " MB");
+                    }
+                },
+                (err) => {
+                    log("squalo.glb non caricato. Uso squalo base.");
                 }
-
-                sharkContainer.add(loadedMesh);
-
-                if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(loadedMesh);
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.play();
-                }
-            }, 
-            undefined, 
-            (err) => {
-                log("Errore caricamento scene.gltf! Usando modello base.");
-                console.error(err);
-            });
+            );
         }
 
         function createPreys() {
             const preyGeo = new THREE.ConeGeometry(0.5, 1.8, 6);
             preyGeo.rotateX(Math.PI / 2);
 
-            for (let i = 0; i < 70; i++) {
-                const mat = new THREE.MeshPhongMaterial({ color: 0xffaa00, emissive: 0x442200 });
+            for (let i = 0; i < 60; i++) {
+                const mat = new THREE.MeshPhongMaterial({ color: 0xffaa00 });
                 const fish = new THREE.Mesh(preyGeo, mat);
                 fish.position.set(
                     (Math.random() - 0.5) * 250,
@@ -256,15 +221,12 @@
                 const dist = Math.min(Math.hypot(dx, dy), maxDist);
                 const angle = Math.atan2(dy, dx);
 
-                const knobX = Math.cos(angle) * dist;
-                const knobY = Math.sin(angle) * dist;
-
-                knob.style.transform = `translate(${knobX}px, ${knobY}px)`;
-                moveInput.x = knobX / maxDist;
-                moveInput.y = knobY / maxDist;
+                knob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+                moveInput.x = (Math.cos(angle) * dist) / maxDist;
+                moveInput.y = (Math.sin(angle) * dist) / maxDist;
             }
 
-            function end(e) {
+            function end() {
                 if (!active) return;
                 active = false; touchId = null;
                 knob.style.transform = `translate(0px, 0px)`;
@@ -330,14 +292,10 @@
             sharkContainer.position.addScaledVector(moveDir, speed);
             sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -20, 15);
 
-            // Telecamera insegue lo squalo
             const offset = new THREE.Vector3(0, 3.5, 14).applyQuaternion(sharkContainer.quaternion);
             camera.position.copy(sharkContainer.position).add(offset);
-            
-            const lookTarget = sharkContainer.position.clone().add(new THREE.Vector3(0, 1, 0));
-            camera.lookAt(lookTarget);
+            camera.lookAt(sharkContainer.position.clone().add(new THREE.Vector3(0, 1, 0)));
 
-            // Movimento pesci
             preyList.forEach(prey => prey.translateZ(prey.userData.speed));
 
             renderer.render(scene, camera);
@@ -350,6 +308,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Avvio diretto senza attendere DOMContentLoaded
-        init();
+        window.onload = init;
     </script>
+</body>
+</html>
