@@ -69,45 +69,41 @@
             log("Inizializzazione scena...");
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x011326);
-            scene.fog = new THREE.FogExp2(0x011326, 0.012);
+            scene.fog = new THREE.FogExp2(0x011326, 0.008);
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.body.appendChild(renderer.domElement);
 
-            // Luce globale omogenea senza punti ciechi
-            const ambientLight = new THREE.AmbientLight(0xffffff, 3.0);
+            // Luce globale per illuminare da ogni angolo
+            const ambientLight = new THREE.AmbientLight(0xffffff, 4.0);
             scene.add(ambientLight);
 
-            const dirLight1 = new THREE.DirectionalLight(0xffffff, 2.0);
-            dirLight1.position.set(20, 50, 20);
-            scene.add(dirLight1);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+            dirLight.position.set(0, 100, 0);
+            scene.add(dirLight);
 
-            const dirLight2 = new THREE.DirectionalLight(0xffffff, 1.5);
-            dirLight2.position.set(-20, -50, -20);
-            scene.add(dirLight2);
-
-            // Fondale marino
-            const seabedGeo = new THREE.PlaneGeometry(800, 800);
+            // Fondale
+            const seabedGeo = new THREE.PlaneGeometry(1000, 1000);
             const seabedMat = new THREE.MeshBasicMaterial({ color: 0x07202e });
             const seabed = new THREE.Mesh(seabedGeo, seabedMat);
             seabed.rotation.x = -Math.PI / 2;
-            seabed.position.y = -40;
+            seabed.position.y = -60;
             scene.add(seabed);
 
             sharkContainer = new THREE.Group();
             scene.add(sharkContainer);
 
-            // Modello di emergenza temporaneo
+            // Modello temporaneo iniziale
             buildFallbackShark();
 
-            // Caricamento e pulizia forzata di squalo.glb
+            // Caricamento del modello GLB
             tryLoadGLB();
 
-            // Creazione Prede
+            // Prede
             createPreys();
 
             // Setup Controlli
@@ -119,34 +115,10 @@
         }
 
         function buildFallbackShark() {
-            const sharkMat = new THREE.MeshPhongMaterial({ color: 0x2b4c7e, flatShading: true });
-            
-            const bodyGeo = new THREE.ConeGeometry(1.5, 6, 8);
-            bodyGeo.rotateX(Math.PI / 2);
+            const sharkMat = new THREE.MeshBasicMaterial({ color: 0x00aaff, wireframe: true });
+            const bodyGeo = new THREE.BoxGeometry(2, 2, 6);
             const body = new THREE.Mesh(bodyGeo, sharkMat);
             sharkContainer.add(body);
-
-            const noseGeo = new THREE.ConeGeometry(1.1, 2.5, 8);
-            noseGeo.rotateX(-Math.PI / 2);
-            const nose = new THREE.Mesh(noseGeo, sharkMat);
-            nose.position.z = -3.5;
-            sharkContainer.add(nose);
-
-            const finGeo = new THREE.ConeGeometry(0.4, 2, 4);
-            finGeo.rotateX(Math.PI / 3);
-            const dorsalFin = new THREE.Mesh(finGeo, sharkMat);
-            dorsalFin.position.set(0, 1.2, 0.2);
-            sharkContainer.add(dorsalFin);
-
-            tailGroup = new THREE.Group();
-            tailGroup.position.z = 3;
-            sharkContainer.add(tailGroup);
-
-            const tailGeo = new THREE.ConeGeometry(0.6, 2.5, 4);
-            const tail = new THREE.Mesh(tailGeo, sharkMat);
-            tail.position.z = 1.2;
-            tail.rotation.x = Math.PI / 4;
-            tailGroup.add(tail);
         }
 
         function tryLoadGLB() {
@@ -156,44 +128,40 @@
             loader.load('./squalo.glb', (gltf) => {
                 log("File squalo.glb caricato con successo!");
                 
-                // Rimuove lo squalo temporaneo
+                // Pulisce il modello fisso
                 while(sharkContainer.children.length > 0) { 
                     sharkContainer.remove(sharkContainer.children[0]); 
                 }
-                tailGroup = null;
 
                 const loadedMesh = gltf.scene;
 
-                // Forzo la visibilità di tutte le parti 3D del modello
-                loadedMesh.traverse((child) => {
-                    if (child.isMesh) {
-                        child.visible = true;
-                        if (child.material) {
-                            child.material.side = THREE.DoubleSide;
-                            child.material.transparent = false;
-                            child.material.opacity = 1.0;
-                            child.material.needsUpdate = true;
-                        }
-                    }
-                });
-
-                // Reset rigido del posizionamento e del centro geometrico
+                // Calcolo esatto del riposizionamento e del centro di massa
                 const box = new THREE.Box3().setFromObject(loadedMesh);
                 const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3());
 
-                loadedMesh.position.set(-center.x, -center.y, -center.z);
+                // Sposta l'origine al centro della maglia 3D
+                loadedMesh.position.sub(center);
 
+                // Calcola fattore di scala ottimale
                 const maxDim = Math.max(size.x, size.y, size.z);
+                let scaleFactor = 1;
                 if (maxDim > 0) {
-                    const scaleFactor = 6 / maxDim;
-                    loadedMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                    scaleFactor = 10 / maxDim;
                 }
+                loadedMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-                // Inserisco il modello dentro un gruppo isolato per pulire la trasformazione
-                const modelWrapper = new THREE.Group();
-                modelWrapper.add(loadedMesh);
-                sharkContainer.add(modelWrapper);
+                // Sostituisce i materiali complessi con un materiale visibile al 100%
+                loadedMesh.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = new THREE.MeshBasicMaterial({ 
+                            color: child.material.color ? child.material.color : 0xffffff,
+                            side: THREE.DoubleSide
+                        });
+                    }
+                });
+
+                sharkContainer.add(loadedMesh);
 
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(loadedMesh);
@@ -201,7 +169,7 @@
                     action.play();
                 }
             }, undefined, (err) => {
-                log("GLB non trovato o bloccato. Uso modello integrato.");
+                log("GLB non trovato. Uso modello fisso.");
             });
         }
 
@@ -288,7 +256,7 @@
                 const sharkPos = sharkContainer.position;
                 for (let i = preyList.length - 1; i >= 0; i--) {
                     const prey = preyList[i];
-                    if (prey.position.distanceTo(sharkPos) < 7.0) {
+                    if (prey.position.distanceTo(sharkPos) < 10.0) {
                         scene.remove(prey);
                         preyList.splice(i, 1);
                         score += 100;
@@ -301,17 +269,15 @@
         }
 
         let targetPitch = 0, targetYaw = 0, currentPitch = 0, currentYaw = 0;
-        const cameraOffset = new THREE.Vector3(0, 6, 24);
+        const cameraOffset = new THREE.Vector3(0, 8, 30);
         const currentCamPos = new THREE.Vector3();
         const currentTargetPos = new THREE.Vector3();
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-            const time = clock.getElapsedTime();
 
             if (mixer) mixer.update(delta);
-            if (tailGroup) tailGroup.rotation.y = Math.sin(time * 10) * 0.4;
 
             const speed = isDashing ? 0.45 : 0.22;
 
@@ -331,13 +297,13 @@
 
             const moveDir = new THREE.Vector3(0, 0, -1).applyQuaternion(sharkContainer.quaternion);
             sharkContainer.position.addScaledVector(moveDir, speed);
-            sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -35, 15);
+            sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -40, 20);
 
             const idealCamPos = cameraOffset.clone().applyQuaternion(sharkContainer.quaternion).add(sharkContainer.position);
-            const idealTarget = sharkContainer.position.clone().add(new THREE.Vector3(0, 1, 0));
+            const idealTarget = sharkContainer.position.clone();
 
-            currentCamPos.lerp(idealCamPos, 0.08);
-            currentTargetPos.lerp(idealTarget, 0.08);
+            currentCamPos.lerp(idealCamPos, 0.1);
+            currentTargetPos.lerp(idealTarget, 0.1);
 
             camera.position.copy(currentCamPos);
             camera.lookAt(currentTargetPos);
