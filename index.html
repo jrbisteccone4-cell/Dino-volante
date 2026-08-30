@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Game - Movimento e Proporzioni Ottimizzate</title>
+    <title>3D Game - Textures Originali e Animazioni</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
@@ -61,6 +61,7 @@
         function log(msg) { document.getElementById('status-log').innerText = msg; }
 
         let scene, camera, renderer, playerGroup, characterMesh, mapMesh;
+        let mixer, animationsMap = new Map();
         const clock = new THREE.Clock();
         
         let moveInput = { x: 0, y: 0 };
@@ -71,10 +72,7 @@
         let verticalVelocity = 0;
         let isGrounded = true;
         let cameraMode = 0;
-
-        let walkCycle = 0;
-        let leftLegBone = null, rightLegBone = null;
-        let leftArmBone = null, rightArmBone = null;
+        let currentAction = "";
 
         const raycaster = new THREE.Raycaster();
         const collidableObjects = [];
@@ -91,10 +89,10 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffeedd, 1.6);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffe8d6, 1.2);
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
             mainLight.position.set(10, 30, 10);
             scene.add(mainLight);
 
@@ -159,42 +157,32 @@
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
-                // COLORE PELLE E TINTA FORMOSA NATURALE (Evita il bianco cadaverico)
-                const skinMaterial = new THREE.MeshStandardMaterial({
-                    color: 0xe0a98b, // Tonalità di pelle calda e viva
-                    roughness: 0.6,
-                    metalness: 0.1
-                });
-
+                // RIPRISTINO DELLE TEXTURES ORIGINALI
                 characterMesh.traverse((child) => {
                     if (child.isMesh) {
-                        // Se il modello ha un colore uniforme bianco/grigio, applica la tonalità pelle
-                        if (!child.material || child.material.color.getHex() > 0xcccccc) {
-                            child.material = skinMaterial;
-                        }
-
                         child.castShadow = true;
                         child.receiveShadow = true;
-                    }
-
-                    // Individua le ossa delle gambe e braccia per animare il passo reale
-                    if (child.isBone || child.type === "Bone") {
-                        const name = child.name.toLowerCase();
-                        if (name.includes("leg") || name.includes("thigh") || name.includes("hip")) {
-                            if (name.includes("l") || name.includes("left")) leftLegBone = child;
-                            if (name.includes("r") || name.includes("right")) rightLegBone = child;
-                        }
-                        if (name.includes("arm") || name.includes("shoulder")) {
-                            if (name.includes("l") || name.includes("left")) leftArmBone = child;
-                            if (name.includes("r") || name.includes("right")) rightArmBone = child;
+                        if (child.material) {
+                            child.material.needsUpdate = true;
                         }
                     }
                 });
+
+                // GESTIONE ANIMAZIONI INTERNE AL FILE GLB
+                if (gltf.animations && gltf.animations.length > 0) {
+                    mixer = new THREE.AnimationMixer(characterMesh);
+                    gltf.animations.forEach((clip) => {
+                        animationsMap.set(clip.name.toLowerCase(), mixer.clipAction(clip));
+                    });
+
+                    // Avvia la prima animazione disponibile
+                    const firstAnim = gltf.animations[0].name.toLowerCase();
+                    switchAnimation(firstAnim);
+                }
 
                 const box = new THREE.Box3().setFromObject(characterMesh);
                 const size = box.getSize(new THREE.Vector3());
                 
-                // Dimensione e scala ottimale del personaggio (1.15m)
                 const targetHeight = 1.15; 
                 const scaleFactor = targetHeight / (size.y || 1);
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
@@ -208,6 +196,26 @@
             }, null, (error) => {
                 console.error(error);
             });
+        }
+
+        function switchAnimation(name) {
+            if (!mixer || currentAction === name) return;
+            
+            let actionToPlay = null;
+            for (let [key, action] of animationsMap.entries()) {
+                if (key.includes(name)) {
+                    actionToPlay = action;
+                    break;
+                }
+            }
+
+            if (actionToPlay) {
+                if (currentAction && animationsMap.has(currentAction)) {
+                    animationsMap.get(currentAction).fadeOut(0.2);
+                }
+                actionToPlay.reset().fadeIn(0.2).play();
+                currentAction = name;
+            }
         }
 
         function setupControls() {
@@ -325,7 +333,6 @@
         function updatePhysics() {
             if (collidableObjects.length === 0) return;
 
-            // Controllo soffitto durante il salto
             if (verticalVelocity > 0) {
                 const headOrigin = playerPos.clone();
                 headOrigin.y += 0.7;
@@ -337,7 +344,6 @@
                 }
             }
 
-            // Controllo aderenza impeccabile al pavimento
             const rayOrigin = playerPos.clone();
             rayOrigin.y += 0.5;
             raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
@@ -373,6 +379,8 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
+            if (mixer) mixer.update(delta);
+
             updatePhysics();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
@@ -396,32 +404,9 @@
                 targetZ.z += moveDir.z;
                 if (canMoveTo(targetZ)) playerPos.z = targetZ.z;
 
-                // SIMULAZIONE REALE DI CAMMINATA SUL PAVIMENTO (Senza scivolamento)
-                walkCycle += delta * 11 * inputMag;
-
-                if (leftLegBone && rightLegBone) {
-                    leftLegBone.rotation.x = Math.sin(walkCycle) * 0.45;
-                    rightLegBone.rotation.x = -Math.sin(walkCycle) * 0.45;
-                }
-                if (leftArmBone && rightArmBone) {
-                    leftArmBone.rotation.x = -Math.sin(walkCycle) * 0.35;
-                    rightArmBone.rotation.x = Math.sin(walkCycle) * 0.35;
-                }
-
-                // Leggero sollevamento e dondolio ad ogni passo per dare peso al personaggio
-                if (characterMesh) {
-                    characterMesh.position.y = Math.abs(Math.sin(walkCycle)) * 0.03;
-                    characterMesh.rotation.z = Math.cos(walkCycle) * 0.02;
-                }
+                switchAnimation("walk");
             } else {
-                // Ritorno in posizione neutrale quando si ferma
-                walkCycle = 0;
-                if (leftLegBone) leftLegBone.rotation.x = THREE.MathUtils.lerp(leftLegBone.rotation.x, 0, 0.1);
-                if (rightLegBone) rightLegBone.rotation.x = THREE.MathUtils.lerp(rightLegBone.rotation.x, 0, 0.1);
-                if (characterMesh) {
-                    characterMesh.position.y = THREE.MathUtils.lerp(characterMesh.position.y, 0, 0.1);
-                    characterMesh.rotation.z = THREE.MathUtils.lerp(characterMesh.rotation.z, 0, 0.1);
-                }
+                switchAnimation("idle");
             }
 
             if (playerGroup) {
@@ -429,7 +414,6 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
-            // GESTIONE TELECAMERA SUL PERSONAGGIO
             if (cameraMode === 0) {
                 const targetDist = 2.0;
                 const headPos = playerPos.clone().add(new THREE.Vector3(0, 0.8, 0));
