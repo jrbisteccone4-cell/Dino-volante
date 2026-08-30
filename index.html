@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Character - Fixed</title>
+    <title>3D Character - Controls Fixed</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #1a1a1a; font-family: sans-serif; touch-action: none; }
@@ -21,7 +21,7 @@
         }
 
         #joystick-container {
-            position: absolute; bottom: 30px; left: 25px; width: 130px; height: 130px;
+            position: absolute; bottom: 35px; left: 25px; width: 130px; height: 130px;
             background: rgba(0, 0, 0, 0.25); border: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 50%; touch-action: none; z-index: 10;
         }
@@ -38,8 +38,8 @@
             z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer;
         }
         .btn-action:active { transform: scale(0.9); }
-        #btn-cam { bottom: 30px; right: 25px; background: #007acc; }
-        #btn-jump { bottom: 120px; right: 25px; background: #28a745; }
+        #btn-cam { bottom: 35px; right: 25px; background: #007acc; }
+        #btn-jump { bottom: 125px; right: 25px; background: #28a745; }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -85,7 +85,6 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
 
-            // Luci calde per scurire l'incarnato in modo naturale
             const ambientLight = new THREE.AmbientLight(0xdbe3ff, 0.9);
             scene.add(ambientLight);
 
@@ -155,7 +154,6 @@
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
-                // Calcolo preciso altezza
                 const box = new THREE.Box3().setFromObject(characterMesh);
                 const size = box.getSize(new THREE.Vector3());
                 const targetHeight = 2.7;
@@ -163,7 +161,6 @@
                 
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 
-                // Posa a terra precisa (nessuna fluttuazione)
                 const updatedBox = new THREE.Box3().setFromObject(characterMesh);
                 characterMesh.position.y = -updatedBox.min.y;
 
@@ -172,11 +169,20 @@
                         child.castShadow = true;
                         child.receiveShadow = true;
                         
-                        // Scurisce delicatamente i toni chiari del modello
                         if (child.material) {
                             child.material = child.material.clone();
                             child.material.roughness = 0.6;
-                            child.material.color.multiplyScalar(0.85); // Scurisce leggermente i colori generali
+                            child.material.color.multiplyScalar(0.85);
+                        }
+                    }
+
+                    // Identifica le braccia e abbassale dalla T-Pose
+                    const nodeName = (child.name || "").toLowerCase();
+                    if (nodeName.includes('arm') || nodeName.includes('braccio') || nodeName.includes('shoulder') || nodeName.includes('spalla')) {
+                        if (nodeName.includes('l') || nodeName.includes('left') || nodeName.includes('sinistra')) {
+                            child.rotation.z = -Math.PI / 2.6; // Abbassa braccio sinistro
+                        } else if (nodeName.includes('r') || nodeName.includes('right') || nodeName.includes('destra')) {
+                            child.rotation.z = Math.PI / 2.6;  // Abbassa braccio destro
                         }
                     }
                 });
@@ -204,14 +210,21 @@
             let active = false, touchId = null, center = { x: 0, y: 0 };
 
             function startJoystick(e) {
-                e.preventDefault();
                 if (active) return;
-                const touch = e.changedTouches ? e.changedTouches[0] : e;
-                if (e.changedTouches) touchId = touch.identifier;
-                const rect = container.getBoundingClientRect();
-                center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-                active = true;
-                moveJoystick(e);
+                const touches = e.changedTouches || [e];
+                for (let i = 0; i < touches.length; i++) {
+                    const t = touches[i];
+                    const rect = container.getBoundingClientRect();
+                    // Verifica se il touch è avvenuto nel joystick
+                    if (t.clientX >= rect.left && t.clientX <= rect.right &&
+                        t.clientY >= rect.top && t.clientY <= rect.bottom) {
+                        active = true;
+                        touchId = t.identifier !== undefined ? t.identifier : null;
+                        center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                        moveJoystick(e);
+                        break;
+                    }
+                }
             }
 
             function moveJoystick(e) {
@@ -231,18 +244,32 @@
                 const angle = Math.atan2(dy, dx);
 
                 knob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+                
+                // Direzione corretta: segue esattamente il dito
                 moveInput.x = (Math.cos(angle) * dist) / maxDist;
                 moveInput.y = (Math.sin(angle) * dist) / maxDist;
             }
 
             function endJoystick(e) {
                 if (!active) return;
-                active = false; touchId = null;
-                knob.style.transform = `translate(0px, 0px)`;
-                moveInput = { x: 0, y: 0 };
+                if (e.changedTouches) {
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === touchId) {
+                            active = false; touchId = null;
+                            knob.style.transform = `translate(0px, 0px)`;
+                            moveInput = { x: 0, y: 0 };
+                            break;
+                        }
+                    }
+                } else {
+                    active = false; touchId = null;
+                    knob.style.transform = `translate(0px, 0px)`;
+                    moveInput = { x: 0, y: 0 };
+                }
             }
 
-            container.addEventListener('touchstart', startJoystick, { passive: false });
+            // Listener multi-touch per evitare conflitti tra joystick e pulsanti
+            window.addEventListener('touchstart', startJoystick, { passive: false });
             window.addEventListener('touchmove', moveJoystick, { passive: false });
             window.addEventListener('touchend', endJoystick);
             window.addEventListener('touchcancel', endJoystick);
@@ -251,25 +278,25 @@
             window.addEventListener('mousemove', moveJoystick);
             window.addEventListener('mouseup', endJoystick);
 
-            // Pulsanti Azione stabili
+            // Tasti Azione indipendenti per permettere il salto simultaneo
             const jumpBtn = document.getElementById('btn-jump');
             const camBtn = document.getElementById('btn-cam');
 
-            const doJump = (e) => {
-                e.preventDefault();
-                if (isGrounded) { verticalVelocity = 0.21; isGrounded = false; }
+            const triggerJump = (e) => {
+                if (e.cancelable) e.preventDefault();
+                if (isGrounded) { verticalVelocity = 0.22; isGrounded = false; }
             };
 
-            const doCam = (e) => {
-                e.preventDefault();
+            const triggerCam = (e) => {
+                if (e.cancelable) e.preventDefault();
                 cameraMode = (cameraMode + 1) % 2;
             };
 
-            jumpBtn.addEventListener('touchstart', doJump, { passive: false });
-            jumpBtn.addEventListener('mousedown', doJump);
+            jumpBtn.addEventListener('touchstart', triggerJump, { passive: false });
+            jumpBtn.addEventListener('mousedown', triggerJump);
 
-            camBtn.addEventListener('touchstart', doCam, { passive: false });
-            camBtn.addEventListener('mousedown', doCam);
+            camBtn.addEventListener('touchstart', triggerCam, { passive: false });
+            camBtn.addEventListener('mousedown', triggerCam);
         }
 
         function animate() {
@@ -277,24 +304,25 @@
             const delta = clock.getDelta();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
-            const speed = 0.13;
+            const speed = 0.14;
 
             if (inputMag > 0.1) {
-                const targetAngle = Math.atan2(-moveInput.x, -moveInput.y);
+                // Calcolo angolare allineato con il movimento del dito
+                const targetAngle = Math.atan2(moveInput.x, moveInput.y);
                 let diff = targetAngle - playerRotation;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                playerRotation += diff * 0.14;
+                playerRotation += diff * 0.15;
 
                 playerPos.x += Math.sin(playerRotation) * speed * inputMag;
                 playerPos.z += Math.cos(playerRotation) * speed * inputMag;
 
-                // Animazione procedural di camminata (soluzione per T-pose)
+                // Animazione camminata e movimento braccia/fianchi
                 walkTimer += delta * 10;
                 if (characterMesh) {
-                    characterMesh.rotation.z = Math.sin(walkTimer) * 0.06; // Oscillazione fianchi
-                    characterMesh.rotation.x = Math.cos(walkTimer * 2) * 0.03; // Rimbalzo passo
-                    characterMesh.position.y = Math.abs(Math.sin(walkTimer)) * 0.1; // Stacco piedi da terra
+                    characterMesh.rotation.z = Math.sin(walkTimer) * 0.05;
+                    characterMesh.rotation.x = Math.cos(walkTimer * 2) * 0.03;
+                    characterMesh.position.y = Math.abs(Math.sin(walkTimer)) * 0.08;
                 }
             } else {
                 if (characterMesh) {
@@ -315,7 +343,7 @@
                 }
             }
 
-            // Limiti stanza
+            // Limiti mappa
             const limit = 37.5;
             playerPos.x = THREE.MathUtils.clamp(playerPos.x, -limit, limit);
             playerPos.z = THREE.MathUtils.clamp(playerPos.z, -limit, limit);
@@ -325,7 +353,7 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
-            // Telecamera
+            // Telecamera inseguimento
             if (cameraMode === 0) {
                 camera.position.set(playerPos.x, playerPos.y + 3.8, playerPos.z + 7.5);
                 camera.lookAt(playerPos.x, playerPos.y + 1.6, playerPos.z);
