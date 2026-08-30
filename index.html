@@ -135,11 +135,11 @@
                 
                 scene.add(mapMesh);
 
-                // Configurazione specifica dell'altezza di spawn per ciascuna mappa
+                // Gestione differenziata dello spawn in base al file della mappa attivo
                 if (filename === 'mappa.glb') {
                     playerPos.set(0, 2.9, 0);
                 } else {
-                    playerPos.set(0, 0.1, 0);
+                    playerPos.set(0, 2.0, 0); // Altezza dedicata alla nuova mappa2
                 }
 
                 verticalVelocity = 0;
@@ -445,3 +445,6 @@
         });
 
         window.onload = init;
+    </script>
+</body>
+</html>
