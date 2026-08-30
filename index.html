@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Singola Mappa Stabile</title>
+    <title>3D Game - Singola Mappa Ottimizzata</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -70,7 +70,7 @@
 
         const clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
-        let playerPos = new THREE.Vector3(0, 0, 0); // Spawn base a terra
+        let playerPos = new THREE.Vector3(8.0, 0, 0); // Spawn impostato a X: 8.0
         let playerRotation = 0;
         let cameraYaw = 0;
         let cameraPitch = 0.15;
@@ -93,15 +93,15 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            // Illuminazione stabile per evitare ombre nere improvvise sul personaggio
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+            // Illuminazione bilanciata per valorizzare i colori della pelle e dell'ambiente
+            const ambientLight = new THREE.AmbientLight(0xfff5ec, 1.4);
             scene.add(ambientLight);
 
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.9);
             hemiLight.position.set(0, 20, 0);
             scene.add(hemiLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            const mainLight = new THREE.DirectionalLight(0xfff3e0, 1.1);
             mainLight.position.set(10, 30, 10);
             scene.add(mainLight);
 
@@ -138,7 +138,7 @@
                         }
                     });
 
-                    playerPos.set(0, 0, 0); // Coordinate di spawn iniziali
+                    playerPos.set(8.0, 0, 0); // Posizione di spawn iniziale precisa
                     isMapLoaded = true; 
                     document.getElementById('status-text').innerText = "PRONTO";
                     log("Mappa caricata con successo!");
@@ -165,8 +165,15 @@
                         child.castShadow = false; 
                         child.receiveShadow = false;
                         if (child.material) {
-                            child.material.roughness = 0.6;
-                            child.material.metalness = 0.2;
+                            // Corregge l'incarnato troppo bianco/cadaverico dando una tonalità calda e umana
+                            if (child.material.color) {
+                                let col = child.material.color;
+                                if (col.r > 0.75 && col.g > 0.75 && col.b > 0.75) {
+                                    child.material.color.setHex(0xffdfc4); // Tonalità pelle calda
+                                }
+                            }
+                            child.material.roughness = 0.5;
+                            child.material.metalness = 0.1;
                             child.material.needsUpdate = true;
                         }
                     }
@@ -178,7 +185,7 @@
                 const scaleFactor = targetHeight / (size.y || 1);
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-                // Ancoraggio perfetto dei piedi sul pavimento
+                // Ancoraggio millimetrico dei piedi esattamente sul pavimento (Y = 0)
                 const updatedBox = new THREE.Box3().setFromObject(characterMesh);
                 characterMesh.position.y = -updatedBox.min.y;
 
@@ -284,7 +291,6 @@
             }, { passive: false });
         }
 
-        // Controllo collisioni per evitare di attraversare i muri
         function canMoveTo(targetPos) {
             if (collidableObjects.length === 0) return true;
 
@@ -333,12 +339,10 @@
                 nextZ.z += moveDir.z;
                 if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
 
-                // Avvia l'animazione solo se ci si muove
                 if (walkAction && !walkAction.isRunning()) {
                     walkAction.play();
                 }
             } else {
-                // Ferma l'animazione se fermo
                 if (walkAction && walkAction.isRunning()) {
                     walkAction.stop();
                 }
@@ -351,7 +355,6 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
-            // Gestione telecamera con protezione anti-attraversamento muri
             if (cameraMode === 0) {
                 const targetDist = 2.5;
                 const headPos = playerPos.clone().add(new THREE.Vector3(0, 0.8, 0));
