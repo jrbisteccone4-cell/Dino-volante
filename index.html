@@ -71,10 +71,13 @@
         let cameraMode = 0;
         let walkTimer = 0;
 
+        const raycaster = new THREE.Raycaster();
+        const collidableObjects = [];
+
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x111111);
-            scene.fog = new THREE.FogExp2(0x111111, 0.012);
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.FogExp2(0x050505, 0.02);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -85,10 +88,10 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xfff5e6, 1.2);
+            const ambientLight = new THREE.AmbientLight(0xfff5e6, 1.5);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffe8cc, 0.8);
+            const mainLight = new THREE.DirectionalLight(0xffe8cc, 1.0);
             mainLight.position.set(20, 40, 20);
             scene.add(mainLight);
 
@@ -105,14 +108,24 @@
 
             loader.load('mappa.glb', (gltf) => {
                 mapMesh = gltf.scene;
+                
+                const box = new THREE.Box3().setFromObject(mapMesh);
+                const center = box.getCenter(new THREE.Vector3());
+                
+                mapMesh.position.x = -center.x;
+                mapMesh.position.z = -center.z;
+                mapMesh.position.y = -box.min.y;
+
                 mapMesh.traverse((child) => {
                     if (child.isMesh) {
                         child.receiveShadow = true;
                         child.castShadow = true;
+                        collidableObjects.push(child);
                     }
                 });
+                
                 scene.add(mapMesh);
-                log("Mappa Backrooms caricata!");
+                log("Mappa pronta con collisioni!");
             }, 
             (xhr) => {
                 if (xhr.lengthComputable) {
@@ -121,7 +134,7 @@
                 }
             }, 
             (error) => {
-                log("Errore: carica 'mappa.glb' su GitHub!");
+                log("Errore carica mappa!");
                 console.error(error);
             });
         }
@@ -138,7 +151,7 @@
 
                 const box = new THREE.Box3().setFromObject(characterMesh);
                 const size = box.getSize(new THREE.Vector3());
-                const targetHeight = 2.4;
+                const targetHeight = 1.8;
                 const scaleFactor = targetHeight / (size.y || 1);
                 
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
@@ -243,12 +256,28 @@
             }, { passive: false });
         }
 
+        function checkCollision(moveVector) {
+            if (collidableObjects.length === 0) return false;
+
+            const rayOrigin = playerPos.clone();
+            rayOrigin.y += 0.8; // Controllo ad altezza busto
+
+            const dir = moveVector.clone().normalize();
+            raycaster.set(rayOrigin, dir);
+
+            const intersects = raycaster.intersectObjects(collidableObjects, true);
+            if (intersects.length > 0 && intersects[0].distance < 0.8) {
+                return true; // Rilevata parete vicina
+            }
+            return false;
+        }
+
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
-            const speed = 0.14;
+            const speed = 0.12;
 
             if (inputMag > 0.1) {
                 const targetAngle = Math.atan2(-moveInput.x, -moveInput.y);
@@ -257,8 +286,22 @@
                 while (diff > Math.PI) diff -= Math.PI * 2;
                 playerRotation += diff * 0.18;
 
-                playerPos.x += Math.sin(playerRotation) * speed * inputMag;
-                playerPos.z += Math.cos(playerRotation) * speed * inputMag;
+                const moveDir = new THREE.Vector3(
+                    Math.sin(playerRotation) * speed * inputMag,
+                    0,
+                    Math.cos(playerRotation) * speed * inputMag
+                );
+
+                // Controllo collisione separato per X e Z per scivolare lungo i muri
+                const testX = new THREE.Vector3(moveDir.x, 0, 0);
+                if (!checkCollision(testX)) {
+                    playerPos.x += moveDir.x;
+                }
+
+                const testZ = new THREE.Vector3(0, 0, moveDir.z);
+                if (!checkCollision(testZ)) {
+                    playerPos.z += moveDir.z;
+                }
 
                 walkTimer += delta * 12;
                 if (characterMesh) {
@@ -289,13 +332,26 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
+            // Gestione telecamera intelligente per evitare di entrare nei muri
             if (cameraMode === 0) {
-                camera.position.set(playerPos.x, playerPos.y + 3.5, playerPos.z + 6.5);
-                camera.lookAt(playerPos.x, playerPos.y + 1.5, playerPos.z);
+                const targetCamPos = new THREE.Vector3(playerPos.x, playerPos.y + 2.2, playerPos.z + 3.2);
+                const camRayDir = targetCamPos.clone().sub(playerPos).normalize();
+                const camDist = targetCamPos.distanceTo(playerPos);
+
+                raycaster.set(playerPos.clone().add(new THREE.Vector3(0, 1.5, 0)), camRayDir);
+                const camHits = raycaster.intersectObjects(collidableObjects, true);
+
+                if (camHits.length > 0 && camHits[0].distance < camDist) {
+                    camera.position.copy(camHits[0].point).sub(camRayDir.clone().multiplyScalar(0.2));
+                } else {
+                    camera.position.copy(targetCamPos);
+                }
+                camera.lookAt(playerPos.x, playerPos.y + 1.2, playerPos.z);
             } else {
-                const headPos = new THREE.Vector3(0, 2.0, -0.2).applyQuaternion(playerGroup.quaternion);
+                // Prima Persona (Vista dagli occhi)
+                const headPos = new THREE.Vector3(0, 1.6, -0.2).applyQuaternion(playerGroup.quaternion);
                 camera.position.copy(playerPos).add(headPos);
-                const lookTarget = new THREE.Vector3(0, 2.0, -5).applyQuaternion(playerGroup.quaternion);
+                const lookTarget = new THREE.Vector3(0, 1.6, -5).applyQuaternion(playerGroup.quaternion);
                 camera.lookAt(playerPos.clone().add(lookTarget));
             }
 
