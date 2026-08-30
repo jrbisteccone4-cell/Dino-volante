@@ -119,7 +119,6 @@
 
                 const box = new THREE.Box3().setFromObject(mapMesh);
                 const center = box.getCenter(new THREE.Vector3());
-                const mapHeight = box.max.y - box.min.y;
                 
                 mapMesh.position.x = -center.x;
                 mapMesh.position.z = -center.z;
@@ -136,15 +135,15 @@
                 
                 scene.add(mapMesh);
 
-                // Fa partire un raggio dal punto più alto della mappa verso il basso per trovare il pavimento
-                playerPos.set(0, mapHeight, 0);
+                // Fa partire un raggio da un'altezza interna sicura (Y = 4) verso il basso per trovare il pavimento della stanza
+                playerPos.set(0, 4, 0);
                 raycaster.set(playerPos, new THREE.Vector3(0, -1, 0));
                 const hits = raycaster.intersectObjects(collidableObjects, true);
 
                 if (hits.length > 0) {
                     playerPos.y = hits[0].point.y;
                 } else {
-                    playerPos.set(0, 0.1, 0);
+                    playerPos.set(0, 0.5, 0);
                 }
 
                 verticalVelocity = 0;
