@@ -74,6 +74,7 @@
         let cameraPitch = 0.15;
         let verticalVelocity = 0;
         let isGrounded = false;
+        let isMapLoaded = false; // Flag per bloccare la fisica durante il caricamento
         let cameraMode = 0;
         let walkCycle = 0;
 
@@ -107,7 +108,10 @@
         }
 
         function loadMap(filename) {
+            isMapLoaded = false; // Blocca fisica e movimento durante il caricamento
             log("Caricamento " + filename + "...");
+            document.getElementById('status-text').innerText = "CARICAMENTO";
+
             const loader = new THREE.GLTFLoader();
 
             loader.load(filename, (gltf) => {
@@ -118,19 +122,15 @@
                 mapMesh = gltf.scene;
                 collidableObjects = [];
 
-                // Prima aggiungiamo la mappa alla scena per calcolare le dimensioni globali corrette
                 scene.add(mapMesh);
 
-                // Calcoliamo il bounding box REALE della mappa
                 const box = new THREE.Box3().setFromObject(mapMesh);
                 const center = box.getCenter(new THREE.Vector3());
                 
-                // Centriamo la mappa sull'asse X e Z, azzerando la base sul piano Y = 0
                 mapMesh.position.x = -center.x;
                 mapMesh.position.z = -center.z;
                 mapMesh.position.y = -box.min.y;
 
-                // Ricalcoliamo il box dopo il posizionamento per sicurezza
                 const finalBox = new THREE.Box3().setFromObject(mapMesh);
 
                 mapMesh.traverse((child) => {
@@ -142,14 +142,15 @@
                     }
                 });
 
-                // Posizioniamo il player esattamente sopra il pavimento calcolato (es: altezza minima + 1 unità)
-                let spawnY = finalBox.min.y + 1.5;
-                playerPos.set(0, spawnY, 0);
+                // Spawn sicuro esattamente al centro della mappa e sopra il pavimento calcolato
+                playerPos.set(0, finalBox.min.y + 0.5, 0);
 
                 verticalVelocity = 0;
-                isGrounded = false;
+                isGrounded = true;
+                isMapLoaded = true; // Sblocca la fisica ora che la mappa è pronta
 
-                log(`Spawn OK! Y pavimento: ${finalBox.min.y.toFixed(1)}`);
+                document.getElementById('status-text').innerText = "PRONTO";
+                log(`Mappa pronta! Y base: ${finalBox.min.y.toFixed(1)}`);
             }, null, (error) => {
                 log("Errore caricamento " + filename + "!");
                 console.error(error);
@@ -186,7 +187,6 @@
                 characterMesh.position.y = -updatedBox.min.y;
 
                 playerGroup.add(characterMesh);
-                document.getElementById('status-text').innerText = "PRONTO";
             }, null, (error) => {
                 log("Errore personaggio!");
                 console.error(error);
@@ -270,7 +270,7 @@
 
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (isGrounded) {
+                if (isGrounded && isMapLoaded) {
                     verticalVelocity = 0.13;
                     isGrounded = false;
                 }
@@ -283,9 +283,10 @@
 
             document.getElementById('btn-interact').addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                if (!isMapLoaded) return; // Evita doppi click durante il caricamento
                 currentMapFile = (currentMapFile === 'mappa.glb') ? 'mappa2.glb' : 'mappa.glb';
                 loadMap(currentMapFile);
-                log("Cambio mappa...");
+                log("Cambio stanza in corso...");
             }, { passive: false });
         }
 
@@ -313,7 +314,16 @@
         }
 
         function updatePhysics() {
-            if (collidableObjects.length === 0) return;
+            if (!isMapLoaded || collidableObjects.length === 0) return;
+
+            // SICUREZZA ANTI-CADIUTA: Se il personaggio cade sotto la mappa (Y < -5), viene salvato
+            if (playerPos.y < -5) {
+                playerPos.set(0, 1.0, 0);
+                verticalVelocity = 0;
+                isGrounded = true;
+                log("Salvataggio anti-caduta attivato!");
+                return;
+            }
 
             if (verticalVelocity > 0) {
                 const headOrigin = playerPos.clone();
@@ -357,7 +367,7 @@
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             const speed = 0.04; 
 
-            if (inputMag > 0.1) {
+            if (isMapLoaded && inputMag > 0.1) {
                 const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
                 playerRotation = moveAngle;
 
