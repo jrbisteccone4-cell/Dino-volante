@@ -3,110 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Shark Simulator</title>
+    <title>3D Shark Game</title>
     <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-            margin: 0;
-            padding: 0;
-        }
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #011326;
-            font-family: sans-serif;
-        }
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #011326; font-family: sans-serif; }
+        canvas { display: block; width: 100%; height: 100%; }
 
         #hud {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            color: #fff;
-            font-size: 16px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            pointer-events: none;
-            z-index: 10;
+            position: absolute; top: 15px; left: 15px; color: #fff; font-size: 16px; font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8); pointer-events: none; z-index: 10;
         }
 
         #joystick-container {
-            position: absolute;
-            bottom: 30px;
-            left: 30px;
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            touch-action: none;
-            z-index: 10;
+            position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px;
+            background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%; touch-action: none; z-index: 10;
         }
         #joystick-knob {
-            position: absolute;
-            top: 35px;
-            left: 35px;
-            width: 50px;
-            height: 50px;
-            background: #ffffff;
-            border-radius: 50%;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            pointer-events: none;
+            position: absolute; top: 35px; left: 35px; width: 50px; height: 50px;
+            background: #ffffff; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); pointer-events: none;
         }
 
         .btn-action {
-            position: absolute;
-            width: 75px;
-            height: 75px;
-            border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            touch-action: manipulation;
-            z-index: 10;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            cursor: pointer;
+            position: absolute; width: 75px; height: 75px; border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.6); color: white; font-weight: bold; font-size: 14px;
+            display: flex; align-items: center; justify-content: center; touch-action: manipulation;
+            z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer;
         }
-        .btn-action:active {
-            transform: scale(0.9);
-        }
-        #btn-bite {
-            bottom: 35px;
-            right: 30px;
-            background: rgba(220, 53, 69, 0.85);
-        }
-        #btn-dash {
-            bottom: 125px;
-            right: 35px;
-            background: rgba(255, 193, 7, 0.85);
-            color: #000;
-        }
+        .btn-action:active { transform: scale(0.9); }
+        #btn-bite { bottom: 35px; right: 30px; background: rgba(220, 53, 69, 0.85); }
+        #btn-dash { bottom: 125px; right: 35px; background: rgba(255, 193, 7, 0.85); color: #000; }
     </style>
 
-    <!-- Libreria standard Three.js stabile -->
+    <!-- Libreria Three.js classica e GLTFLoader compatibile al 100% -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
 
-    <div id="hud">
-        Punti: <span id="score">0</span> | Prede Divorate: <span id="eaten">0</span>
-    </div>
-
-    <div id="joystick-container">
-        <div id="joystick-knob"></div>
-    </div>
-
+    <div id="hud">Punti: <span id="score">0</span> | Prede Divorate: <span id="eaten">0</span></div>
+    <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-dash" class="btn-action">SCATTO</div>
     <div id="btn-bite" class="btn-action">MORDI</div>
 
@@ -122,14 +58,14 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xdff0ff, 1.5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
         scene.add(ambientLight);
 
         const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
         dirLight.position.set(20, 50, 20);
         scene.add(dirLight);
 
-        // Fondale marino
+        // Fondale
         const seabedGeo = new THREE.PlaneGeometry(800, 800);
         const seabedMat = new THREE.MeshBasicMaterial({ color: 0x07202e });
         const seabed = new THREE.Mesh(seabedGeo, seabedMat);
@@ -137,57 +73,58 @@
         seabed.position.y = -40;
         scene.add(seabed);
 
-        // --- COSTRUZIONE SQUALO 3D ARTIGIANALE DETTAGLIATO ---
         const sharkContainer = new THREE.Group();
         scene.add(sharkContainer);
 
-        const sharkMaterial = new THREE.MeshPhongMaterial({ color: 0x3b5998, flatShading: true });
-        const bellyMaterial = new THREE.MeshPhongMaterial({ color: 0xdde5ee, flatShading: true });
+        let mixer = null;
+        const clock = new THREE.Clock();
 
-        // Corpo principale
-        const bodyGeo = new THREE.ConeGeometry(1.4, 5.5, 8);
-        bodyGeo.rotateX(Math.PI / 2);
-        const sharkBody = new THREE.Mesh(bodyGeo, sharkMaterial);
-        sharkContainer.add(sharkBody);
+        // Caricamento del file reale squalo.glb
+        const loader = new THREE.GLTFLoader();
+        
+        // Tenta di caricare 'squalo.glb' o 'Squalo che nuota.glb'
+        function loadSharkModel(filePath) {
+            loader.load(
+                filePath,
+                function (gltf) {
+                    const loadedMesh = gltf.scene;
 
-        // Muso / Punta
-        const noseGeo = new THREE.ConeGeometry(1.0, 2.0, 8);
-        noseGeo.rotateX(-Math.PI / 2);
-        const nose = new THREE.Mesh(noseGeo, sharkMaterial);
-        nose.position.set(0, 0, -3.2);
-        sharkContainer.add(nose);
+                    // Ridimensionamento automatico del modello 3D
+                    const box = new THREE.Box3().setFromObject(loadedMesh);
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    
+                    if (maxDim > 0) {
+                        const targetScale = 6 / maxDim;
+                        loadedMesh.scale.set(targetScale, targetScale, targetScale);
+                    }
 
-        // Pinna Dorsale
-        const dorsalGeo = new THREE.ConeGeometry(0.4, 2.0, 4);
-        dorsalGeo.rotateX(Math.PI / 3);
-        const dorsalFin = new THREE.Mesh(dorsalGeo, sharkMaterial);
-        dorsalFin.position.set(0, 1.1, 0.2);
-        sharkContainer.add(dorsalFin);
+                    const center = box.getCenter(new THREE.Vector3());
+                    loadedMesh.position.sub(center.multiplyScalar(loadedMesh.scale.x));
 
-        // Pinne Pettorali
-        const finGeo = new THREE.BoxGeometry(2.2, 0.1, 0.8);
-        const leftFin = new THREE.Mesh(finGeo, sharkMaterial);
-        leftFin.position.set(1.1, -0.5, -0.5);
-        leftFin.rotation.z = -0.3;
-        sharkContainer.add(leftFin);
+                    sharkContainer.add(loadedMesh);
 
-        const rightFin = new THREE.Mesh(finGeo, sharkMaterial);
-        rightFin.position.set(-1.1, -0.5, -0.5);
-        rightFin.rotation.z = 0.3;
-        sharkContainer.add(rightFin);
+                    // Animazione del nuoto originale del file GLB
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        mixer = new THREE.AnimationMixer(loadedMesh);
+                        const action = mixer.clipAction(gltf.animations[0]);
+                        action.play();
+                    }
+                },
+                undefined,
+                function (error) {
+                    if (filePath === './squalo.glb') {
+                        // Se non trova 'squalo.glb', prova col nome con gli spazi
+                        loadSharkModel('./Squalo%20che%20nuota.glb');
+                    }
+                }
+            );
+        }
 
-        // Coda articolata (Gruppo separato per l'animazione del nuoto)
-        const tailGroup = new THREE.Group();
-        tailGroup.position.set(0, 0, 3.2);
-        sharkContainer.add(tailGroup);
+        // Avvia il caricamento
+        loadSharkModel('./squalo.glb');
 
-        const tailGeo = new THREE.ConeGeometry(0.5, 2.2, 4);
-        const tailMesh = new THREE.Mesh(tailGeo, sharkMaterial);
-        tailMesh.position.set(0, 0, 1.1);
-        tailMesh.rotation.x = Math.PI / 4;
-        tailGroup.add(tailMesh);
-
-        // --- PREDE (PESCI) ---
+        // Prede
         const preyList = [];
         const preyGeo = new THREE.ConeGeometry(0.4, 1.2, 6);
         preyGeo.rotateX(Math.PI / 2);
@@ -209,9 +146,8 @@
         let isDashing = false;
         let score = 0;
         let eatenCount = 0;
-        const clock = new THREE.Clock();
 
-        // --- GESTIONE JOYSTICK ---
+        // Joystick
         const joystickContainer = document.getElementById('joystick-container');
         const joystickKnob = document.getElementById('joystick-knob');
         let joystickActive = false;
@@ -285,7 +221,6 @@
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleEnd);
 
-        // --- PULSANTI AZIONE ---
         document.getElementById('btn-dash').addEventListener('click', () => {
             if (isDashing) return;
             isDashing = true;
@@ -303,20 +238,6 @@
                     eatenCount++;
                     document.getElementById('score').innerText = score;
                     document.getElementById('eaten').innerText = eatenCount;
-
-                    // Rigenera il pesce lontano
-                    const newFishGeo = new THREE.ConeGeometry(0.4, 1.2, 6);
-                    newFishGeo.rotateX(Math.PI / 2);
-                    const mat = new THREE.MeshBasicMaterial({ color: Math.random() * 0xffffff });
-                    const fish = new THREE.Mesh(newFishGeo, mat);
-                    fish.position.set(
-                        sharkPos.x + (Math.random() - 0.5) * 200,
-                        Math.random() * 30 - 15,
-                        sharkPos.z + (Math.random() - 0.5) * 200
-                    );
-                    fish.userData = { speed: Math.random() * 0.08 + 0.03 };
-                    scene.add(fish);
-                    preyList.push(fish);
                 }
             }
         });
@@ -330,14 +251,13 @@
         const currentCamPos = new THREE.Vector3();
         const currentTargetPos = new THREE.Vector3();
 
-        // --- LOOP DI GIOCO PRINCIPALE ---
         function animate() {
             requestAnimationFrame(animate);
-            const time = clock.getElapsedTime();
-            const speed = isDashing ? 0.45 : 0.22;
+            const delta = clock.getDelta();
 
-            // Movimento fluido della coda (effetto nuoto)
-            tailGroup.rotation.y = Math.sin(time * 12) * 0.35;
+            if (mixer) mixer.update(delta);
+
+            const speed = isDashing ? 0.45 : 0.22;
 
             if (Math.hypot(moveInput.x, moveInput.y) > 0.05) {
                 targetYaw -= moveInput.x * 0.035;
@@ -357,7 +277,6 @@
             sharkContainer.position.addScaledVector(moveDir, speed);
             sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -35, 15);
 
-            // Inseguimento fluido della telecamera
             const idealCamPos = cameraOffset.clone().applyQuaternion(sharkContainer.quaternion).add(sharkContainer.position);
             const idealTarget = sharkContainer.position.clone().add(new THREE.Vector3(0, 1, 0));
 
@@ -367,7 +286,6 @@
             camera.position.copy(currentCamPos);
             camera.lookAt(currentTargetPos);
 
-            // Movimento prede
             preyList.forEach(prey => {
                 prey.translateZ(prey.userData.speed);
             });
