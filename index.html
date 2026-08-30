@@ -3,33 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Corretto</title>
+    <title>3D Game - Caricamento Ottimizzato</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0a0a0a; font-family: sans-serif; position: fixed; }
         canvas { display: block; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 1; }
 
+        /* Schermata di caricamento iniziale */
+        #loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0a0a; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 99999;
+            color: white; transition: opacity 0.5s ease;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.2);
+            border-top: 5px solid #00ffcc; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #loading-text { font-size: 14px; font-family: monospace; font-weight: bold; color: #00ffcc; letter-spacing: 1px; }
+
         #hud {
-            position: absolute; top: 15px; left: 15px; color: #222; font-size: 12px; font-weight: bold;
-            font-family: monospace; pointer-events: none; z-index: 10; background: rgba(255,255,255,0.85);
-            padding: 6px 10px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            position: absolute; top: 80px; left: 15px; color: #222; font-size: 13px; font-weight: bold;
+            font-family: monospace; pointer-events: none; z-index: 10; background: rgba(255,255,255,0.9);
+            padding: 8px 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
 
         #status-log {
-            position: absolute; top: 65px; left: 15px; color: #00ffcc; font-size: 11px;
+            position: absolute; top: 130px; left: 15px; color: #00ffcc; font-size: 12px;
             font-family: monospace; pointer-events: none; z-index: 10; font-weight: bold;
-            background: rgba(0,0,0,0.85); padding: 6px 10px; border-radius: 4px; max-width: 90vw;
+            background: rgba(0,0,0,0.85); padding: 8px 12px; border-radius: 4px; max-width: 90vw;
         }
 
         #joystick-container {
             position: absolute; bottom: 30px; left: 20px; width: 120px; height: 120px;
-            background: rgba(0, 0, 0, 0.25); border: 2px solid rgba(255, 255, 255, 0.4);
+            background: rgba(0, 0, 0, 0.35); border: 2px solid rgba(255, 255, 255, 0.5);
             border-radius: 50%; touch-action: none; z-index: 10;
         }
         #joystick-knob {
             position: absolute; top: 37px; left: 37px; width: 46px; height: 46px;
-            background: #222; border: 2px solid #fff; border-radius: 50%;
-            pointer-events: none;
+            background: #222; border: 2px solid #fff; border-radius: 50%; pointer-events: none;
         }
 
         .btn-action {
@@ -48,11 +62,17 @@
 </head>
 <body>
 
+    <!-- Schermata di caricamento visibile finché i file non sono pronti -->
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <div id="loading-text">CARICAMENTO MONDO 3D...</div>
+    </div>
+
     <div id="hud">
-        STATO: <span id="status-text">AVVIO...</span><br>
+        STATO: <span id="status-text">CARICAMENTO</span><br>
         POS: X:<span id="posX">8.0</span> Y:<span id="posY">0</span> Z:<span id="posZ">0</span>
     </div>
-    <div id="status-log">Pronto. Usa il joystick per camminare/correre.</div>
+    <div id="status-log">Inizializzazione...</div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-jump" class="btn-action">SALTA</div>
@@ -75,6 +95,7 @@
         let cameraYaw = 0;
         let cameraPitch = 0.15;
         let isMapLoaded = false;
+        let isCharLoaded = false;
         let cameraMode = 0;
 
         let isJumping = false;
@@ -84,10 +105,20 @@
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
 
+        function checkEverythingLoaded() {
+            if (isMapLoaded && isCharLoaded) {
+                const loaderScreen = document.getElementById('loading-screen');
+                loaderScreen.style.opacity = '0';
+                setTimeout(() => { loaderScreen.style.display = 'none'; }, 500);
+                document.getElementById('status-text').innerText = "PRONTO";
+                log("Tutto pronto! Buon divertimento.");
+            }
+        }
+
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0a0a);
-            scene.fog = new THREE.FogExp2(0x0a0a0a, 0.02);
+            scene.background = new THREE.Color(0x87ceeb); 
+            scene.fog = new THREE.FogExp2(0x87ceeb, 0.02);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
 
@@ -97,14 +128,10 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xfff5ec, 1.4);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
             scene.add(ambientLight);
 
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
-            hemiLight.position.set(0, 20, 0);
-            scene.add(hemiLight);
-
-            const mainLight = new THREE.DirectionalLight(0xfff3e0, 1.2);
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
             mainLight.position.set(10, 30, 10);
             scene.add(mainLight);
 
@@ -116,41 +143,34 @@
         }
 
         function loadMap() {
-            isMapLoaded = false; 
-            log("Caricamento mappa.glb...");
-            document.getElementById('status-text').innerText = "CARICAMENTO";
-
+            log("Scaricamento mappa.glb...");
             const loader = new THREE.GLTFLoader();
 
             loader.load('mappa.glb', (gltf) => {
-                try {
-                    if (mapMesh) scene.remove(mapMesh);
+                mapMesh = gltf.scene;
+                collidableObjects = [];
+                scene.add(mapMesh);
 
-                    mapMesh = gltf.scene;
-                    collidableObjects = [];
-                    scene.add(mapMesh);
-
-                    mapMesh.traverse((child) => {
-                        if (child.isMesh) {
-                            if (child.material) {
-                                child.material.side = THREE.DoubleSide;
-                                child.material.roughness = 0.8;
-                                child.material.metalness = 0.1;
-                            }
-                            collidableObjects.push(child);
+                mapMesh.traverse((child) => {
+                    if (child.isMesh) {
+                        if (child.material) {
+                            child.material.side = THREE.DoubleSide;
                         }
-                    });
+                        collidableObjects.push(child);
+                    }
+                });
 
-                    playerPos.set(8.0, 0, 0); 
-                    isMapLoaded = true; 
-                    document.getElementById('status-text').innerText = "PRONTO";
-                    log("Mappa caricata con successo!");
-                } catch (err) {
-                    log("Errore script: " + err.message);
-                    console.error(err);
+                playerPos.set(8.0, 0, 0); 
+                isMapLoaded = true; 
+                log("Mappa caricata.");
+                checkEverythingLoaded();
+            }, (xhr) => {
+                if (xhr.total) {
+                    const pct = Math.floor((xhr.loaded / xhr.total) * 100);
+                    document.getElementById('loading-text').innerText = `MAPPA: ${pct}%`;
                 }
-            }, undefined, (error) => {
-                log("Errore: mappa.glb non trovato!");
+            }, (error) => {
+                log("Errore caricamento mappa.glb");
                 console.error(error);
             });
         }
@@ -158,28 +178,22 @@
         function loadCharacter() {
             playerGroup = new THREE.Group();
             scene.add(playerGroup);
+            log("Scaricamento personaggio.glb...");
 
             const loader = new THREE.GLTFLoader();
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
                 characterMesh.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = false; 
-                        child.receiveShadow = false;
-                        if (child.material) {
-                            child.material.roughness = 0.5;
-                            child.material.metalness = 0.1;
-                            child.material.color.setHex(0xff5733);
-                            child.material.needsUpdate = true;
-                        }
+                    if (child.isMesh && child.material) {
+                        child.material.color.setHex(0xff5733);
+                        child.material.needsUpdate = true;
                     }
                 });
 
                 const box = new THREE.Box3().setFromObject(characterMesh);
                 const size = box.getSize(new THREE.Vector3());
-                const targetHeight = 1.15; 
-                const scaleFactor = targetHeight / (size.y || 1);
+                const scaleFactor = 1.15 / (size.y || 1);
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
                 const updatedBox = new THREE.Box3().setFromObject(characterMesh);
@@ -193,12 +207,18 @@
                     walkAction.setLoop(THREE.LoopRepeat);
                     walkAction.play();
                     walkAction.weight = 0;
-                    log("Personaggio e texture pronti!");
-                } else {
-                    log("Personaggio pronto (senza animazioni)");
                 }
-            }, undefined, (error) => {
-                log("Errore: personaggio.glb non trovato!");
+
+                isCharLoaded = true;
+                log("Personaggio caricato.");
+                checkEverythingLoaded();
+            }, (xhr) => {
+                if (xhr.total) {
+                    const pct = Math.floor((xhr.loaded / xhr.total) * 100);
+                    document.getElementById('loading-text').innerText = `PERSONAGGIO: ${pct}%`;
+                }
+            }, (error) => {
+                log("Errore caricamento personaggio.glb");
                 console.error(error);
             });
         }
@@ -316,7 +336,7 @@
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             
-            if (isMapLoaded) {
+            if (isMapLoaded && isCharLoaded) {
                 if (inputMag > 0.05) {
                     const isRunning = inputMag > 0.75;
                     const currentSpeed = (isRunning ? 0.045 : 0.022) * inputMag;
