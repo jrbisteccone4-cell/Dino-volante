@@ -149,24 +149,17 @@
         const sharkContainer = new THREE.Group();
         scene.add(sharkContainer);
 
-        // MODELLO DI RISERVA VISIBILE SUBITO
-        const bodyGeo = new THREE.ConeGeometry(1, 4, 8);
-        bodyGeo.rotateX(-Math.PI / 2);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4a6572, roughness: 0.4 });
-        const fallbackShark = new THREE.Mesh(bodyGeo, bodyMat);
-        sharkContainer.add(fallbackShark);
-
         let mixer = null;
         const clock = new THREE.Clock();
 
-        // CARICAMENTO FILE GLTF
         const loader = new GLTFLoader();
+
+        // Caricamento del file con il nome esatto caricato su GitHub
         loader.load(
-            'scene.gltf',
+            './Squalo%20che%20nuota.glb',
             (gltf) => {
                 const loadedMesh = gltf.scene;
 
-                // Calcola dimensioni reali del modello caricato
                 const box = new THREE.Box3().setFromObject(loadedMesh);
                 const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
@@ -176,12 +169,9 @@
                     loadedMesh.scale.set(targetScale, targetScale, targetScale);
                 }
 
-                // Centra la geometria
                 const center = box.getCenter(new THREE.Vector3());
                 loadedMesh.position.sub(center.multiplyScalar(loadedMesh.scale.x));
 
-                // Rimuove lo squalo di riserva e inserisce quello scaricato
-                sharkContainer.remove(fallbackShark);
                 sharkContainer.add(loadedMesh);
 
                 if (gltf.animations && gltf.animations.length > 0) {
@@ -191,7 +181,7 @@
                 }
             },
             undefined,
-            (err) => console.log("Caricamento modello custom fallito, uso riserva", err)
+            (err) => console.error("Errore caricamento modello 3D:", err)
         );
 
         const preyList = [];
