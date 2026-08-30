@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Completo</title>
+    <title>3D Game - Spawn Perfetto</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -18,7 +18,7 @@
         #status-log {
             position: absolute; top: 65px; left: 15px; color: #0066cc; font-size: 11px;
             font-family: monospace; pointer-events: none; z-index: 10; font-weight: bold;
-            background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px;
+            background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; max-width: 90vw;
         }
 
         #joystick-container {
@@ -74,12 +74,25 @@
         let cameraPitch = 0.15;
         let verticalVelocity = 0;
         let isGrounded = false;
-        let isMapLoaded = false; // Flag per bloccare la fisica durante il caricamento
+        let isMapLoaded = false;
         let cameraMode = 0;
         let walkCycle = 0;
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
+
+        // =========================================================================
+        // PUNTO DI GENERAZIONE (SPAWN) PERSONALIZZATO PER MAPPA
+        // Se vuoi che una mappa abbia uno spawn fisso specifico (es. vicino a una porta),
+        // compila qui sotto le coordinate X, Y, Z. Se lasci { custom: false }, il gioco
+        // calcolerà automaticamente il centro perfetto del pavimento della mappa.
+        // =========================================================================
+        const mapSpawnPoints = {
+            'mappa.glb': { custom: false, x: 0, y: 0, z: 0 },
+            'mappa2.glb': { custom: false, x: 0, y: 0, z: 0 } 
+            // Esempio se vuoi personalizzarla:
+            // 'mappa2.glb': { custom: true, x: 5.2, y: 1.0, z: -3.5 }
+        };
 
         function init() {
             scene = new THREE.Scene();
@@ -91,6 +104,7 @@
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.boxShadow = "none";
             document.body.appendChild(renderer.domElement);
 
             const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
@@ -108,7 +122,7 @@
         }
 
         function loadMap(filename) {
-            isMapLoaded = false; // Blocca fisica e movimento durante il caricamento
+            isMapLoaded = false; 
             log("Caricamento " + filename + "...");
             document.getElementById('status-text').innerText = "CARICAMENTO";
 
@@ -121,9 +135,9 @@
 
                 mapMesh = gltf.scene;
                 collidableObjects = [];
-
                 scene.add(mapMesh);
 
+                // Centra la mappa geometricamente nello spazio 3D
                 const box = new THREE.Box3().setFromObject(mapMesh);
                 const center = box.getCenter(new THREE.Vector3());
                 
@@ -131,6 +145,7 @@
                 mapMesh.position.z = -center.z;
                 mapMesh.position.y = -box.min.y;
 
+                // Ricalcola il box definitivo dopo il posizionamento
                 const finalBox = new THREE.Box3().setFromObject(mapMesh);
 
                 mapMesh.traverse((child) => {
@@ -142,15 +157,38 @@
                     }
                 });
 
-                // Spawn sicuro esattamente al centro della mappa e sopra il pavimento calcolato
-                playerPos.set(0, finalBox.min.y + 0.5, 0);
+                // STAMPA DEI DATI DELLA MAPPA (Ti dice esattamente come è fatta la mappa)
+                console.log(`Mappa "${filename}" caricata:`, {
+                    minY: finalBox.min.y.toFixed(2),
+                    maxY: finalBox.maxY.toFixed(2),
+                    centerX: 0,
+                    centerZ: 0
+                });
+
+                // GESTIONE DELLO SPAWN (Centro automatico del pavimento o personalizzato)
+                const spawnConfig = mapSpawnPoints[filename];
+                if (spawnConfig && spawnConfig.custom) {
+                    playerPos.set(spawnConfig.x, spawnConfig.y, spawnConfig.z);
+                    log(`Spawn personalizzato applicato per ${filename}`);
+                } else {
+                    // Spawn perfetto al centro esatto della mappa, 0.5 metri sopra il pavimento minimo
+                    playerPos.set(0, finalBox.min.y + 0.6, 0);
+                    
+                    // Controlla con un raggio dall'alto se c'è un pavimento valido in quel punto
+                    raycaster.set(new THREE.Vector3(0, finalBox.maxY + 2, 0), new THREE.Vector3(0, -1, 0));
+                    const hits = raycaster.intersectObjects(collidableObjects, true);
+                    if (hits.length > 0) {
+                        // Trova il punto di impatto più alto (il pavimento calpestabile)
+                        playerPos.y = hits[0].point.y + 0.1;
+                    }
+                }
 
                 verticalVelocity = 0;
                 isGrounded = true;
-                isMapLoaded = true; // Sblocca la fisica ora che la mappa è pronta
+                isMapLoaded = true; 
 
                 document.getElementById('status-text').innerText = "PRONTO";
-                log(`Mappa pronta! Y base: ${finalBox.min.y.toFixed(1)}`);
+                log(`Spawn OK! Y pavimento: ${playerPos.y.toFixed(1)}`);
             }, null, (error) => {
                 log("Errore caricamento " + filename + "!");
                 console.error(error);
@@ -283,7 +321,7 @@
 
             document.getElementById('btn-interact').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (!isMapLoaded) return; // Evita doppi click durante il caricamento
+                if (!isMapLoaded) return; 
                 currentMapFile = (currentMapFile === 'mappa.glb') ? 'mappa2.glb' : 'mappa.glb';
                 loadMap(currentMapFile);
                 log("Cambio stanza in corso...");
@@ -316,12 +354,12 @@
         function updatePhysics() {
             if (!isMapLoaded || collidableObjects.length === 0) return;
 
-            // SICUREZZA ANTI-CADIUTA: Se il personaggio cade sotto la mappa (Y < -5), viene salvato
+            // Se per qualsiasi motivo scende sotto la mappa, lo rispedisce al centro esatto salvandolo
             if (playerPos.y < -5) {
                 playerPos.set(0, 1.0, 0);
                 verticalVelocity = 0;
                 isGrounded = true;
-                log("Salvataggio anti-caduta attivato!");
+                log("Anti-caduta attivato!");
                 return;
             }
 
