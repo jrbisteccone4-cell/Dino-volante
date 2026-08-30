@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Definitivo con Collisioni</title>
+    <title>3D Game - Teletrasporto e Animazioni</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -34,14 +34,14 @@
 
         .btn-action {
             position: absolute; width: 68px; height: 68px; border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.6); color: white; font-weight: bold; font-size: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.6); color: white; font-weight: bold; font-size: 11px;
             display: flex; align-items: center; justify-content: center; touch-action: none;
             z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; text-align: center;
         }
         .btn-action:active { transform: scale(0.9); }
         #btn-cam { bottom: 30px; right: 20px; background: #007acc; }
         #btn-jump { bottom: 110px; right: 20px; background: #28a745; }
-        #btn-interact { bottom: 30px; right: 100px; background: #ff9800; display: flex; }
+        #btn-teleport { bottom: 30px; right: 100px; background: #9c27b0; font-size: 10px; }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -58,7 +58,7 @@
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-jump" class="btn-action">SALTA</div>
     <div id="btn-cam" class="btn-action">VISTA</div>
-    <div id="btn-interact" class="btn-action">APRI</div>
+    <div id="btn-teleport" class="btn-action">MAPPA 2</div>
 
     <script>
         function log(msg) { 
@@ -82,13 +82,10 @@
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
 
-        // =========================================================================
-        // CONFIGURAZIONE SPAWN E COORDINATE PER MAPPA
-        // Modifica x, y, z per decidere esattamente dove far spawnare il personaggio
-        // =========================================================================
+        // Coordinate di spawn precise per evitare fluttuazioni o compenetrazioni
         const mapSpawnPoints = {
             'mappa.glb': { x: 0, y: 0, z: 0 },
-            'mappa2.glb': { x: -89.5, y: 0.0, z: -4.6 } // Esempio con le coordinate della tua seconda mappa
+            'mappa2.glb': { x: -89.5, y: 0.5, z: -4.6 }
         };
 
         function init() {
@@ -143,9 +140,16 @@
                         }
                     });
 
-                    // Applica lo spawn configurato per questa mappa
                     const spawn = mapSpawnPoints[filename] || { x: 0, y: 0, z: 0 };
                     playerPos.set(spawn.x, spawn.y, spawn.z);
+
+                    // Aggiorna etichetta del tasto teletrasporto in base alla mappa corrente
+                    const btnTeleport = document.getElementById('btn-teleport');
+                    if (filename === 'mappa.glb') {
+                        btnTeleport.innerText = "MAPPA 2";
+                    } else {
+                        btnTeleport.innerText = "MAPPA 1";
+                    }
 
                     isMapLoaded = true; 
                     document.getElementById('status-text').innerText = "PRONTO";
@@ -186,11 +190,13 @@
 
                 playerGroup.add(characterMesh);
 
+                // Configura l'animazione in loop continuo per evitare l'effetto statico/fluttuante
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(characterMesh);
                     const action = mixer.clipAction(gltf.animations[0]);
+                    action.setLoop(THREE.LoopRepeat);
                     action.play();
-                    log("Personaggio e animazioni pronti!");
+                    log("Animazione in loop avviata!");
                 } else {
                     log("Personaggio pronto!");
                 }
@@ -284,7 +290,8 @@
                 cameraMode = (cameraMode + 1) % 2;
             }, { passive: false });
 
-            document.getElementById('btn-interact').addEventListener('touchstart', (e) => {
+            // Tasto di teletrasporto tra le mappe
+            document.getElementById('btn-teleport').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (!isMapLoaded) return; 
                 currentMapFile = (currentMapFile === 'mappa.glb') ? 'mappa2.glb' : 'mappa.glb';
@@ -292,12 +299,11 @@
             }, { passive: false });
         }
 
-        // Controllo collisioni per evitare di attraversare i muri
         function canMoveTo(targetPos) {
             if (collidableObjects.length === 0) return true;
 
             const origin = targetPos.clone();
-            origin.y += 0.4; // Altezza petto/corpo
+            origin.y += 0.4;
 
             const directions = [
                 new THREE.Vector3(1, 0, 0),
@@ -310,7 +316,7 @@
                 raycaster.set(origin, dir);
                 const hits = raycaster.intersectObjects(collidableObjects, true);
                 if (hits.length > 0 && hits[0].distance < 0.3) {
-                    return false; // Muro vicino, blocca il movimento
+                    return false;
                 }
             }
             return true;
@@ -335,7 +341,6 @@
                     Math.cos(moveAngle) * speed * inputMag
                 );
 
-                // Controllo collisioni asse X e Z separati per scivolare lungo i muri
                 let nextX = playerPos.clone();
                 nextX.x += moveDir.x;
                 if (canMoveTo(nextX)) playerPos.x = nextX.x;
@@ -350,7 +355,6 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
-            // Gestione telecamera con protezione anti-attraversamento muri
             if (cameraMode === 0) {
                 const targetDist = 2.5;
                 const headPos = playerPos.clone().add(new THREE.Vector3(0, 0.8, 0));
@@ -361,7 +365,6 @@
                     -Math.cos(cameraYaw) * Math.cos(cameraPitch)
                 ).normalize();
 
-                // Raggio per evitare che la telecamera attraversi i muri alle spalle
                 raycaster.set(headPos, camDir);
                 const camHits = raycaster.intersectObjects(collidableObjects, true);
 
