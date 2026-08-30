@@ -70,14 +70,13 @@
 
         const clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
-        let playerPos = new THREE.Vector3(8.0, 0, 0); // Spawn X: 8.0
+        let playerPos = new THREE.Vector3(8.0, 0, 0);
         let playerRotation = 0;
         let cameraYaw = 0;
         let cameraPitch = 0.15;
         let isMapLoaded = false;
         let cameraMode = 0;
 
-        // Gestione Salto e Fisica
         let isJumping = false;
         let jumpVelocity = 0;
         const gravity = 0.018;
@@ -98,7 +97,6 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            // Illuminazione ottimizzata per risaltare le texture originali
             const ambientLight = new THREE.AmbientLight(0xfff5ec, 1.4);
             scene.add(ambientLight);
 
@@ -165,7 +163,7 @@
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
-                // Manteniamo le texture originali correggendo solo la tonalità se troppo bianca
+                // CORRETTO: Forziamo la modifica del colore anche in presenza di texture map
                 characterMesh.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = false; 
@@ -173,10 +171,11 @@
                         if (child.material) {
                             child.material.roughness = 0.5;
                             child.material.metalness = 0.1;
-                            // Corregge la luce fredda/bianca fondendola con una tinta calda naturale senza perdere le texture
-                            if (child.material.color) {
-                                child.material.color.lerp(new THREE.Color(0xffdfc4), 0.25);
-                            }
+                            
+                            // Se il materiale usa una texture, color tint potrebbe non funzionare direttamente 
+                            // a meno di impostare correttamente il colore di base o usare un filtro vertex/fragment.
+                            // Qui applichiamo una colorazione diretta compatibile:
+                            child.material.color.setHex(0xff5733); // Esempio: Rosso/Arancione vivo per testare il cambio colore
                             child.material.needsUpdate = true;
                         }
                     }
@@ -188,7 +187,6 @@
                 const scaleFactor = targetHeight / (size.y || 1);
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-                // Ancoraggio millimetrico dei piedi sul pavimento (Y = 0)
                 const updatedBox = new THREE.Box3().setFromObject(characterMesh);
                 characterMesh.position.y = -updatedBox.min.y;
 
@@ -198,7 +196,8 @@
                     mixer = new THREE.AnimationMixer(characterMesh);
                     walkAction = mixer.clipAction(gltf.animations[0]);
                     walkAction.setLoop(THREE.LoopRepeat);
-                    walkAction.stop(); 
+                    walkAction.play(); // Avviamo l'azione e gestiamo il peso/crossfade anziché stopparla bruscamente
+                    walkAction.weight = 0;
                     log("Personaggio e texture pronti!");
                 } else {
                     log("Personaggio pronto (senza animazioni)");
@@ -300,23 +299,18 @@
 
         function canMoveTo(targetPos) {
             if (collidableObjects.length === 0) return true;
-
             const origin = targetPos.clone();
             origin.y += 0.4;
-
             const directions = [
                 new THREE.Vector3(1, 0, 0),
                 new THREE.Vector3(-1, 0, 0),
                 new THREE.Vector3(0, 0, 1),
                 new THREE.Vector3(0, 0, -1)
             ];
-
             for (let dir of directions) {
                 raycaster.set(origin, dir);
                 const hits = raycaster.intersectObjects(collidableObjects, true);
-                if (hits.length > 0 && hits[0].distance < 0.3) {
-                    return false;
-                }
+                if (hits.length > 0 && hits[0].distance < 0.3) return false;
             }
             return true;
         }
@@ -326,8 +320,8 @@
             const delta = clock.getDelta();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
-            // Velocità adattata per far corrispondere il passo dell'animazione ed evitare lo strisciamento
-            const currentSpeed = 0.035 * inputMag; 
+            // Velocità e movimento fluido senza scatti anomali
+            const currentSpeed = 0.04 * inputMag; 
 
             if (isMapLoaded && inputMag > 0.1) {
                 const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
@@ -347,18 +341,17 @@
                 nextZ.z += moveDir.z;
                 if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
 
-                // Sincronizzazione precisa della velocità dell'animazione (camminata / corsa)
+                // Gestione fluida dell'animazione per evitare lo strisciamento
                 if (walkAction) {
-                    walkAction.timeScale = inputMag * 2.0;
-                    if (!walkAction.isRunning()) walkAction.play();
+                    walkAction.weight = THREE.MathUtils.lerp(walkAction.weight, 1.0, 0.1);
+                    walkAction.timeScale = 1.0 + (inputMag * 0.5);
                 }
             } else {
-                if (walkAction && walkAction.isRunning()) {
-                    walkAction.stop();
+                if (walkAction) {
+                    walkAction.weight = THREE.MathUtils.lerp(walkAction.weight, 0.0, 0.1);
                 }
             }
 
-            // Fisica del salto
             if (isJumping) {
                 playerPos.y += jumpVelocity;
                 jumpVelocity -= gravity;
