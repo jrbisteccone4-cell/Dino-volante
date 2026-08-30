@@ -18,6 +18,7 @@
         #status-log {
             position: absolute; top: 65px; left: 15px; color: #0066cc; font-size: 11px;
             font-family: monospace; pointer-events: none; z-index: 10; font-weight: bold;
+            background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px;
         }
 
         #joystick-container {
@@ -72,7 +73,7 @@
         let cameraYaw = 0;
         let cameraPitch = 0.15;
         let verticalVelocity = 0;
-        let isGrounded = true;
+        let isGrounded = false;
         let cameraMode = 0;
         let walkCycle = 0;
 
@@ -117,13 +118,20 @@
                 mapMesh = gltf.scene;
                 collidableObjects = [];
 
+                // Prima aggiungiamo la mappa alla scena per calcolare le dimensioni globali corrette
+                scene.add(mapMesh);
+
+                // Calcoliamo il bounding box REALE della mappa
                 const box = new THREE.Box3().setFromObject(mapMesh);
                 const center = box.getCenter(new THREE.Vector3());
                 
-                // Centra la mappa perfettamente nell'origine e poggia il pavimento a Y = 0
+                // Centriamo la mappa sull'asse X e Z, azzerando la base sul piano Y = 0
                 mapMesh.position.x = -center.x;
                 mapMesh.position.z = -center.z;
                 mapMesh.position.y = -box.min.y;
+
+                // Ricalcoliamo il box dopo il posizionamento per sicurezza
+                const finalBox = new THREE.Box3().setFromObject(mapMesh);
 
                 mapMesh.traverse((child) => {
                     if (child.isMesh) {
@@ -133,16 +141,15 @@
                         collidableObjects.push(child);
                     }
                 });
-                
-                scene.add(mapMesh);
 
-                // Spawn automatico universale: posiziona sempre il personaggio al centro esatto e leggermente sopra il pavimento calcolato
-                playerPos.set(0, 0.5, 0);
+                // Posizioniamo il player esattamente sopra il pavimento calcolato (es: altezza minima + 1 unità)
+                let spawnY = finalBox.min.y + 1.5;
+                playerPos.set(0, spawnY, 0);
 
                 verticalVelocity = 0;
-                isGrounded = true;
+                isGrounded = false;
 
-                log("Mappa pronta!");
+                log(`Spawn OK! Y pavimento: ${finalBox.min.y.toFixed(1)}`);
             }, null, (error) => {
                 log("Errore caricamento " + filename + "!");
                 console.error(error);
@@ -180,9 +187,8 @@
 
                 playerGroup.add(characterMesh);
                 document.getElementById('status-text').innerText = "PRONTO";
-                log("Personaggio pronto!");
             }, null, (error) => {
-                log("Errore caricamento personaggio!");
+                log("Errore personaggio!");
                 console.error(error);
             });
         }
@@ -279,7 +285,7 @@
                 e.preventDefault();
                 currentMapFile = (currentMapFile === 'mappa.glb') ? 'mappa2.glb' : 'mappa.glb';
                 loadMap(currentMapFile);
-                log("Porta aperta! Cambio stanza...");
+                log("Cambio mappa...");
             }, { passive: false });
         }
 
@@ -321,14 +327,14 @@
             }
 
             const rayOrigin = playerPos.clone();
-            rayOrigin.y += 0.4;
+            rayOrigin.y += 0.5;
             raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
 
             const floorHits = raycaster.intersectObjects(collidableObjects, true);
 
             if (floorHits.length > 0) {
                 const floorY = floorHits[0].point.y;
-                if (playerPos.y <= floorY + 0.08 && verticalVelocity <= 0) {
+                if (playerPos.y <= floorY + 0.05 && verticalVelocity <= 0) {
                     playerPos.y = floorY;
                     verticalVelocity = 0;
                     isGrounded = true;
@@ -336,18 +342,9 @@
                     isGrounded = false;
                 }
             } else {
-                if (playerPos.y <= 0) {
-                    playerPos.y = 0;
-                    verticalVelocity = 0;
-                    isGrounded = true;
-                } else {
-                    isGrounded = false;
-                }
-            }
-
-            if (!isGrounded) {
                 verticalVelocity -= 0.008;
                 playerPos.y += verticalVelocity;
+                isGrounded = false;
             }
         }
 
