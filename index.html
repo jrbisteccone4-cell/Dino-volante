@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Fix Definitivo</title>
+    <title>3D Game - Stabile</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -75,23 +75,14 @@
         let playerRotation = 0;
         let cameraYaw = 0;
         let cameraPitch = 0.15;
-        let verticalVelocity = 0;
-        let isGrounded = false;
         let isMapLoaded = false;
         let cameraMode = 0;
         let walkCycle = 0;
 
-        const raycaster = new THREE.Raycaster();
-        let collidableObjects = [];
-
-        // =========================================================================
-        // CONFIGURAZIONE SPAWN MAPPE
-        // custom: false -> Spawna automaticamente al centro perfetto della mappa.
-        // custom: true  -> Spawna esattamente alle coordinate X, Y, Z specificate.
-        // =========================================================================
+        // Configurazione delle coordinate di spawn per ogni mappa
         const mapSpawnPoints = {
             'mappa.glb': { custom: false, x: 0, y: 0, z: 0 },
-            'mappa2.glb': { custom: false, x: 0, y: 0, z: 0 } 
+            'mappa2.glb': { custom: false, x: 0, y: 0, z: 0 } // Modifica custom: true e inserisci x, y, z se vuoi uno spawn fisso
         };
 
         function init() {
@@ -134,10 +125,9 @@
                     }
 
                     mapMesh = gltf.scene;
-                    collidableObjects = [];
                     scene.add(mapMesh);
 
-                    // NORMALIZZAZIONE GEOMETRICA: Centra la mappa e porta il pavimento a Y = 0
+                    // Centratura geometrica della mappa a Y = 0
                     const box = new THREE.Box3().setFromObject(mapMesh);
                     const center = box.getCenter(new THREE.Vector3());
                     
@@ -146,29 +136,22 @@
                     mapMesh.position.y = -box.min.y;
 
                     mapMesh.traverse((child) => {
-                        if (child.isMesh) {
-                            if (child.material) {
-                                child.material.side = THREE.DoubleSide;
-                            }
-                            collidableObjects.push(child);
+                        if (child.isMesh && child.material) {
+                            child.material.side = THREE.DoubleSide;
                         }
                     });
 
-                    // GESTIONE SPAWN SICURO
+                    // Gestione dello spawn pulita senza raycast instabili
                     const config = mapSpawnPoints[filename];
                     if (config && config.custom) {
                         playerPos.set(config.x, config.y, config.z);
                     } else {
-                        // Poiché la mappa è normalizzata a Y=0, spawnare a Y=0.1 garantisce di essere sul pavimento
-                        playerPos.set(0, 0.1, 0);
+                        playerPos.set(0, 0.0, 0); // Posizione sicura sul piano base della mappa
                     }
 
-                    verticalVelocity = 0;
-                    isGrounded = true;
                     isMapLoaded = true; 
-
                     document.getElementById('status-text').innerText = "PRONTO";
-                    log("Mappa caricata con successo!");
+                    log("Mappa pronta e stabile!");
                 } catch (err) {
                     log("Errore script: " + err.message);
                     console.error(err);
@@ -288,10 +271,7 @@
 
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (isGrounded && isMapLoaded) {
-                    verticalVelocity = 0.13;
-                    isGrounded = false;
-                }
+                // Salto disattivato temporaneamente per stabilità dei movimenti base
             }, { passive: false });
 
             document.getElementById('btn-cam').addEventListener('touchstart', (e) => {
@@ -307,44 +287,9 @@
             }, { passive: false });
         }
 
-        function updatePhysics() {
-            if (!isMapLoaded || collidableObjects.length === 0) return;
-
-            // Protezione anti-caduta se scende sotto la mappa
-            if (playerPos.y < -5) {
-                playerPos.set(0, 0.5, 0);
-                verticalVelocity = 0;
-                isGrounded = true;
-                return;
-            }
-
-            const rayOrigin = playerPos.clone();
-            rayOrigin.y += 0.5;
-            raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
-
-            const floorHits = raycaster.intersectObjects(collidableObjects, true);
-
-            if (floorHits.length > 0) {
-                const floorY = floorHits[0].point.y;
-                if (playerPos.y <= floorY + 0.05 && verticalVelocity <= 0) {
-                    playerPos.y = floorY;
-                    verticalVelocity = 0;
-                    isGrounded = true;
-                } else {
-                    isGrounded = false;
-                }
-            } else {
-                verticalVelocity -= 0.008;
-                playerPos.y += verticalVelocity;
-                isGrounded = false;
-            }
-        }
-
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-
-            updatePhysics();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             const speed = 0.04; 
