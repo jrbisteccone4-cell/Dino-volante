@@ -35,7 +35,6 @@
         #btn-dash { bottom: 125px; right: 35px; background: rgba(255, 193, 7, 0.85); color: #000; }
     </style>
 
-    <!-- Libreria Three.js classica e GLTFLoader compatibile al 100% -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
@@ -65,7 +64,6 @@
         dirLight.position.set(20, 50, 20);
         scene.add(dirLight);
 
-        // Fondale
         const seabedGeo = new THREE.PlaneGeometry(800, 800);
         const seabedMat = new THREE.MeshBasicMaterial({ color: 0x07202e });
         const seabed = new THREE.Mesh(seabedGeo, seabedMat);
@@ -76,20 +74,26 @@
         const sharkContainer = new THREE.Group();
         scene.add(sharkContainer);
 
+        // MODELLO TEMPORANEO (Garantisce che lo schermo non sia mai vuoto)
+        const fallbackGeo = new THREE.ConeGeometry(1.2, 5, 8);
+        fallbackGeo.rotateX(Math.PI / 2);
+        const fallbackMat = new THREE.MeshPhongMaterial({ color: 0x3b5998, flatShading: true });
+        const fallbackMesh = new THREE.Mesh(fallbackGeo, fallbackMat);
+        sharkContainer.add(fallbackMesh);
+
         let mixer = null;
         const clock = new THREE.Clock();
 
-        // Caricamento del file reale squalo.glb
         const loader = new THREE.GLTFLoader();
         
-        // Tenta di caricare 'squalo.glb' o 'Squalo che nuota.glb'
-        function loadSharkModel(filePath) {
+        function loadModel(path) {
             loader.load(
-                filePath,
+                path,
                 function (gltf) {
+                    // Se scarica il file GLB, rimuove la forma temporanea e mette lo squalo reale
+                    sharkContainer.remove(fallbackMesh);
                     const loadedMesh = gltf.scene;
 
-                    // Ridimensionamento automatico del modello 3D
                     const box = new THREE.Box3().setFromObject(loadedMesh);
                     const size = box.getSize(new THREE.Vector3());
                     const maxDim = Math.max(size.x, size.y, size.z);
@@ -104,7 +108,6 @@
 
                     sharkContainer.add(loadedMesh);
 
-                    // Animazione del nuoto originale del file GLB
                     if (gltf.animations && gltf.animations.length > 0) {
                         mixer = new THREE.AnimationMixer(loadedMesh);
                         const action = mixer.clipAction(gltf.animations[0]);
@@ -112,19 +115,16 @@
                     }
                 },
                 undefined,
-                function (error) {
-                    if (filePath === './squalo.glb') {
-                        // Se non trova 'squalo.glb', prova col nome con gli spazi
-                        loadSharkModel('./Squalo%20che%20nuota.glb');
+                function (err) {
+                    if (path === './squalo.glb') {
+                        loadModel('./Squalo%20che%20nuota.glb');
                     }
                 }
             );
         }
 
-        // Avvia il caricamento
-        loadSharkModel('./squalo.glb');
+        loadModel('./squalo.glb');
 
-        // Prede
         const preyList = [];
         const preyGeo = new THREE.ConeGeometry(0.4, 1.2, 6);
         preyGeo.rotateX(Math.PI / 2);
@@ -147,7 +147,6 @@
         let score = 0;
         let eatenCount = 0;
 
-        // Joystick
         const joystickContainer = document.getElementById('joystick-container');
         const joystickKnob = document.getElementById('joystick-knob');
         let joystickActive = false;
