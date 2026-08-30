@@ -98,8 +98,8 @@
             mainLight.position.set(10, 20, 10);
             scene.add(mainLight);
 
-            loadMap(currentMapFile);
             loadCharacter();
+            loadMap(currentMapFile);
             setupControls();
 
             animate();
@@ -120,6 +120,7 @@
                 const box = new THREE.Box3().setFromObject(mapMesh);
                 const center = box.getCenter(new THREE.Vector3());
                 
+                // Centra la mappa perfettamente nell'origine e poggia il pavimento a Y = 0
                 mapMesh.position.x = -center.x;
                 mapMesh.position.z = -center.z;
                 mapMesh.position.y = -box.min.y;
@@ -135,19 +136,15 @@
                 
                 scene.add(mapMesh);
 
-                // Gestione differenziata dello spawn in base al file della mappa attivo
-                if (filename === 'mappa.glb') {
-                    playerPos.set(0, 2.9, 0);
-                } else {
-                    playerPos.set(0, 2.0, 0); // Altezza dedicata alla nuova mappa2
-                }
+                // Spawn automatico universale: posiziona sempre il personaggio al centro esatto e leggermente sopra il pavimento calcolato
+                playerPos.set(0, 0.5, 0);
 
                 verticalVelocity = 0;
                 isGrounded = true;
 
                 log("Mappa pronta!");
             }, null, (error) => {
-                log("Errore caricamento mappa!");
+                log("Errore caricamento " + filename + "!");
                 console.error(error);
             });
         }
@@ -185,6 +182,7 @@
                 document.getElementById('status-text').innerText = "PRONTO";
                 log("Personaggio pronto!");
             }, null, (error) => {
+                log("Errore caricamento personaggio!");
                 console.error(error);
             });
         }
