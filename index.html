@@ -132,7 +132,7 @@
         renderer.toneMappingExposure = 1.2;
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xdff0ff, 1.8);
+        const ambientLight = new THREE.AmbientLight(0xdff0ff, 2.0);
         scene.add(ambientLight);
 
         const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -149,50 +149,49 @@
         const sharkContainer = new THREE.Group();
         scene.add(sharkContainer);
 
-        let sharkMesh = null;
+        // MODELLO DI RISERVA VISIBILE SUBITO
+        const bodyGeo = new THREE.ConeGeometry(1, 4, 8);
+        bodyGeo.rotateX(-Math.PI / 2);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4a6572, roughness: 0.4 });
+        const fallbackShark = new THREE.Mesh(bodyGeo, bodyMat);
+        sharkContainer.add(fallbackShark);
+
         let mixer = null;
         const clock = new THREE.Clock();
 
+        // CARICAMENTO FILE GLTF
         const loader = new GLTFLoader();
-
         loader.load(
             'scene.gltf',
             (gltf) => {
-                sharkMesh = gltf.scene;
+                const loadedMesh = gltf.scene;
 
-                sharkMesh.traverse((child) => {
-                    if (child.isMesh && child.material && child.material.map) {
-                        child.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
-                        child.material.map.minFilter = THREE.LinearMipmapLinearFilter;
-                        child.material.map.magFilter = THREE.LinearFilter;
-                        child.material.needsUpdate = true;
-                    }
-                });
-
-                const box = new THREE.Box3().setFromObject(sharkMesh);
+                // Calcola dimensioni reali del modello caricato
+                const box = new THREE.Box3().setFromObject(loadedMesh);
                 const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
                 
                 if (maxDim > 0) {
-                    const targetScale = 5 / maxDim;
-                    sharkMesh.scale.set(targetScale, targetScale, targetScale);
+                    const targetScale = 6 / maxDim;
+                    loadedMesh.scale.set(targetScale, targetScale, targetScale);
                 }
 
+                // Centra la geometria
                 const center = box.getCenter(new THREE.Vector3());
-                sharkMesh.position.sub(center.multiplyScalar(sharkMesh.scale.x));
+                loadedMesh.position.sub(center.multiplyScalar(loadedMesh.scale.x));
 
-                sharkContainer.add(sharkMesh);
+                // Rimuove lo squalo di riserva e inserisce quello scaricato
+                sharkContainer.remove(fallbackShark);
+                sharkContainer.add(loadedMesh);
 
                 if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(sharkMesh);
+                    mixer = new THREE.AnimationMixer(loadedMesh);
                     const action = mixer.clipAction(gltf.animations[0]);
                     action.play();
                 }
             },
             undefined,
-            (error) => {
-                console.error("Errore caricamento scene.gltf:", error);
-            }
+            (err) => console.log("Caricamento modello custom fallito, uso riserva", err)
         );
 
         const preyList = [];
@@ -319,7 +318,7 @@
                 sharkContainer.position.y = Math.max(-28, Math.min(10, sharkContainer.position.y - moveInput.y * 0.05));
             }
 
-            const camDist = 9;
+            const camDist = 10;
             const camX = sharkContainer.position.x + camDist * Math.sin(cameraAngleYaw) * Math.cos(cameraAnglePitch);
             const camY = sharkContainer.position.y + camDist * Math.sin(cameraAnglePitch) + 2;
             const camZ = sharkContainer.position.z + camDist * Math.cos(cameraAngleYaw) * Math.cos(cameraAnglePitch);
