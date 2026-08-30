@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Shark Simulator</title>
+    <title>3D Shark Game</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #011326; font-family: sans-serif; }
@@ -46,7 +46,7 @@
 <body>
 
     <div id="hud">Punti: <span id="score">0</span> | Prede Divorate: <span id="eaten">0</span></div>
-    <div id="status-log">Avvio motore 3D...</div>
+    <div id="status-log">Caricamento in corso...</div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-dash" class="btn-action">SCATTO</div>
@@ -57,7 +57,7 @@
             document.getElementById('status-log').innerText = msg;
         }
 
-        let scene, camera, renderer, sharkContainer, tailGroup;
+        let scene, camera, renderer, sharkContainer;
         let mixer = null;
         const clock = new THREE.Clock();
         const preyList = [];
@@ -66,110 +66,98 @@
         let score = 0, eatenCount = 0;
 
         function init() {
-            log("Inizializzazione scena...");
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x011326);
-            scene.fog = new THREE.FogExp2(0x011326, 0.008);
+            scene.fog = new THREE.FogExp2(0x011326, 0.01);
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.body.appendChild(renderer.domElement);
 
-            // Luce globale per illuminare da ogni angolo
-            const ambientLight = new THREE.AmbientLight(0xffffff, 4.0);
+            // Illuminazione potenziata per rendere visibili le texture
+            const ambientLight = new THREE.AmbientLight(0xffffff, 2.5);
             scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
-            dirLight.position.set(0, 100, 0);
-            scene.add(dirLight);
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight1.position.set(20, 40, 20);
+            scene.add(dirLight1);
+
+            const dirLight2 = new THREE.DirectionalLight(0xffffff, 1.0);
+            dirLight2.position.set(-20, -20, -20);
+            scene.add(dirLight2);
 
             // Fondale
-            const seabedGeo = new THREE.PlaneGeometry(1000, 1000);
-            const seabedMat = new THREE.MeshBasicMaterial({ color: 0x07202e });
+            const seabedGeo = new THREE.PlaneGeometry(800, 800);
+            const seabedMat = new THREE.MeshPhongMaterial({ color: 0x07202e });
             const seabed = new THREE.Mesh(seabedGeo, seabedMat);
             seabed.rotation.x = -Math.PI / 2;
-            seabed.position.y = -60;
+            seabed.position.y = -40;
             scene.add(seabed);
 
             sharkContainer = new THREE.Group();
             scene.add(sharkContainer);
 
-            // Modello temporaneo iniziale
-            buildFallbackShark();
+            // Carica il modello scene.gltf insieme alle sue texture
+            loadGLTFModel();
 
-            // Caricamento del modello GLB
-            tryLoadGLB();
-
-            // Prede
+            // Creazione Prede
             createPreys();
 
             // Setup Controlli
             setupJoystick();
             setupButtons();
 
-            log("Gioco Pronto!");
             animate();
         }
 
-        function buildFallbackShark() {
-            const sharkMat = new THREE.MeshBasicMaterial({ color: 0x00aaff, wireframe: true });
-            const bodyGeo = new THREE.BoxGeometry(2, 2, 6);
-            const body = new THREE.Mesh(bodyGeo, sharkMat);
-            sharkContainer.add(body);
-        }
-
-        function tryLoadGLB() {
-            if (typeof THREE.GLTFLoader === 'undefined') return;
+        function loadGLTFModel() {
+            log("Caricamento scene.gltf...");
             const loader = new THREE.GLTFLoader();
             
-            loader.load('./squalo.glb', (gltf) => {
-                log("File squalo.glb caricato con successo!");
-                
-                // Pulisce il modello fisso
-                while(sharkContainer.children.length > 0) { 
-                    sharkContainer.remove(sharkContainer.children[0]); 
-                }
-
+            loader.load('./scene.gltf', (gltf) => {
+                log("Squalo caricato con successo!");
                 const loadedMesh = gltf.scene;
 
-                // Calcolo esatto del riposizionamento e del centro di massa
+                // Attiva la resa visiva a doppio lato per le texture
+                loadedMesh.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        child.material.side = THREE.DoubleSide;
+                    }
+                });
+
+                // Centra la maglia 3D ed effettua il ridimensionamento
                 const box = new THREE.Box3().setFromObject(loadedMesh);
                 const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3());
 
-                // Sposta l'origine al centro della maglia 3D
                 loadedMesh.position.sub(center);
 
-                // Calcola fattore di scala ottimale
                 const maxDim = Math.max(size.x, size.y, size.z);
-                let scaleFactor = 1;
                 if (maxDim > 0) {
-                    scaleFactor = 10 / maxDim;
+                    const scaleFactor = 8 / maxDim;
+                    loadedMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 }
-                loadedMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
-
-                // Sostituisce i materiali complessi con un materiale visibile al 100%
-                loadedMesh.traverse((child) => {
-                    if (child.isMesh) {
-                        child.material = new THREE.MeshBasicMaterial({ 
-                            color: child.material.color ? child.material.color : 0xffffff,
-                            side: THREE.DoubleSide
-                        });
-                    }
-                });
 
                 sharkContainer.add(loadedMesh);
 
+                // Attiva le animazioni se presenti nel modello
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(loadedMesh);
                     const action = mixer.clipAction(gltf.animations[0]);
                     action.play();
                 }
-            }, undefined, (err) => {
-                log("GLB non trovato. Uso modello fisso.");
+            }, 
+            (xhr) => {
+                if (xhr.total > 0) {
+                    const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                    log("Caricamento squalo: " + percent + "%");
+                }
+            }, 
+            (err) => {
+                log("Errore nel caricamento di scene.gltf: verifica i file.");
             });
         }
 
@@ -256,7 +244,7 @@
                 const sharkPos = sharkContainer.position;
                 for (let i = preyList.length - 1; i >= 0; i--) {
                     const prey = preyList[i];
-                    if (prey.position.distanceTo(sharkPos) < 10.0) {
+                    if (prey.position.distanceTo(sharkPos) < 7.0) {
                         scene.remove(prey);
                         preyList.splice(i, 1);
                         score += 100;
@@ -269,7 +257,7 @@
         }
 
         let targetPitch = 0, targetYaw = 0, currentPitch = 0, currentYaw = 0;
-        const cameraOffset = new THREE.Vector3(0, 8, 30);
+        const cameraOffset = new THREE.Vector3(0, 6, 24);
         const currentCamPos = new THREE.Vector3();
         const currentTargetPos = new THREE.Vector3();
 
@@ -297,13 +285,13 @@
 
             const moveDir = new THREE.Vector3(0, 0, -1).applyQuaternion(sharkContainer.quaternion);
             sharkContainer.position.addScaledVector(moveDir, speed);
-            sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -40, 20);
+            sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -35, 15);
 
             const idealCamPos = cameraOffset.clone().applyQuaternion(sharkContainer.quaternion).add(sharkContainer.position);
-            const idealTarget = sharkContainer.position.clone();
+            const idealTarget = sharkContainer.position.clone().add(new THREE.Vector3(0, 1, 0));
 
-            currentCamPos.lerp(idealCamPos, 0.1);
-            currentTargetPos.lerp(idealTarget, 0.1);
+            currentCamPos.lerp(idealCamPos, 0.08);
+            currentTargetPos.lerp(idealTarget, 0.08);
 
             camera.position.copy(currentCamPos);
             camera.lookAt(currentTargetPos);
