@@ -1,1 +1,354 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pomni 3D - White Room</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #e0e0e0; font-family: sans-serif; }
+        canvas { display: block; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 1; }
 
+        #hud {
+            position: absolute; top: 15px; left: 15px; color: #333; font-size: 14px; font-weight: bold;
+            font-family: monospace; pointer-events: none; z-index: 10; background: rgba(255,255,255,0.7);
+            padding: 8px 12px; border-radius: 8px;
+        }
+
+        #status-log {
+            position: absolute; top: 75px; left: 15px; color: #0066cc; font-size: 13px;
+            font-family: monospace; pointer-events: none; z-index: 10; font-weight: bold;
+        }
+
+        #joystick-container {
+            position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px;
+            background: rgba(0, 0, 0, 0.15); border: 2px solid rgba(0, 0, 0, 0.3);
+            border-radius: 50%; touch-action: none; z-index: 10;
+        }
+        #joystick-knob {
+            position: absolute; top: 35px; left: 35px; width: 50px; height: 50px;
+            background: #222; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none;
+        }
+
+        .btn-action {
+            position: absolute; width: 75px; height: 75px; border-radius: 50%;
+            border: 2px solid rgba(0, 0, 0, 0.3); color: white; font-weight: bold; font-size: 13px;
+            display: flex; align-items: center; justify-content: center; touch-action: manipulation;
+            z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;
+        }
+        .btn-action:active { transform: scale(0.9); }
+        #btn-cam { bottom: 35px; right: 30px; background: #007acc; }
+        #btn-jump { bottom: 125px; right: 35px; background: #28a745; }
+    </style>
+
+    <!-- Three.js e GLTFLoader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+</head>
+<body>
+
+    <div id="hud">
+        STATO: <span id="status-text">CARICAMENTO...</span><br>
+        POSIZIONE: X:<span id="posX">0</span> Z:<span id="posZ">0</span>
+    </div>
+    <div id="status-log">Inizializzazione...</div>
+
+    <div id="joystick-container"><div id="joystick-knob"></div></div>
+    <div id="btn-jump" class="btn-action">SALTA</div>
+    <div id="btn-cam" class="btn-action">VISTA</div>
+
+    <script>
+        function log(msg) { document.getElementById('status-log').innerText = msg; }
+
+        let scene, camera, renderer, playerGroup, characterMesh, mixer;
+        let walkAction, idleAction;
+        const clock = new THREE.Clock();
+        
+        let moveInput = { x: 0, y: 0 };
+        let playerPos = new THREE.Vector3(0, 0, 0);
+        let playerRotation = 0;
+        let verticalVelocity = 0;
+        let isGrounded = true;
+        let cameraMode = 0;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            scene.fog = new THREE.FogExp2(0xf0f0f0, 0.015);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            // Luci diffuse per valorizzare il modello 3D
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+            scene.add(ambientLight);
+
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            mainLight.position.set(20, 40, 20);
+            mainLight.castShadow = true;
+            scene.add(mainLight);
+
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            fillLight.position.set(-20, 20, -20);
+            scene.add(fillLight);
+
+            createRoom();
+            loadCharacter();
+
+            setupJoystick();
+            setupButtons();
+
+            animate();
+        }
+
+        function createRoom() {
+            const roomSize = 80;
+
+            // Pavimento metallico riflettente
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#3a4149'; ctx.fillRect(0, 0, 256, 256);
+            ctx.strokeStyle = '#1d2125'; ctx.lineWidth = 6;
+            for (let i = 0; i <= 256; i += 32) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 256); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(256, i); ctx.stroke();
+            }
+            ctx.fillStyle = '#727d8a';
+            for (let x = 16; x < 256; x += 32) {
+                for (let y = 16; y < 256; y += 32) {
+                    ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+
+            const ironTexture = new THREE.CanvasTexture(canvas);
+            ironTexture.wrapS = THREE.RepeatWrapping;
+            ironTexture.wrapT = THREE.RepeatWrapping;
+            ironTexture.repeat.set(20, 20);
+
+            const floorMat = new THREE.MeshStandardMaterial({ map: ironTexture, roughness: 0.3, metalness: 0.7 });
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(roomSize, roomSize), floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Stanza Bianca
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.9 });
+            const wallGeo = new THREE.PlaneGeometry(roomSize, 30);
+            
+            const wallN = new THREE.Mesh(wallGeo, wallMat); wallN.position.set(0, 15, -roomSize / 2); scene.add(wallN);
+            const wallS = new THREE.Mesh(wallGeo, wallMat); wallS.position.set(0, 15, roomSize / 2); wallS.rotation.y = Math.PI; scene.add(wallS);
+            const wallE = new THREE.Mesh(wallGeo, wallMat); wallE.position.set(roomSize / 2, 15, 0); wallE.rotation.y = -Math.PI / 2; scene.add(wallE);
+            const wallW = new THREE.Mesh(wallGeo, wallMat); wallW.position.set(-roomSize / 2, 15, 0); wallW.rotation.y = Math.PI / 2; scene.add(wallW);
+        }
+
+        function loadCharacter() {
+            playerGroup = new THREE.Group();
+            scene.add(playerGroup);
+
+            log("Download personaggio.glb...");
+            const loader = new THREE.GLTFLoader();
+
+            loader.load('personaggio.glb', (gltf) => {
+                characterMesh = gltf.scene;
+
+                // Calcolo automatico di altezza e posizionamento al suolo
+                const box = new THREE.Box3().setFromObject(characterMesh);
+                const size = box.getSize(new THREE.Vector3());
+                const targetHeight = 3.0; // Altezza desiderata
+                const scaleFactor = targetHeight / (size.y || 1);
+                
+                characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                
+                // Riallinea i piedi a terra
+                const updatedBox = new THREE.Box3().setFromObject(characterMesh);
+                characterMesh.position.y = -updatedBox.min.y;
+
+                characterMesh.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+                playerGroup.add(characterMesh);
+
+                // Gestione animazioni del modello (se presenti nel file)
+                if (gltf.animations && gltf.animations.length > 0) {
+                    mixer = new THREE.AnimationMixer(characterMesh);
+                    idleAction = mixer.clipAction(gltf.animations[0]);
+                    if (gltf.animations.length > 1) {
+                        walkAction = mixer.clipAction(gltf.animations[1]);
+                    } else {
+                        walkAction = idleAction;
+                    }
+                    idleAction.play();
+                }
+
+                document.getElementById('status-text').innerText = "PRONTO";
+                log("Pomni caricata con successo!");
+            }, 
+            (xhr) => {
+                if (xhr.lengthComputable) {
+                    const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                    log(`Caricamento Pomni: ${percent}%`);
+                } else {
+                    log("Scaricamento modello in corso...");
+                }
+            }, 
+            (error) => {
+                log("Errore: impossibile caricare 'personaggio.glb'");
+                console.error(error);
+            });
+        }
+
+        function setupJoystick() {
+            const container = document.getElementById('joystick-container');
+            const knob = document.getElementById('joystick-knob');
+            let active = false, center = { x: 0, y: 0 }, touchId = null;
+
+            function start(e) {
+                if (active) return;
+                const touch = e.changedTouches ? e.changedTouches[0] : e;
+                if (e.changedTouches) touchId = touch.identifier;
+                const rect = container.getBoundingClientRect();
+                center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                active = true;
+                move(e);
+            }
+
+            function move(e) {
+                if (!active) return;
+                let touch = null;
+                if (e.touches) {
+                    for (let i = 0; i < e.touches.length; i++) {
+                        if (e.touches[i].identifier === touchId) { touch = e.touches[i]; break; }
+                    }
+                    if (!touch) return;
+                } else { touch = e; }
+
+                const dx = touch.clientX - center.x;
+                const dy = touch.clientY - center.y;
+                const maxDist = 40;
+                const dist = Math.min(Math.hypot(dx, dy), maxDist);
+                const angle = Math.atan2(dy, dx);
+
+                knob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+                moveInput.x = (Math.cos(angle) * dist) / maxDist;
+                moveInput.y = (Math.sin(angle) * dist) / maxDist;
+            }
+
+            function end() {
+                if (!active) return;
+                active = false; touchId = null;
+                knob.style.transform = `translate(0px, 0px)`;
+                moveInput = { x: 0, y: 0 };
+            }
+
+            container.addEventListener('touchstart', start, { passive: false });
+            window.addEventListener('touchmove', move, { passive: false });
+            window.addEventListener('touchend', end);
+            container.addEventListener('mousedown', start);
+            window.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', end);
+        }
+
+        function setupButtons() {
+            document.getElementById('btn-jump').addEventListener('click', () => {
+                if (isGrounded) { verticalVelocity = 0.22; isGrounded = false; }
+            });
+
+            document.getElementById('btn-cam').addEventListener('click', () => {
+                cameraMode = (cameraMode + 1) % 2;
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (mixer) mixer.update(delta);
+
+            const inputMag = Math.hypot(moveInput.x, moveInput.y);
+            const speed = 0.16;
+
+            if (inputMag > 0.1) {
+                const targetAngle = Math.atan2(-moveInput.x, -moveInput.y);
+                let diff = targetAngle - playerRotation;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                playerRotation += diff * 0.15;
+
+                playerPos.x += Math.sin(playerRotation) * speed * inputMag;
+                playerPos.z += Math.cos(playerRotation) * speed * inputMag;
+
+                if (walkAction && idleAction && walkAction !== idleAction) {
+                    if (!walkAction.isRunning()) {
+                        idleAction.stop();
+                        walkAction.play();
+                    }
+                }
+            } else {
+                if (walkAction && idleAction && walkAction !== idleAction) {
+                    if (walkAction.isRunning()) {
+                        walkAction.stop();
+                        idleAction.play();
+                    }
+                }
+            }
+
+            // Gravità e salto
+            playerPos.y += verticalVelocity;
+            if (!isGrounded) {
+                verticalVelocity -= 0.012;
+                if (playerPos.y <= 0) {
+                    playerPos.y = 0;
+                    verticalVelocity = 0;
+                    isGrounded = true;
+                }
+            }
+
+            // Limiti mappa
+            const limit = 37.5;
+            playerPos.x = THREE.MathUtils.clamp(playerPos.x, -limit, limit);
+            playerPos.z = THREE.MathUtils.clamp(playerPos.z, -limit, limit);
+
+            if (playerGroup) {
+                playerGroup.position.copy(playerPos);
+                playerGroup.rotation.y = playerRotation;
+            }
+
+            // Telecamera
+            if (cameraMode === 0) {
+                camera.position.set(playerPos.x, playerPos.y + 4.5, playerPos.z + 9);
+                camera.lookAt(playerPos.x, playerPos.y + 2.0, playerPos.z);
+            } else {
+                const headPos = new THREE.Vector3(0, 2.8, -0.2).applyQuaternion(playerGroup.quaternion);
+                camera.position.copy(playerPos).add(headPos);
+                const lookTarget = new THREE.Vector3(0, 2.8, -5).applyQuaternion(playerGroup.quaternion);
+                camera.lookAt(playerPos.clone().add(lookTarget));
+            }
+
+            document.getElementById('posX').innerText = playerPos.x.toFixed(1);
+            document.getElementById('posZ').innerText = playerPos.z.toFixed(1);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            if (!camera || !renderer) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        window.onload = init;
+    </script>
+</body>
+</html>
