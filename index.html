@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Character - Controls Fixed</title>
+    <title>3D Game - Fixed Controls & Pose</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #1a1a1a; font-family: sans-serif; touch-action: none; }
@@ -168,21 +168,19 @@
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
-                        
                         if (child.material) {
                             child.material = child.material.clone();
                             child.material.roughness = 0.6;
-                            child.material.color.multiplyScalar(0.85);
                         }
                     }
 
-                    // Identifica le braccia e abbassale dalla T-Pose
-                    const nodeName = (child.name || "").toLowerCase();
-                    if (nodeName.includes('arm') || nodeName.includes('braccio') || nodeName.includes('shoulder') || nodeName.includes('spalla')) {
-                        if (nodeName.includes('l') || nodeName.includes('left') || nodeName.includes('sinistra')) {
-                            child.rotation.z = -Math.PI / 2.6; // Abbassa braccio sinistro
-                        } else if (nodeName.includes('r') || nodeName.includes('right') || nodeName.includes('destra')) {
-                            child.rotation.z = Math.PI / 2.6;  // Abbassa braccio destro
+                    // Abbassa le braccia manipolando le ossa (Bone) o i nodi parent
+                    if (child.isBone || child.type === "Bone" || child.name.toLowerCase().includes("arm") || child.name.toLowerCase().includes("shoulder")) {
+                        const name = child.name.toLowerCase();
+                        if (name.includes("left") || name.includes("_l") || name.includes(".l")) {
+                            child.rotation.z -= 1.2; // Ruota braccio sinistro in basso
+                        } else if (name.includes("right") || name.includes("_r") || name.includes(".r")) {
+                            child.rotation.z += 1.2; // Ruota braccio destro in basso
                         }
                     }
                 });
@@ -207,36 +205,48 @@
         function setupControls() {
             const container = document.getElementById('joystick-container');
             const knob = document.getElementById('joystick-knob');
-            let active = false, touchId = null, center = { x: 0, y: 0 };
+            let activeTouchId = null;
+            let center = { x: 0, y: 0 };
 
-            function startJoystick(e) {
-                if (active) return;
-                const touches = e.changedTouches || [e];
-                for (let i = 0; i < touches.length; i++) {
-                    const t = touches[i];
-                    const rect = container.getBoundingClientRect();
-                    // Verifica se il touch è avvenuto nel joystick
-                    if (t.clientX >= rect.left && t.clientX <= rect.right &&
-                        t.clientY >= rect.top && t.clientY <= rect.bottom) {
-                        active = true;
-                        touchId = t.identifier !== undefined ? t.identifier : null;
-                        center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-                        moveJoystick(e);
+            // Gestione Joystick indipendente
+            container.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (activeTouchId !== null) return;
+                const touch = e.changedTouches[0];
+                activeTouchId = touch.identifier;
+                const rect = container.getBoundingClientRect();
+                center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                updateJoystick(touch);
+            }, { passive: false });
+
+            window.addEventListener('touchmove', (e) => {
+                if (activeTouchId === null) return;
+                for (let i = 0; i < e.touches.length; i++) {
+                    if (e.touches[i].identifier === activeTouchId) {
+                        updateJoystick(e.touches[i]);
                         break;
                     }
                 }
-            }
+            }, { passive: false });
 
-            function moveJoystick(e) {
-                if (!active) return;
-                let touch = null;
-                if (e.touches) {
-                    for (let i = 0; i < e.touches.length; i++) {
-                        if (e.touches[i].identifier === touchId) { touch = e.touches[i]; break; }
+            const stopJoystick = (e) => {
+                if (activeTouchId === null) return;
+                if (e.changedTouches) {
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === activeTouchId) {
+                            activeTouchId = null;
+                            knob.style.transform = `translate(0px, 0px)`;
+                            moveInput = { x: 0, y: 0 };
+                            break;
+                        }
                     }
-                    if (!touch) return;
-                } else { touch = e; }
+                }
+            };
 
+            window.addEventListener('touchend', stopJoystick);
+            window.addEventListener('touchcancel', stopJoystick);
+
+            function updateJoystick(touch) {
                 const dx = touch.clientX - center.x;
                 const dy = touch.clientY - center.y;
                 const maxDist = 45;
@@ -245,58 +255,27 @@
 
                 knob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
                 
-                // Direzione corretta: segue esattamente il dito
-                moveInput.x = (Math.cos(angle) * dist) / maxDist;
-                moveInput.y = (Math.sin(angle) * dist) / maxDist;
+                // INVERTITO E CORRETTO: Ora segue al 100% la direzione del dito
+                moveInput.x = (dx / maxDist);
+                moveInput.y = (dy / maxDist);
             }
 
-            function endJoystick(e) {
-                if (!active) return;
-                if (e.changedTouches) {
-                    for (let i = 0; i < e.changedTouches.length; i++) {
-                        if (e.changedTouches[i].identifier === touchId) {
-                            active = false; touchId = null;
-                            knob.style.transform = `translate(0px, 0px)`;
-                            moveInput = { x: 0, y: 0 };
-                            break;
-                        }
-                    }
-                } else {
-                    active = false; touchId = null;
-                    knob.style.transform = `translate(0px, 0px)`;
-                    moveInput = { x: 0, y: 0 };
-                }
-            }
-
-            // Listener multi-touch per evitare conflitti tra joystick e pulsanti
-            window.addEventListener('touchstart', startJoystick, { passive: false });
-            window.addEventListener('touchmove', moveJoystick, { passive: false });
-            window.addEventListener('touchend', endJoystick);
-            window.addEventListener('touchcancel', endJoystick);
-
-            container.addEventListener('mousedown', startJoystick);
-            window.addEventListener('mousemove', moveJoystick);
-            window.addEventListener('mouseup', endJoystick);
-
-            // Tasti Azione indipendenti per permettere il salto simultaneo
+            // Pulsante Salto Indipendente (non blocca il movimento)
             const jumpBtn = document.getElementById('btn-jump');
             const camBtn = document.getElementById('btn-cam');
 
-            const triggerJump = (e) => {
-                if (e.cancelable) e.preventDefault();
-                if (isGrounded) { verticalVelocity = 0.22; isGrounded = false; }
-            };
+            jumpBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (isGrounded) {
+                    verticalVelocity = 0.22;
+                    isGrounded = false;
+                }
+            }, { passive: false });
 
-            const triggerCam = (e) => {
-                if (e.cancelable) e.preventDefault();
+            camBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
                 cameraMode = (cameraMode + 1) % 2;
-            };
-
-            jumpBtn.addEventListener('touchstart', triggerJump, { passive: false });
-            jumpBtn.addEventListener('mousedown', triggerJump);
-
-            camBtn.addEventListener('touchstart', triggerCam, { passive: false });
-            camBtn.addEventListener('mousedown', triggerCam);
+            }, { passive: false });
         }
 
         function animate() {
@@ -307,18 +286,18 @@
             const speed = 0.14;
 
             if (inputMag > 0.1) {
-                // Calcolo angolare allineato con il movimento del dito
-                const targetAngle = Math.atan2(moveInput.x, moveInput.y);
+                // Orientamento basato sul joystick
+                const targetAngle = Math.atan2(-moveInput.x, -moveInput.y);
                 let diff = targetAngle - playerRotation;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                playerRotation += diff * 0.15;
+                playerRotation += diff * 0.18;
 
                 playerPos.x += Math.sin(playerRotation) * speed * inputMag;
                 playerPos.z += Math.cos(playerRotation) * speed * inputMag;
 
-                // Animazione camminata e movimento braccia/fianchi
-                walkTimer += delta * 10;
+                // Animazione camminata
+                walkTimer += delta * 12;
                 if (characterMesh) {
                     characterMesh.rotation.z = Math.sin(walkTimer) * 0.05;
                     characterMesh.rotation.x = Math.cos(walkTimer * 2) * 0.03;
@@ -332,7 +311,7 @@
                 }
             }
 
-            // Gravità e Salto
+            // Fisiatria e Gravità
             playerPos.y += verticalVelocity;
             if (!isGrounded) {
                 verticalVelocity -= 0.012;
@@ -343,7 +322,7 @@
                 }
             }
 
-            // Limiti mappa
+            // Limiti stanza
             const limit = 37.5;
             playerPos.x = THREE.MathUtils.clamp(playerPos.x, -limit, limit);
             playerPos.z = THREE.MathUtils.clamp(playerPos.z, -limit, limit);
@@ -353,7 +332,7 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
-            // Telecamera inseguimento
+            // Inseguimento Telecamera
             if (cameraMode === 0) {
                 camera.position.set(playerPos.x, playerPos.y + 3.8, playerPos.z + 7.5);
                 camera.lookAt(playerPos.x, playerPos.y + 1.6, playerPos.z);
