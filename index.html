@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Versione Stabile</title>
+    <title>3D Game - Singola Mappa Stabile</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -52,7 +52,7 @@
         STATO: <span id="status-text">AVVIO...</span><br>
         POS: X:<span id="posX">0</span> Y:<span id="posY">0</span> Z:<span id="posZ">0</span>
     </div>
-    <div id="status-log">Tocca il portale nella Mappa 1 per andare alla Mappa 2</div>
+    <div id="status-log">Inizializzazione mappa...</div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-jump" class="btn-action">SALTA</div>
@@ -65,13 +65,12 @@
         }
 
         let scene, camera, renderer, playerGroup, characterMesh, mapMesh;
-        let currentMapFile = 'mappa.glb'; 
         let mixer = null;
         let walkAction = null;
 
         const clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
-        let playerPos = new THREE.Vector3(0, 0, 0);
+        let playerPos = new THREE.Vector3(0, 0, 0); // Spawn base a terra
         let playerRotation = 0;
         let cameraYaw = 0;
         let cameraPitch = 0.15;
@@ -80,12 +79,6 @@
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
-        let portalObject = null; // Oggetto portale interattivo
-
-        const mapSpawnPoints = {
-            'mappa.glb': { x: 0, y: 0, z: 0 },
-            'mappa2.glb': { x: -89.5, y: 0.0, z: -4.6 }
-        };
 
         function init() {
             scene = new THREE.Scene();
@@ -100,7 +93,7 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            // Illuminazione forte e diffusa per evitare che il personaggio diventi nero
+            // Illuminazione stabile per evitare ombre nere improvvise sul personaggio
             const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
             scene.add(ambientLight);
 
@@ -113,28 +106,22 @@
             scene.add(mainLight);
 
             loadCharacter();
-            loadMap(currentMapFile);
+            loadMap();
             setupControls();
 
             animate();
         }
 
-        function loadMap(filename) {
+        function loadMap() {
             isMapLoaded = false; 
-            log("Caricamento " + filename + "...");
+            log("Caricamento mappa.glb...");
             document.getElementById('status-text').innerText = "CARICAMENTO";
 
             const loader = new THREE.GLTFLoader();
 
-            loader.load(filename, (gltf) => {
+            loader.load('mappa.glb', (gltf) => {
                 try {
-                    if (mapMesh) {
-                        scene.remove(mapMesh);
-                    }
-                    if (portalObject) {
-                        scene.remove(portalObject);
-                        portalObject = null;
-                    }
+                    if (mapMesh) scene.remove(mapMesh);
 
                     mapMesh = gltf.scene;
                     collidableObjects = [];
@@ -151,32 +138,16 @@
                         }
                     });
 
-                    const spawn = mapSpawnPoints[filename] || { x: 0, y: 0, z: 0 };
-                    playerPos.set(spawn.x, spawn.y, spawn.z);
-
-                    // Crea il portale interattivo solo nella prima mappa
-                    if (filename === 'mappa.glb') {
-                        const portalGeometry = new THREE.CylinderGeometry(0.8, 0.8, 2.5, 32);
-                        const portalMaterial = new THREE.MeshBasicMaterial({ 
-                            color: 0x00ffcc, 
-                            transparent: true, 
-                            opacity: 0.6,
-                            wireframe: false
-                        });
-                        portalObject = new THREE.Mesh(portalGeometry, portalMaterial);
-                        portalObject.position.set(0, 1.25, 3); // Posizionato davanti allo spawn
-                        scene.add(portalObject);
-                    }
-
+                    playerPos.set(0, 0, 0); // Coordinate di spawn iniziali
                     isMapLoaded = true; 
                     document.getElementById('status-text').innerText = "PRONTO";
-                    log(filename === 'mappa.glb' ? "Tocca il cilindro verde/azzurro per la Mappa 2" : "Mappa 2 caricata");
+                    log("Mappa caricata con successo!");
                 } catch (err) {
                     log("Errore script: " + err.message);
                     console.error(err);
                 }
             }, undefined, (error) => {
-                log("Errore file: " + filename + " non trovato!");
+                log("Errore: mappa.glb non trovato!");
                 console.error(error);
             });
         }
@@ -191,7 +162,7 @@
 
                 characterMesh.traverse((child) => {
                     if (child.isMesh) {
-                        child.castShadow = false; // Disattivato per evitare ombre nere improvvise sul modello
+                        child.castShadow = false; 
                         child.receiveShadow = false;
                         if (child.material) {
                             child.material.roughness = 0.6;
@@ -207,7 +178,7 @@
                 const scaleFactor = targetHeight / (size.y || 1);
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-                // Allineamento perfetto dei piedi sul piano Y=0
+                // Ancoraggio perfetto dei piedi sul pavimento
                 const updatedBox = new THREE.Box3().setFromObject(characterMesh);
                 characterMesh.position.y = -updatedBox.min.y;
 
@@ -217,7 +188,7 @@
                     mixer = new THREE.AnimationMixer(characterMesh);
                     walkAction = mixer.clipAction(gltf.animations[0]);
                     walkAction.setLoop(THREE.LoopRepeat);
-                    walkAction.stop(); // Parte fermo per evitare fluttuazioni statiche
+                    walkAction.stop(); // Fermo all'avvio per evitare fluttuazioni statiche
                     log("Personaggio pronto!");
                 } else {
                     log("Personaggio pronto (senza animazioni)");
@@ -239,23 +210,8 @@
             window.addEventListener('touchstart', (e) => {
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const touch = e.changedTouches[i];
-                    
-                    // Controllo se il giocatore ha toccato il portale per teletrasportarsi
-                    if (portalObject && currentMapFile === 'mappa.glb') {
-                        const mouse = new THREE.Vector2(
-                            (touch.clientX / window.innerWidth) * 2 - 1,
-                            -(touch.clientY / window.innerHeight) * 2 + 1
-                        );
-                        raycaster.setFromCamera(mouse, camera);
-                        const hits = raycaster.intersectObject(portalObject);
-                        if (hits.length > 0) {
-                            currentMapFile = 'mappa2.glb';
-                            loadMap(currentMapFile);
-                            return;
-                        }
-                    }
-
                     const rect = container.getBoundingClientRect();
+
                     if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
                         touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
                         if (joystickTouchId === null) {
@@ -328,6 +284,7 @@
             }, { passive: false });
         }
 
+        // Controllo collisioni per evitare di attraversare i muri
         function canMoveTo(targetPos) {
             if (collidableObjects.length === 0) return true;
 
@@ -376,12 +333,12 @@
                 nextZ.z += moveDir.z;
                 if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
 
-                // Avvia l'animazione solo quando si cammina
+                // Avvia l'animazione solo se ci si muove
                 if (walkAction && !walkAction.isRunning()) {
                     walkAction.play();
                 }
             } else {
-                // Ferma l'animazione quando è fermo per evitare fluttuazioni
+                // Ferma l'animazione se fermo
                 if (walkAction && walkAction.isRunning()) {
                     walkAction.stop();
                 }
@@ -394,6 +351,7 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
+            // Gestione telecamera con protezione anti-attraversamento muri
             if (cameraMode === 0) {
                 const targetDist = 2.5;
                 const headPos = playerPos.clone().add(new THREE.Vector3(0, 0.8, 0));
