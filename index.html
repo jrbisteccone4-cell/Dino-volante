@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Game - Velocità Controllata</title>
+    <title>3D Game - Mappa 1 e Mappa 2</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
@@ -33,13 +33,14 @@
 
         .btn-action {
             position: absolute; width: 68px; height: 68px; border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.6); color: white; font-weight: bold; font-size: 13px;
+            border: 2px solid rgba(255, 255, 255, 0.6); color: white; font-weight: bold; font-size: 12px;
             display: flex; align-items: center; justify-content: center; touch-action: none;
-            z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;
+            z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; text-align: center;
         }
         .btn-action:active { transform: scale(0.9); }
         #btn-cam { bottom: 30px; right: 20px; background: #007acc; }
-        #btn-jump { bottom: 110px; right: 20px; background: #28a745; }
+        #btn-jump { bottom: 105px; right: 20px; background: #28a745; }
+        #btn-interact { bottom: 180px; right: 20px; background: #ff9800; display: none; }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -56,13 +57,18 @@
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-jump" class="btn-action">SALTA</div>
     <div id="btn-cam" class="btn-action">VISTA</div>
+    <div id="btn-interact" class="btn-action">APRI / USA</div>
 
     <script>
         function log(msg) { document.getElementById('status-log').innerText = msg; }
 
         let scene, camera, renderer, playerGroup, characterMesh, mapMesh;
+        let currentMapFile = 'mappa.glb'; 
+        let doorMesh = null;
+        let doorOpen = false;
+        let canInteractWithDoor = false;
+
         const clock = new THREE.Clock();
-        
         let moveInput = { x: 0, y: 0 };
         let playerPos = new THREE.Vector3(0, 0, 0);
         let playerRotation = 0;
@@ -71,11 +77,10 @@
         let verticalVelocity = 0;
         let isGrounded = true;
         let cameraMode = 0;
-
         let walkCycle = 0;
 
         const raycaster = new THREE.Raycaster();
-        const collidableObjects = [];
+        let collidableObjects = [];
 
         function init() {
             scene = new THREE.Scene();
@@ -96,19 +101,26 @@
             mainLight.position.set(10, 20, 10);
             scene.add(mainLight);
 
-            loadMap();
+            loadMap(currentMapFile);
             loadCharacter();
             setupControls();
 
             animate();
         }
 
-        function loadMap() {
-            log("Caricamento mappa.glb...");
+        function loadMap(filename) {
+            log("Caricamento " + filename + "...");
             const loader = new THREE.GLTFLoader();
 
-            loader.load('mappa.glb', (gltf) => {
+            loader.load(filename, (gltf) => {
+                if (mapMesh) {
+                    scene.remove(mapMesh);
+                }
+
                 mapMesh = gltf.scene;
+                collidableObjects = [];
+                doorMesh = null;
+                doorOpen = false;
 
                 const box = new THREE.Box3().setFromObject(mapMesh);
                 const center = box.getCenter(new THREE.Vector3());
@@ -122,7 +134,11 @@
                         if (child.material) {
                             child.material.side = THREE.DoubleSide;
                         }
-                        collidableObjects.push(child);
+                        if (child.name.toLowerCase().includes('porta') || child.name.toLowerCase().includes('door')) {
+                            doorMesh = child;
+                        } else {
+                            collidableObjects.push(child);
+                        }
                     }
                 });
                 
@@ -130,7 +146,7 @@
                 spawnPlayerSafely();
                 log("Mappa pronta!");
             }, null, (error) => {
-                log("Errore carica mappa!");
+                log("Errore caricamento mappa!");
                 console.error(error);
             });
         }
@@ -151,9 +167,7 @@
             playerGroup = new THREE.Group();
             scene.add(playerGroup);
 
-            log("Caricamento personaggio.glb...");
             const loader = new THREE.GLTFLoader();
-
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
@@ -171,7 +185,6 @@
 
                 const box = new THREE.Box3().setFromObject(characterMesh);
                 const size = box.getSize(new THREE.Vector3());
-                
                 const targetHeight = 1.15; 
                 const scaleFactor = targetHeight / (size.y || 1);
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
@@ -181,7 +194,7 @@
 
                 playerGroup.add(characterMesh);
                 document.getElementById('status-text').innerText = "PRONTO";
-                log("Giocatore pronto!");
+                log("Personaggio pronto!");
             }, null, (error) => {
                 console.error(error);
             });
@@ -274,6 +287,46 @@
                 e.preventDefault();
                 cameraMode = (cameraMode + 1) % 2;
             }, { passive: false });
+
+            document.getElementById('btn-interact').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (canInteractWithDoor) {
+                    if (!doorOpen) {
+                        if (doorMesh) {
+                            doorMesh.position.x += 1.5;
+                        }
+                        doorOpen = true;
+                        log("Porta aperta! Tocca di nuovo per entrare.");
+                        document.getElementById('btn-interact').innerText = "ENTRA";
+                    } else {
+                        currentMapFile = (currentMapFile === 'mappa.glb') ? 'mappa2.glb' : 'mappa.glb';
+                        loadMap(currentMapFile);
+                        document.getElementById('btn-interact').style.display = 'none';
+                        canInteractWithDoor = false;
+                        document.getElementById('btn-interact').innerText = "APRI / USA";
+                    }
+                }
+            }, { passive: false });
+        }
+
+        function checkDoorProximity() {
+            if (!doorMesh) {
+                document.getElementById('btn-interact').style.display = 'none';
+                canInteractWithDoor = false;
+                return;
+            }
+
+            const doorWorldPos = new THREE.Vector3();
+            doorMesh.getWorldPosition(doorWorldPos);
+            const distance = playerPos.distanceTo(doorWorldPos);
+
+            if (distance < 2.5) {
+                document.getElementById('btn-interact').style.display = 'flex';
+                canInteractWithDoor = true;
+            } else {
+                document.getElementById('btn-interact').style.display = 'none';
+                canInteractWithDoor = false;
+            }
         }
 
         function canMoveTo(nextPos) {
@@ -349,9 +402,9 @@
             const delta = clock.getDelta();
 
             updatePhysics();
+            checkDoorProximity();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
-            // VELOCITÀ RIDOTTA E BILANCIATA (nei limiti ideali di camminata)
             const speed = 0.04; 
 
             if (inputMag > 0.1) {
