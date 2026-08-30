@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Versione Corretta</title>
+    <title>3D Game - Texture e Movimento Corretti</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -52,7 +52,7 @@
         STATO: <span id="status-text">AVVIO...</span><br>
         POS: X:<span id="posX">8.0</span> Y:<span id="posY">0</span> Z:<span id="posZ">0</span>
     </div>
-    <div id="status-log">Mappa pronta. Usa il joystick per camminare.</div>
+    <div id="status-log">Pronto. Usa il joystick per camminare/correre.</div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-jump" class="btn-action">SALTA</div>
@@ -70,7 +70,7 @@
 
         const clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
-        let playerPos = new THREE.Vector3(8.0, 0, 0); // X impostata a 8.0 come richiesto
+        let playerPos = new THREE.Vector3(8.0, 0, 0); // Spawn X: 8.0
         let playerRotation = 0;
         let cameraYaw = 0;
         let cameraPitch = 0.15;
@@ -80,7 +80,7 @@
         // Gestione Salto e Fisica
         let isJumping = false;
         let jumpVelocity = 0;
-        const gravity = 0.015;
+        const gravity = 0.018;
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
@@ -98,15 +98,15 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            // Illuminazione forte e bilanciata
-            const ambientLight = new THREE.AmbientLight(0xfff5ec, 1.5);
+            // Illuminazione ottimizzata per risaltare le texture originali
+            const ambientLight = new THREE.AmbientLight(0xfff5ec, 1.4);
             scene.add(ambientLight);
 
             const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
             hemiLight.position.set(0, 20, 0);
             scene.add(hemiLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            const mainLight = new THREE.DirectionalLight(0xfff3e0, 1.2);
             mainLight.position.set(10, 30, 10);
             scene.add(mainLight);
 
@@ -165,17 +165,20 @@
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
+                // Manteniamo le texture originali correggendo solo la tonalità se troppo bianca
                 characterMesh.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = false; 
                         child.receiveShadow = false;
-                        
-                        // Forziamo un materiale con colore della pelle caldo ed evitare il bianco cadaverico
-                        child.material = new THREE.MeshStandardMaterial({
-                            color: 0xe0ac69, // Tonalità pelle umana realistica
-                            roughness: 0.5,
-                            metalness: 0.1
-                        });
+                        if (child.material) {
+                            child.material.roughness = 0.5;
+                            child.material.metalness = 0.1;
+                            // Corregge la luce fredda/bianca fondendola con una tinta calda naturale senza perdere le texture
+                            if (child.material.color) {
+                                child.material.color.lerp(new THREE.Color(0xffdfc4), 0.25);
+                            }
+                            child.material.needsUpdate = true;
+                        }
                     }
                 });
 
@@ -185,7 +188,7 @@
                 const scaleFactor = targetHeight / (size.y || 1);
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-                // Ancoraggio millimetrico dei piedi esattamente sul pavimento (Y = 0)
+                // Ancoraggio millimetrico dei piedi sul pavimento (Y = 0)
                 const updatedBox = new THREE.Box3().setFromObject(characterMesh);
                 characterMesh.position.y = -updatedBox.min.y;
 
@@ -196,7 +199,7 @@
                     walkAction = mixer.clipAction(gltf.animations[0]);
                     walkAction.setLoop(THREE.LoopRepeat);
                     walkAction.stop(); 
-                    log("Personaggio pronto!");
+                    log("Personaggio e texture pronti!");
                 } else {
                     log("Personaggio pronto (senza animazioni)");
                 }
@@ -281,12 +284,11 @@
                 moveInput.y = (dy / maxDist);
             }
 
-            // Attivazione pulsante Salto con fisica
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (!isJumping) {
                     isJumping = true;
-                    jumpVelocity = 0.22; // Forza del salto
+                    jumpVelocity = 0.22;
                 }
             }, { passive: false });
 
@@ -324,16 +326,17 @@
             const delta = clock.getDelta();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
-            const speed = 0.04; 
+            // Velocità adattata per far corrispondere il passo dell'animazione ed evitare lo strisciamento
+            const currentSpeed = 0.035 * inputMag; 
 
             if (isMapLoaded && inputMag > 0.1) {
                 const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
                 playerRotation = moveAngle;
 
                 const moveDir = new THREE.Vector3(
-                    Math.sin(moveAngle) * speed * inputMag,
+                    Math.sin(moveAngle) * currentSpeed,
                     0,
-                    Math.cos(moveAngle) * speed * inputMag
+                    Math.cos(moveAngle) * currentSpeed
                 );
 
                 let nextX = playerPos.clone();
@@ -344,9 +347,9 @@
                 nextZ.z += moveDir.z;
                 if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
 
-                // Sincronizza la velocità dell'animazione con il movimento per evitare l'effetto scivolamento
+                // Sincronizzazione precisa della velocità dell'animazione (camminata / corsa)
                 if (walkAction) {
-                    walkAction.timeScale = inputMag * 2.5;
+                    walkAction.timeScale = inputMag * 2.0;
                     if (!walkAction.isRunning()) walkAction.play();
                 }
             } else {
@@ -355,7 +358,7 @@
                 }
             }
 
-            // Gestione della fisica del salto
+            // Fisica del salto
             if (isJumping) {
                 playerPos.y += jumpVelocity;
                 jumpVelocity -= gravity;
