@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Fix Spawn & Animazioni</title>
+    <title>3D Game - Spawn Regolabile</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -68,16 +68,22 @@
 
         let scene, camera, renderer, playerGroup, characterMesh, mapMesh;
         let currentMapFile = 'mappa.glb'; 
-        let mixer = null; // Per le animazioni del personaggio
+        let mixer = null;
 
         const clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
-        let playerPos = new THREE.Vector3(0, 3.0, 0); // Partenza alta per evitare i muri
+        let playerPos = new THREE.Vector3(0, 0.5, 0);
         let playerRotation = 0;
         let cameraYaw = 0;
         let cameraPitch = 0.15;
         let isMapLoaded = false;
         let cameraMode = 0;
+
+        // Configurazione delle coordinate esatte di spawn per ogni mappa
+        const mapSpawnPoints = {
+            'mappa.glb': { x: 0, y: 0.5, z: 0 },
+            'mappa2.glb': { x: 0, y: 0.5, z: 0 }
+        };
 
         function init() {
             scene = new THREE.Scene();
@@ -127,8 +133,9 @@
                         }
                     });
 
-                    // Riporta il personaggio in alto a ogni cambio mappa per evitare compenetrazioni
-                    playerPos.set(0, 3.0, 0);
+                    // Imposta lo spawn specifico per questa mappa
+                    const spawn = mapSpawnPoints[filename] || { x: 0, y: 0.5, z: 0 };
+                    playerPos.set(spawn.x, spawn.y, spawn.z);
 
                     isMapLoaded = true; 
                     document.getElementById('status-text').innerText = "PRONTO";
@@ -169,14 +176,13 @@
 
                 playerGroup.add(characterMesh);
 
-                // Attiva l'animazione inclusa nel file GLB (se presente)
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(characterMesh);
                     const action = mixer.clipAction(gltf.animations[0]);
                     action.play();
                     log("Animazione avviata!");
                 } else {
-                    log("Personaggio pronto (senza animazioni nel file)");
+                    log("Personaggio pronto!");
                 }
             }, undefined, (error) => {
                 log("Errore: personaggio.glb non trovato!");
