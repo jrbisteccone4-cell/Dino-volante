@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Game - Mappa 1 e Mappa 2</title>
+    <title>3D Game - Porta Automatica</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
@@ -39,8 +39,9 @@
         }
         .btn-action:active { transform: scale(0.9); }
         #btn-cam { bottom: 30px; right: 20px; background: #007acc; }
-        #btn-jump { bottom: 105px; right: 20px; background: #28a745; }
-        #btn-interact { bottom: 180px; right: 20px; background: #ff9800; display: none; }
+        #btn-jump { bottom: 110px; right: 20px; background: #28a745; }
+        /* Pulsante posizionato comodamente a sinistra del blocco comandi */
+        #btn-interact { bottom: 30px; right: 100px; background: #ff9800; display: none; }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -57,7 +58,7 @@
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-jump" class="btn-action">SALTA</div>
     <div id="btn-cam" class="btn-action">VISTA</div>
-    <div id="btn-interact" class="btn-action">APRI / USA</div>
+    <div id="btn-interact" class="btn-action">APRI</div>
 
     <script>
         function log(msg) { document.getElementById('status-log').innerText = msg; }
@@ -67,6 +68,8 @@
         let doorMesh = null;
         let doorOpen = false;
         let canInteractWithDoor = false;
+        let doorCloseTimer = null;
+        let originalDoorX = 0;
 
         const clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
@@ -121,6 +124,7 @@
                 collidableObjects = [];
                 doorMesh = null;
                 doorOpen = false;
+                if (doorCloseTimer) clearTimeout(doorCloseTimer);
 
                 const box = new THREE.Box3().setFromObject(mapMesh);
                 const center = box.getCenter(new THREE.Vector3());
@@ -136,6 +140,7 @@
                         }
                         if (child.name.toLowerCase().includes('porta') || child.name.toLowerCase().includes('door')) {
                             doorMesh = child;
+                            originalDoorX = child.position.x;
                         } else {
                             collidableObjects.push(child);
                         }
@@ -288,23 +293,25 @@
                 cameraMode = (cameraMode + 1) % 2;
             }, { passive: false });
 
+            // Tocco del pulsante: apre la porta e imposta la chiusura automatica
             document.getElementById('btn-interact').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (canInteractWithDoor) {
-                    if (!doorOpen) {
-                        if (doorMesh) {
-                            doorMesh.position.x += 1.5;
-                        }
-                        doorOpen = true;
-                        log("Porta aperta! Tocca di nuovo per entrare.");
-                        document.getElementById('btn-interact').innerText = "ENTRA";
-                    } else {
-                        currentMapFile = (currentMapFile === 'mappa.glb') ? 'mappa2.glb' : 'mappa.glb';
-                        loadMap(currentMapFile);
-                        document.getElementById('btn-interact').style.display = 'none';
-                        canInteractWithDoor = false;
-                        document.getElementById('btn-interact').innerText = "APRI / USA";
+                if (canInteractWithDoor && !doorOpen) {
+                    if (doorMesh) {
+                        doorMesh.position.x = originalDoorX + 1.5; // Apre la porta
                     }
+                    doorOpen = true;
+                    log("Porta aperta!");
+
+                    // Timer per la chiusura automatica dopo 4 secondi
+                    if (doorCloseTimer) clearTimeout(doorCloseTimer);
+                    doorCloseTimer = setTimeout(() => {
+                        if (doorMesh && doorOpen) {
+                            doorMesh.position.x = originalDoorX; // Richiude la porta
+                            doorOpen = false;
+                            log("Porta richiusa automaticamente.");
+                        }
+                    }, 4000);
                 }
             }, { passive: false });
         }
@@ -320,9 +327,20 @@
             doorMesh.getWorldPosition(doorWorldPos);
             const distance = playerPos.distanceTo(doorWorldPos);
 
+            // Se il giocatore è vicino alla porta
             if (distance < 2.5) {
-                document.getElementById('btn-interact').style.display = 'flex';
+                if (!doorOpen) {
+                    document.getElementById('btn-interact').style.display = 'flex';
+                }
                 canInteractWithDoor = true;
+
+                // Se la porta è aperta e il giocatore si avvicina molto, cambia mappa automaticamente
+                if (doorOpen && distance < 1.2) {
+                    currentMapFile = (currentMapFile === 'mappa.glb') ? 'mappa2.glb' : 'mappa.glb';
+                    loadMap(currentMapFile);
+                    document.getElementById('btn-interact').style.display = 'none';
+                    canInteractWithDoor = false;
+                }
             } else {
                 document.getElementById('btn-interact').style.display = 'none';
                 canInteractWithDoor = false;
