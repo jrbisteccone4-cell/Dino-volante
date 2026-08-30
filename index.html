@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Game - Fixed Controls & Pose</title>
+    <title>3D Backrooms Game</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #1a1a1a; font-family: sans-serif; touch-action: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
         canvas { display: block; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 1; }
 
         #hud {
@@ -48,7 +48,7 @@
 <body>
 
     <div id="hud">
-        STATO: <span id="status-text">CARICAMENTO...</span><br>
+        STATO: <span id="status-text">CARICAMENTO MAPPA...</span><br>
         POSIZIONE: X:<span id="posX">0</span> Z:<span id="posZ">0</span>
     </div>
     <div id="status-log">Inizializzazione...</div>
@@ -60,7 +60,7 @@
     <script>
         function log(msg) { document.getElementById('status-log').innerText = msg; }
 
-        let scene, camera, renderer, playerGroup, characterMesh;
+        let scene, camera, renderer, playerGroup, characterMesh, mapMesh;
         const clock = new THREE.Clock();
         
         let moveInput = { x: 0, y: 0 };
@@ -73,8 +73,8 @@
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xd0d0d0);
-            scene.fog = new THREE.FogExp2(0xd0d0d0, 0.015);
+            scene.background = new THREE.Color(0x111111);
+            scene.fog = new THREE.FogExp2(0x111111, 0.012);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -85,63 +85,45 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xdbe3ff, 0.9);
+            const ambientLight = new THREE.AmbientLight(0xfff5e6, 1.2);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffeedd, 1.2);
-            mainLight.position.set(15, 30, 15);
-            mainLight.castShadow = true;
+            const mainLight = new THREE.DirectionalLight(0xffe8cc, 0.8);
+            mainLight.position.set(20, 40, 20);
             scene.add(mainLight);
 
-            const fillLight = new THREE.DirectionalLight(0x99aacc, 0.4);
-            fillLight.position.set(-15, 15, -15);
-            scene.add(fillLight);
-
-            createRoom();
+            loadMap();
             loadCharacter();
-
             setupControls();
 
             animate();
         }
 
-        function createRoom() {
-            const roomSize = 80;
+        function loadMap() {
+            log("Caricamento mappa.glb...");
+            const loader = new THREE.GLTFLoader();
 
-            const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#2b3036'; ctx.fillRect(0, 0, 256, 256);
-            ctx.strokeStyle = '#15181b'; ctx.lineWidth = 6;
-            for (let i = 0; i <= 256; i += 32) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 256); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(256, i); ctx.stroke();
-            }
-            ctx.fillStyle = '#515963';
-            for (let x = 16; x < 256; x += 32) {
-                for (let y = 16; y < 256; y += 32) {
-                    ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+            loader.load('mappa.glb', (gltf) => {
+                mapMesh = gltf.scene;
+                mapMesh.traverse((child) => {
+                    if (child.isMesh) {
+                        child.receiveShadow = true;
+                        child.castShadow = true;
+                    }
+                });
+                scene.add(mapMesh);
+                log("Mappa Backrooms caricata!");
+            }, 
+            (xhr) => {
+                if (xhr.lengthComputable) {
+                    const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                    log(`Caricamento mappa: ${percent}%`);
                 }
-            }
-
-            const ironTexture = new THREE.CanvasTexture(canvas);
-            ironTexture.wrapS = THREE.RepeatWrapping;
-            ironTexture.wrapT = THREE.RepeatWrapping;
-            ironTexture.repeat.set(20, 20);
-
-            const floorMat = new THREE.MeshStandardMaterial({ map: ironTexture, roughness: 0.4, metalness: 0.6 });
-            const floor = new THREE.Mesh(new THREE.PlaneGeometry(roomSize, roomSize), floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
-
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.8 });
-            const wallGeo = new THREE.PlaneGeometry(roomSize, 30);
-            
-            const wallN = new THREE.Mesh(wallGeo, wallMat); wallN.position.set(0, 15, -roomSize / 2); scene.add(wallN);
-            const wallS = new THREE.Mesh(wallGeo, wallMat); wallS.position.set(0, 15, roomSize / 2); wallS.rotation.y = Math.PI; scene.add(wallS);
-            const wallE = new THREE.Mesh(wallGeo, wallMat); wallE.position.set(roomSize / 2, 15, 0); wallE.rotation.y = -Math.PI / 2; scene.add(wallE);
-            const wallW = new THREE.Mesh(wallGeo, wallMat); wallW.position.set(-roomSize / 2, 15, 0); wallW.rotation.y = Math.PI / 2; scene.add(wallW);
+            }, 
+            (error) => {
+                log("Errore: carica 'mappa.glb' su GitHub!");
+                console.error(error);
+            });
         }
 
         function loadCharacter() {
@@ -156,7 +138,7 @@
 
                 const box = new THREE.Box3().setFromObject(characterMesh);
                 const size = box.getSize(new THREE.Vector3());
-                const targetHeight = 2.7;
+                const targetHeight = 2.4;
                 const scaleFactor = targetHeight / (size.y || 1);
                 
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
@@ -168,36 +150,22 @@
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
-                        if (child.material) {
-                            child.material = child.material.clone();
-                            child.material.roughness = 0.6;
-                        }
                     }
 
-                    // Abbassa le braccia manipolando le ossa (Bone) o i nodi parent
                     if (child.isBone || child.type === "Bone" || child.name.toLowerCase().includes("arm") || child.name.toLowerCase().includes("shoulder")) {
                         const name = child.name.toLowerCase();
                         if (name.includes("left") || name.includes("_l") || name.includes(".l")) {
-                            child.rotation.z -= 1.2; // Ruota braccio sinistro in basso
+                            child.rotation.z -= 1.2;
                         } else if (name.includes("right") || name.includes("_r") || name.includes(".r")) {
-                            child.rotation.z += 1.2; // Ruota braccio destro in basso
+                            child.rotation.z += 1.2;
                         }
                     }
                 });
 
                 playerGroup.add(characterMesh);
-
                 document.getElementById('status-text').innerText = "PRONTO";
-                log("Personaggio pronto!");
-            }, 
-            (xhr) => {
-                if (xhr.lengthComputable) {
-                    const percent = Math.round((xhr.loaded / xhr.total) * 100);
-                    log(`Caricamento: ${percent}%`);
-                }
-            }, 
-            (error) => {
-                log("Errore nel caricamento del file .glb");
+                log("Giocatore pronto!");
+            }, null, (error) => {
                 console.error(error);
             });
         }
@@ -208,7 +176,6 @@
             let activeTouchId = null;
             let center = { x: 0, y: 0 };
 
-            // Gestione Joystick indipendente
             container.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (activeTouchId !== null) return;
@@ -255,12 +222,10 @@
 
                 knob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
                 
-                // INVERTITO E CORRETTO: Ora segue al 100% la direzione del dito
                 moveInput.x = (dx / maxDist);
                 moveInput.y = (dy / maxDist);
             }
 
-            // Pulsante Salto Indipendente (non blocca il movimento)
             const jumpBtn = document.getElementById('btn-jump');
             const camBtn = document.getElementById('btn-cam');
 
@@ -286,7 +251,6 @@
             const speed = 0.14;
 
             if (inputMag > 0.1) {
-                // Orientamento basato sul joystick
                 const targetAngle = Math.atan2(-moveInput.x, -moveInput.y);
                 let diff = targetAngle - playerRotation;
                 while (diff < -Math.PI) diff += Math.PI * 2;
@@ -296,7 +260,6 @@
                 playerPos.x += Math.sin(playerRotation) * speed * inputMag;
                 playerPos.z += Math.cos(playerRotation) * speed * inputMag;
 
-                // Animazione camminata
                 walkTimer += delta * 12;
                 if (characterMesh) {
                     characterMesh.rotation.z = Math.sin(walkTimer) * 0.05;
@@ -311,7 +274,6 @@
                 }
             }
 
-            // Fisiatria e Gravità
             playerPos.y += verticalVelocity;
             if (!isGrounded) {
                 verticalVelocity -= 0.012;
@@ -322,24 +284,18 @@
                 }
             }
 
-            // Limiti stanza
-            const limit = 37.5;
-            playerPos.x = THREE.MathUtils.clamp(playerPos.x, -limit, limit);
-            playerPos.z = THREE.MathUtils.clamp(playerPos.z, -limit, limit);
-
             if (playerGroup) {
                 playerGroup.position.copy(playerPos);
                 playerGroup.rotation.y = playerRotation;
             }
 
-            // Inseguimento Telecamera
             if (cameraMode === 0) {
-                camera.position.set(playerPos.x, playerPos.y + 3.8, playerPos.z + 7.5);
-                camera.lookAt(playerPos.x, playerPos.y + 1.6, playerPos.z);
+                camera.position.set(playerPos.x, playerPos.y + 3.5, playerPos.z + 6.5);
+                camera.lookAt(playerPos.x, playerPos.y + 1.5, playerPos.z);
             } else {
-                const headPos = new THREE.Vector3(0, 2.2, -0.2).applyQuaternion(playerGroup.quaternion);
+                const headPos = new THREE.Vector3(0, 2.0, -0.2).applyQuaternion(playerGroup.quaternion);
                 camera.position.copy(playerPos).add(headPos);
-                const lookTarget = new THREE.Vector3(0, 2.2, -5).applyQuaternion(playerGroup.quaternion);
+                const lookTarget = new THREE.Vector3(0, 2.0, -5).applyQuaternion(playerGroup.quaternion);
                 camera.lookAt(playerPos.clone().add(lookTarget));
             }
 
