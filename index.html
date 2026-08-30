@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Backrooms Game</title>
+    <title>3D Game - Correzione Collisioni e Spawn</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
@@ -48,8 +48,8 @@
 <body>
 
     <div id="hud">
-        STATO: <span id="status-text">CARICAMENTO MAPPA...</span><br>
-        POSIZIONE: X:<span id="posX">0</span> Z:<span id="posZ">0</span> Y:<span id="posY">0</span>
+        STATO: <span id="status-text">CARICAMENTO...</span><br>
+        POSIZIONE: X:<span id="posX">0</span> Y:<span id="posY">0</span> Z:<span id="posZ">0</span>
     </div>
     <div id="status-log">Inizializzazione...</div>
 
@@ -64,10 +64,12 @@
         const clock = new THREE.Clock();
         
         let moveInput = { x: 0, y: 0 };
-        let playerPos = new THREE.Vector3(2.0, 10.0, 2.0); // Parte dall'alto e cade sul pavimento
+        let playerPos = new THREE.Vector3(0, 0, 0);
         let playerRotation = 0;
+        let cameraYaw = 0;
+        let cameraPitch = 0.2;
         let verticalVelocity = 0;
-        let isGrounded = false;
+        let isGrounded = true;
         let cameraMode = 0;
         let walkTimer = 0;
 
@@ -77,7 +79,7 @@
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0a0a0a);
-            scene.fog = new THREE.FogExp2(0x0a0a0a, 0.02);
+            scene.fog = new THREE.FogExp2(0x0a0a0a, 0.015);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -88,12 +90,20 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xfff5e6, 2.0);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.8);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffe8cc, 1.2);
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
             mainLight.position.set(20, 50, 20);
             scene.add(mainLight);
+
+            // Base di sicurezza fisica (Impedisce la caduta all'infinito sotto quota 0)
+            const floorGeo = new THREE.PlaneGeometry(1000, 1000);
+            const floorMat = new THREE.MeshBasicMaterial({ visible: false });
+            const safetyFloor = new THREE.Mesh(floorGeo, floorMat);
+            safetyFloor.rotation.x = -Math.PI / 2;
+            safetyFloor.position.y = -0.01;
+            scene.add(safetyFloor);
 
             loadMap();
             loadCharacter();
@@ -109,20 +119,32 @@
             loader.load('mappa.glb', (gltf) => {
                 mapMesh = gltf.scene;
 
+                // Calcolo esatto dei confini della mappa 3D
+                const box = new THREE.Box3().setFromObject(mapMesh);
+                const center = box.getCenter(new THREE.Vector3());
+                
+                // Centra la mappa all'origine
+                mapMesh.position.x = -center.x;
+                mapMesh.position.z = -center.z;
+                mapMesh.position.y = -box.min.y; // Allinea il fondo della mappa a 0
+
                 mapMesh.traverse((child) => {
                     if (child.isMesh) {
                         child.receiveShadow = true;
                         child.castShadow = true;
-                        // Rende visibili anche le facce interne dei muri per evitare schermate nere
                         if (child.material) {
-                            child.material.side = THREE.DoubleSide;
+                            child.material.side = THREE.DoubleSide; // Rende i muri sempre solidi alla vista
                         }
                         collidableObjects.push(child);
                     }
                 });
                 
                 scene.add(mapMesh);
-                log("Mappa caricata!");
+
+                // Calcolo posizione di spawn sicura
+                spawnPlayerSafely();
+
+                log("Mappa caricata e stabilizzata!");
             }, 
             (xhr) => {
                 if (xhr.lengthComputable) {
@@ -131,9 +153,22 @@
                 }
             }, 
             (error) => {
-                log("Errore carica mappa!");
+                log("Errore caricamento mappa!");
                 console.error(error);
             });
+        }
+
+        function spawnPlayerSafely() {
+            // Posziona lo spawn sopra la mappa e usa il Raycast per trovare il primo pavimento solido sotto
+            playerPos.set(0, 50, 0);
+            raycaster.set(playerPos, new THREE.Vector3(0, -1, 0));
+            const hits = raycaster.intersectObjects(collidableObjects, true);
+
+            if (hits.length > 0) {
+                playerPos.y = hits[0].point.y + 0.1;
+            } else {
+                playerPos.set(0, 0.1, 0);
+            }
         }
 
         function loadCharacter() {
@@ -148,7 +183,7 @@
 
                 const box = new THREE.Box3().setFromObject(characterMesh);
                 const size = box.getSize(new THREE.Vector3());
-                const targetHeight = 1.3;
+                const targetHeight = 1.4;
                 const scaleFactor = targetHeight / (size.y || 1);
                 
                 characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
@@ -160,15 +195,6 @@
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
-                    }
-
-                    if (child.isBone || child.type === "Bone" || child.name.toLowerCase().includes("arm") || child.name.toLowerCase().includes("shoulder")) {
-                        const name = child.name.toLowerCase();
-                        if (name.includes("left") || name.includes("_l") || name.includes(".l")) {
-                            child.rotation.z -= 1.2;
-                        } else if (name.includes("right") || name.includes("_r") || name.includes(".r")) {
-                            child.rotation.z += 1.2;
-                        }
                     }
                 });
 
@@ -183,49 +209,70 @@
         function setupControls() {
             const container = document.getElementById('joystick-container');
             const knob = document.getElementById('joystick-knob');
-            let activeTouchId = null;
-            let center = { x: 0, y: 0 };
+            let joystickTouchId = null;
+            let cameraTouchId = null;
+            let joystickCenter = { x: 0, y: 0 };
+            let lastTouchPos = { x: 0, y: 0 };
 
-            container.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                if (activeTouchId !== null) return;
-                const touch = e.changedTouches[0];
-                activeTouchId = touch.identifier;
-                const rect = container.getBoundingClientRect();
-                center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-                updateJoystick(touch);
-            }, { passive: false });
-
-            window.addEventListener('touchmove', (e) => {
-                if (activeTouchId === null) return;
-                for (let i = 0; i < e.touches.length; i++) {
-                    if (e.touches[i].identifier === activeTouchId) {
-                        updateJoystick(e.touches[i]);
-                        break;
+            window.addEventListener('touchstart', (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    
+                    const rect = container.getBoundingClientRect();
+                    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+                        touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                        if (joystickTouchId === null) {
+                            joystickTouchId = touch.identifier;
+                            joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                            updateJoystick(touch);
+                        }
+                    } else {
+                        if (touch.clientX > window.innerWidth / 3 && cameraTouchId === null) {
+                            cameraTouchId = touch.identifier;
+                            lastTouchPos = { x: touch.clientX, y: touch.clientY };
+                        }
                     }
                 }
             }, { passive: false });
 
-            const stopJoystick = (e) => {
-                if (activeTouchId === null) return;
-                if (e.changedTouches) {
-                    for (let i = 0; i < e.changedTouches.length; i++) {
-                        if (e.changedTouches[i].identifier === activeTouchId) {
-                            activeTouchId = null;
-                            knob.style.transform = `translate(0px, 0px)`;
-                            moveInput = { x: 0, y: 0 };
-                            break;
-                        }
+            window.addEventListener('touchmove', (e) => {
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+
+                    if (touch.identifier === joystickTouchId) {
+                        updateJoystick(touch);
+                    } else if (touch.identifier === cameraTouchId) {
+                        const dx = touch.clientX - lastTouchPos.x;
+                        const dy = touch.clientY - lastTouchPos.y;
+
+                        cameraYaw -= dx * 0.005;
+                        cameraPitch = Math.max(-0.4, Math.min(0.8, cameraPitch + dy * 0.005));
+
+                        lastTouchPos = { x: touch.clientX, y: touch.clientY };
+                    }
+                }
+            }, { passive: false });
+
+            const stopTouch = (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === joystickTouchId) {
+                        joystickTouchId = null;
+                        knob.style.transform = `translate(0px, 0px)`;
+                        moveInput = { x: 0, y: 0 };
+                    }
+                    if (touch.identifier === cameraTouchId) {
+                        cameraTouchId = null;
                     }
                 }
             };
 
-            window.addEventListener('touchend', stopJoystick);
-            window.addEventListener('touchcancel', stopJoystick);
+            window.addEventListener('touchend', stopTouch);
+            window.addEventListener('touchcancel', stopTouch);
 
             function updateJoystick(touch) {
-                const dx = touch.clientX - center.x;
-                const dy = touch.clientY - center.y;
+                const dx = touch.clientX - joystickCenter.x;
+                const dy = touch.clientY - joystickCenter.y;
                 const maxDist = 45;
                 const dist = Math.min(Math.hypot(dx, dy), maxDist);
                 const angle = Math.atan2(dy, dx);
@@ -242,7 +289,7 @@
             jumpBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (isGrounded) {
-                    verticalVelocity = 0.22;
+                    verticalVelocity = 0.18;
                     isGrounded = false;
                 }
             }, { passive: false });
@@ -253,54 +300,46 @@
             }, { passive: false });
         }
 
-        // VERIFICA COLLISIONE PARATE E MURO
-        function isWallBlocked(targetPos) {
-            if (collidableObjects.length === 0) return false;
+        // RILEVAMENTO MULTI-RAGGIO PER IMPEDIRE IL PASSAGGIO ATTRAVERSO I MURI
+        function canMoveTo(nextPos) {
+            if (collidableObjects.length === 0) return true;
 
-            const checkHeight = 0.6;
-            const origin = targetPos.clone();
-            origin.y += checkHeight;
+            const checkHeights = [0.3, 0.8, 1.2]; // Controlla caviglie, vita e testa
+            const rayCount = 8; // 8 direzioni attorno al personaggio
+            const safeRadius = 0.5; // Distanza minima dal muro
 
-            const directions = [
-                new THREE.Vector3(1, 0, 0),
-                new THREE.Vector3(-1, 0, 0),
-                new THREE.Vector3(0, 0, 1),
-                new THREE.Vector3(0, 0, -1),
-                new THREE.Vector3(0.7, 0, 0.7),
-                new THREE.Vector3(-0.7, 0, 0.7),
-                new THREE.Vector3(0.7, 0, -0.7),
-                new THREE.Vector3(-0.7, 0, -0.7)
-            ];
+            for (let h of checkHeights) {
+                const origin = nextPos.clone();
+                origin.y += h;
 
-            const radius = 0.6; // Distanza dal muro
+                for (let i = 0; i < rayCount; i++) {
+                    const angle = (i / rayCount) * Math.PI * 2;
+                    const dir = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
 
-            for (let dir of directions) {
-                raycaster.set(origin, dir);
-                const hits = raycaster.intersectObjects(collidableObjects, true);
-                if (hits.length > 0 && hits[0].distance < radius) {
-                    return true;
+                    raycaster.set(origin, dir);
+                    const hits = raycaster.intersectObjects(collidableObjects, true);
+
+                    if (hits.length > 0 && hits[0].distance < safeRadius) {
+                        return false; // Trovato un muro troppo vicino, blocca il passo
+                    }
                 }
             }
-            return false;
+            return true;
         }
 
-        // RILEVAMENTO FISICO DEL PAVIMENTO
-        function updateGroundPhysics() {
+        // GESTIONE FISICA PAVIMENTO ED ELEVAZIONE TERRENO
+        function updatePhysics() {
             if (collidableObjects.length === 0) return;
 
-            // Lancia un raggio verso il basso partendo da sopra il personaggio
             const rayOrigin = playerPos.clone();
             rayOrigin.y += 1.0;
-            const rayDir = new THREE.Vector3(0, -1, 0);
+            raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
 
-            raycaster.set(rayOrigin, rayDir);
             const hits = raycaster.intersectObjects(collidableObjects, true);
 
             if (hits.length > 0) {
                 const floorY = hits[0].point.y;
-                
-                // Se il personaggio è caduto vicino al pavimento
-                if (playerPos.y <= floorY + 0.05 && verticalVelocity <= 0) {
+                if (playerPos.y <= floorY + 0.1 && verticalVelocity <= 0) {
                     playerPos.y = floorY;
                     verticalVelocity = 0;
                     isGrounded = true;
@@ -308,12 +347,17 @@
                     isGrounded = false;
                 }
             } else {
-                isGrounded = false;
+                if (playerPos.y <= 0) {
+                    playerPos.y = 0;
+                    verticalVelocity = 0;
+                    isGrounded = true;
+                } else {
+                    isGrounded = false;
+                }
             }
 
-            // Gravità
             if (!isGrounded) {
-                verticalVelocity -= 0.012;
+                verticalVelocity -= 0.01;
                 playerPos.y += verticalVelocity;
             }
         }
@@ -322,48 +366,37 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Calcolo Fisica di Caduta/Pavimento
-            updateGroundPhysics();
+            updatePhysics();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             const speed = 0.09;
 
             if (inputMag > 0.1) {
-                const targetAngle = Math.atan2(-moveInput.x, -moveInput.y);
-                let diff = targetAngle - playerRotation;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                playerRotation += diff * 0.18;
+                const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
+                playerRotation = moveAngle;
 
                 const moveDir = new THREE.Vector3(
-                    Math.sin(playerRotation) * speed * inputMag,
+                    Math.sin(moveAngle) * speed * inputMag,
                     0,
-                    Math.cos(playerRotation) * speed * inputMag
+                    Math.cos(moveAngle) * speed * inputMag
                 );
 
-                const nextX = playerPos.clone();
-                nextX.x += moveDir.x;
-                if (!isWallBlocked(nextX)) {
-                    playerPos.x = nextX.x;
+                // Prova movimento separato per asse X e Z per evitare incastri nei muri
+                const targetPosX = playerPos.clone();
+                targetPosX.x += moveDir.x;
+                if (canMoveTo(targetPosX)) {
+                    playerPos.x = targetPosX.x;
                 }
 
-                const nextZ = playerPos.clone();
-                nextZ.z += moveDir.z;
-                if (!isWallBlocked(nextZ)) {
-                    playerPos.z = nextZ.z;
+                const targetPosZ = playerPos.clone();
+                targetPosZ.z += moveDir.z;
+                if (canMoveTo(targetPosZ)) {
+                    playerPos.z = targetPosZ.z;
                 }
 
                 walkTimer += delta * 12;
                 if (characterMesh) {
-                    characterMesh.rotation.z = Math.sin(walkTimer) * 0.04;
-                    characterMesh.rotation.x = Math.cos(walkTimer * 2) * 0.02;
                     characterMesh.position.y = Math.abs(Math.sin(walkTimer)) * 0.04;
-                }
-            } else {
-                if (characterMesh) {
-                    characterMesh.rotation.z = THREE.MathUtils.lerp(characterMesh.rotation.z, 0, 0.1);
-                    characterMesh.rotation.x = THREE.MathUtils.lerp(characterMesh.rotation.x, 0, 0.1);
-                    characterMesh.position.y = THREE.MathUtils.lerp(characterMesh.position.y, 0, 0.1);
                 }
             }
 
@@ -372,33 +405,26 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
-            // TELECAMERA SENZA BUG
+            // GESTIONE POSIZIONAMENTO E ROTAZIONE TELECAMERA
             if (cameraMode === 0) {
-                const camOffset = new THREE.Vector3(0, 1.1, 1.8).applyQuaternion(playerGroup.quaternion);
-                const targetCamPos = playerPos.clone().add(camOffset);
+                const dist = 2.8;
+                const cx = playerPos.x - Math.sin(cameraYaw) * Math.cos(cameraPitch) * dist;
+                const cy = playerPos.y + 1.2 + Math.sin(cameraPitch) * dist;
+                const cz = playerPos.z - Math.cos(cameraYaw) * Math.cos(cameraPitch) * dist;
 
-                const camRayDir = targetCamPos.clone().sub(playerPos).normalize();
-                const camDist = targetCamPos.distanceTo(playerPos);
-
-                raycaster.set(playerPos.clone().add(new THREE.Vector3(0, 0.9, 0)), camRayDir);
-                const camHits = raycaster.intersectObjects(collidableObjects, true);
-
-                if (camHits.length > 0 && camHits[0].distance < camDist) {
-                    camera.position.copy(camHits[0].point).sub(camRayDir.clone().multiplyScalar(0.15));
-                } else {
-                    camera.position.copy(targetCamPos);
-                }
-                camera.lookAt(playerPos.x, playerPos.y + 0.9, playerPos.z);
+                camera.position.set(cx, Math.max(playerPos.y + 0.3, cy), cz);
+                camera.lookAt(playerPos.x, playerPos.y + 1.1, playerPos.z);
             } else {
-                const headPos = new THREE.Vector3(0, 1.1, -0.05).applyQuaternion(playerGroup.quaternion);
-                camera.position.copy(playerPos).add(headPos);
-                const lookTarget = new THREE.Vector3(0, 1.1, -3).applyQuaternion(playerGroup.quaternion);
-                camera.lookAt(playerPos.clone().add(lookTarget));
+                camera.position.set(playerPos.x, playerPos.y + 1.2, playerPos.z);
+                const lookX = playerPos.x + Math.sin(cameraYaw) * Math.cos(cameraPitch) * 5;
+                const lookY = playerPos.y + 1.2 - Math.sin(cameraPitch) * 5;
+                const lookZ = playerPos.z + Math.cos(cameraYaw) * Math.cos(cameraPitch) * 5;
+                camera.lookAt(lookX, lookY, lookZ);
             }
 
             document.getElementById('posX').innerText = playerPos.x.toFixed(1);
-            document.getElementById('posZ').innerText = playerPos.z.toFixed(1);
             document.getElementById('posY').innerText = playerPos.y.toFixed(1);
+            document.getElementById('posZ').innerText = playerPos.z.toFixed(1);
 
             renderer.render(scene, camera);
         }
