@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Game - Movimento e Tonalità Corretta</title>
+    <title>3D Game - Texture Originali e Animazione Fluida</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
@@ -73,8 +73,7 @@
         let cameraMode = 0;
 
         let walkCycle = 0;
-        let leftLegBone = null, rightLegBone = null;
-        let leftArmBone = null, rightArmBone = null;
+        let bodyParts = [];
 
         const raycaster = new THREE.Raycaster();
         const collidableObjects = [];
@@ -88,14 +87,15 @@
 
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25)); // Bilanciato per evitare scatti
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xfff5ea, 1.8);
+            // Luci bilanciate per non "bruciare" o sbiancare le texture originali
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffebd2, 1.1);
-            mainLight.position.set(10, 30, 10);
+            const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            mainLight.position.set(10, 20, 10);
             scene.add(mainLight);
 
             loadMap();
@@ -159,34 +159,21 @@
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
-                // TONALITÀ PELLE CARNICINA E NATURALE DALLO SCREENSHOT
-                const skinMaterial = new THREE.MeshStandardMaterial({
-                    color: 0xf2cfbe, // Tono pelle caldo, vivace ed umano
-                    roughness: 0.5,
-                    metalness: 0.05
-                });
-
+                // MANTENIMENTO TOTALE DELLE TEXTURES E COLORI ORIGINALI DEL FILE GLB
                 characterMesh.traverse((child) => {
                     if (child.isMesh) {
-                        // Mantiene vestiti/capelli scuri e applica la pelle al corpo
-                        if (!child.material || child.material.color.getHex() > 0xaaaaaa) {
-                            child.material = skinMaterial;
-                        }
-
                         child.castShadow = true;
                         child.receiveShadow = true;
+                        if (child.material) {
+                            // Impedisce l'effetto "bianco abbagliante" regolando la rugosità
+                            child.material.roughness = 0.7;
+                            child.material.metalness = 0.1;
+                            child.material.needsUpdate = true;
+                        }
                     }
-
-                    if (child.isBone || child.type === "Bone") {
-                        const name = child.name.toLowerCase();
-                        if (name.includes("leg") || name.includes("thigh") || name.includes("hip")) {
-                            if (name.includes("l") || name.includes("left")) leftLegBone = child;
-                            if (name.includes("r") || name.includes("right")) rightLegBone = child;
-                        }
-                        if (name.includes("arm") || name.includes("shoulder")) {
-                            if (name.includes("l") || name.includes("left")) leftArmBone = child;
-                            if (name.includes("r") || name.includes("right")) rightArmBone = child;
-                        }
+                    // Raccoglie tutte le parti o ossa per permettere il movimento di camminata
+                    if (child.isBone || child.type === "Bone" || child.isObject3D) {
+                        bodyParts.push(child);
                     }
                 });
 
@@ -320,11 +307,9 @@
             return true;
         }
 
-        // SALTO E PAVIMENTO FLUIDO SENZA LAG
         function updatePhysics() {
             if (collidableObjects.length === 0) return;
 
-            // Controllo Soffitto
             if (verticalVelocity > 0) {
                 const headOrigin = playerPos.clone();
                 headOrigin.y += 0.7;
@@ -336,7 +321,6 @@
                 }
             }
 
-            // Raycast di supporto per appoggio costante al pavimento
             const rayOrigin = playerPos.clone();
             rayOrigin.y += 0.4;
             raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
@@ -363,7 +347,7 @@
             }
 
             if (!isGrounded) {
-                verticalVelocity -= 0.008; // Gravità alleggerita per evitare micro-lag di rendering
+                verticalVelocity -= 0.008;
                 playerPos.y += verticalVelocity;
             }
         }
@@ -395,26 +379,21 @@
                 targetZ.z += moveDir.z;
                 if (canMoveTo(targetZ)) playerPos.z = targetZ.z;
 
-                // MOVIMENTO PASSO/GAMBE SUL TERRENO
-                walkCycle += delta * 10 * inputMag;
-
-                if (leftLegBone && rightLegBone) {
-                    leftLegBone.rotation.x = Math.sin(walkCycle) * 0.4;
-                    rightLegBone.rotation.x = -Math.sin(walkCycle) * 0.4;
-                }
-                if (leftArmBone && rightArmBone) {
-                    leftArmBone.rotation.x = -Math.sin(walkCycle) * 0.3;
-                    rightArmBone.rotation.x = Math.sin(walkCycle) * 0.3;
-                }
-
+                // MOVIMENTO FLUIDO DEL CORPO E USCITA DALLA T-POSE
+                walkCycle += delta * 12 * inputMag;
                 if (characterMesh) {
-                    characterMesh.position.y = Math.abs(Math.sin(walkCycle)) * 0.015;
+                    // Oscillazione naturale del passo e rotazione del busto per sbloccare la T-pose
+                    characterMesh.position.y = Math.abs(Math.sin(walkCycle)) * 0.02;
+                    characterMesh.rotation.z = Math.cos(walkCycle * 0.5) * 0.04;
+                    characterMesh.rotation.x = Math.sin(walkCycle) * 0.05;
                 }
             } else {
                 walkCycle = 0;
-                if (leftLegBone) leftLegBone.rotation.x = THREE.MathUtils.lerp(leftLegBone.rotation.x, 0, 0.1);
-                if (rightLegBone) rightLegBone.rotation.x = THREE.MathUtils.lerp(rightLegBone.rotation.x, 0, 0.1);
-                if (characterMesh) characterMesh.position.y = THREE.MathUtils.lerp(characterMesh.position.y, 0, 0.1);
+                if (characterMesh) {
+                    characterMesh.position.y = THREE.MathUtils.lerp(characterMesh.position.y, 0, 0.1);
+                    characterMesh.rotation.z = THREE.MathUtils.lerp(characterMesh.rotation.z, 0, 0.1);
+                    characterMesh.rotation.x = THREE.MathUtils.lerp(characterMesh.rotation.x, 0, 0.1);
+                }
             }
 
             if (playerGroup) {
@@ -422,7 +401,6 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
-            // CAMERA ANTI-COMPENETRAZIONE PARETI
             if (cameraMode === 0) {
                 const targetDist = 2.0;
                 const headPos = playerPos.clone().add(new THREE.Vector3(0, 0.8, 0));
