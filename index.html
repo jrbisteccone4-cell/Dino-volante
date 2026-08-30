@@ -59,6 +59,7 @@
 
         let scene, camera, renderer, sharkContainer;
         let mixer = null;
+        let tempSharkMesh = null;
         const clock = new THREE.Clock();
         const preyList = [];
         let moveInput = { x: 0, y: 0 };
@@ -98,7 +99,14 @@
             sharkContainer = new THREE.Group();
             scene.add(sharkContainer);
 
-            // Posizione iniziale della telecamera per inquadrare lo squalo al centro
+            // Modello temporaneo dello squalo in attesa del file 3D
+            const tempGeo = new THREE.ConeGeometry(1, 4, 8);
+            tempGeo.rotateX(Math.PI / 2);
+            const tempMat = new THREE.MeshPhongMaterial({ color: 0x888888 });
+            tempSharkMesh = new THREE.Mesh(tempGeo, tempMat);
+            sharkContainer.add(tempSharkMesh);
+
+            // Posizione iniziale della telecamera
             camera.position.set(0, 4, 18);
 
             loadGLTFModel();
@@ -106,12 +114,13 @@
             setupJoystick();
             setupButtons();
 
+            log("Oceano generato!");
             animate();
         }
 
         function createOceanFloor() {
             // Terreno sabbioso
-            const floorGeo = new THREE.PlaneGeometry(600, 600, 64, 64);
+            const floorGeo = new THREE.PlaneGeometry(600, 600, 32, 32);
             const pos = floorGeo.attributes.position;
             for (let i = 0; i < pos.count; i++) {
                 const vx = pos.getX(i);
@@ -152,7 +161,13 @@
             const loader = new THREE.GLTFLoader();
             
             loader.load('./scene.gltf', (gltf) => {
-                log("Squalo pronto!");
+                log("Squalo 3D caricato con successo!");
+                
+                // Rimuove lo squalo temporaneo grigio
+                if (tempSharkMesh) {
+                    sharkContainer.remove(tempSharkMesh);
+                }
+
                 const loadedMesh = gltf.scene;
 
                 loadedMesh.traverse((child) => {
@@ -163,7 +178,7 @@
                     }
                 });
 
-                // Centra e ridimensiona perfettamente lo squalo
+                // Centra e ridimensiona lo squalo
                 const box = new THREE.Box3().setFromObject(loadedMesh);
                 const size = box.getSize(new THREE.Vector3());
                 const center = box.getCenter(new THREE.Vector3());
@@ -172,7 +187,7 @@
 
                 const maxDim = Math.max(size.x, size.y, size.z);
                 if (maxDim > 0) {
-                    const targetSize = 7.0; // Dimensione ideale al centro dello schermo
+                    const targetSize = 7.0;
                     const scaleFactor = targetSize / maxDim;
                     loadedMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 }
@@ -187,7 +202,8 @@
             }, 
             undefined, 
             (err) => {
-                log("Errore nel caricamento del file 3D.");
+                log("Errore caricamento scene.gltf! Usando modello base.");
+                console.error(err);
             });
         }
 
@@ -314,14 +330,14 @@
             sharkContainer.position.addScaledVector(moveDir, speed);
             sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -20, 15);
 
-            // Inquadratura perfetta: lo squalo rimane fisso al centro dello schermo
+            // Telecamera insegue lo squalo
             const offset = new THREE.Vector3(0, 3.5, 14).applyQuaternion(sharkContainer.quaternion);
             camera.position.copy(sharkContainer.position).add(offset);
             
             const lookTarget = sharkContainer.position.clone().add(new THREE.Vector3(0, 1, 0));
             camera.lookAt(lookTarget);
 
-            // Movimento dei pesci
+            // Movimento pesci
             preyList.forEach(prey => prey.translateZ(prey.userData.speed));
 
             renderer.render(scene, camera);
@@ -334,7 +350,8 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        window.addEventListener('DOMContentLoaded', init);
+        // Avvio diretto senza attendere DOMContentLoaded
+        init();
     </script>
 </body>
 </html>
