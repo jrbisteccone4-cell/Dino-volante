@@ -41,51 +41,53 @@
             position: absolute;
             bottom: 30px;
             left: 30px;
-            width: 110px;
-            height: 110px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 50%;
             touch-action: none;
             z-index: 10;
         }
         #joystick-knob {
             position: absolute;
-            top: 32px;
-            left: 32px;
-            width: 45px;
-            height: 45px;
+            top: 35px;
+            left: 35px;
+            width: 50px;
+            height: 50px;
             background: #ffffff;
             border-radius: 50%;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            pointer-events: none;
         }
 
         .btn-action {
             position: absolute;
-            width: 70px;
-            height: 70px;
+            width: 75px;
+            height: 75px;
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.6);
             color: white;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
             touch-action: manipulation;
             z-index: 10;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            cursor: pointer;
         }
         .btn-action:active {
             transform: scale(0.9);
         }
         #btn-bite {
-            bottom: 30px;
+            bottom: 35px;
             right: 30px;
             background: rgba(220, 53, 69, 0.85);
         }
         #btn-dash {
-            bottom: 110px;
+            bottom: 125px;
             right: 35px;
             background: rgba(255, 193, 7, 0.85);
             color: #000;
@@ -120,7 +122,7 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x011326);
-        scene.fog = new THREE.FogExp2(0x011326, 0.012);
+        scene.fog = new THREE.FogExp2(0x011326, 0.008);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         
@@ -139,11 +141,11 @@
         sunLight.position.set(30, 100, 30);
         scene.add(sunLight);
 
-        const seabedGeo = new THREE.PlaneGeometry(600, 600, 32, 32);
+        const seabedGeo = new THREE.PlaneGeometry(800, 800, 32, 32);
         const seabedMat = new THREE.MeshStandardMaterial({ color: 0x0f2a1d, roughness: 0.9 });
         const seabed = new THREE.Mesh(seabedGeo, seabedMat);
         seabed.rotation.x = -Math.PI / 2;
-        seabed.position.y = -30;
+        seabed.position.y = -50;
         scene.add(seabed);
 
         const sharkContainer = new THREE.Group();
@@ -154,7 +156,6 @@
 
         const loader = new GLTFLoader();
 
-        // Caricamento del file con il nome esatto caricato su GitHub
         loader.load(
             './Squalo%20che%20nuota.glb',
             (gltf) => {
@@ -185,18 +186,18 @@
         );
 
         const preyList = [];
-        const preyGeo = new THREE.ConeGeometry(0.3, 1, 6);
+        const preyGeo = new THREE.ConeGeometry(0.4, 1.2, 6);
         preyGeo.rotateX(Math.PI / 2);
 
-        for (let i = 0; i < 70; i++) {
+        for (let i = 0; i < 80; i++) {
             const mat = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff, roughness: 0.3 });
             const fish = new THREE.Mesh(preyGeo, mat);
             fish.position.set(
-                (Math.random() - 0.5) * 200,
-                Math.random() * 20 - 15,
-                (Math.random() - 0.5) * 200
+                (Math.random() - 0.5) * 300,
+                Math.random() * 40 - 20,
+                (Math.random() - 0.5) * 300
             );
-            fish.userData = { speed: Math.random() * 0.05 + 0.02 };
+            fish.userData = { speed: Math.random() * 0.08 + 0.03 };
             scene.add(fish);
             preyList.push(fish);
         }
@@ -210,55 +211,98 @@
         const joystickKnob = document.getElementById('joystick-knob');
         let joystickActive = false;
         let joystickCenter = { x: 0, y: 0 };
+        let touchId = null;
 
         function handleStart(e) {
-            joystickActive = true;
-            const touch = e.touches ? e.touches[0] : e;
+            if (joystickActive) return;
+            const touch = e.changedTouches ? e.changedTouches[0] : e;
+            if (e.changedTouches) touchId = touch.identifier;
+            
             const rect = joystickContainer.getBoundingClientRect();
             joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+            joystickActive = true;
             handleMove(e);
         }
 
         function handleMove(e) {
             if (!joystickActive) return;
-            const touch = e.touches ? e.touches[0] : e;
+            let touch = null;
+            if (e.touches) {
+                for (let i = 0; i < e.touches.length; i++) {
+                    if (e.touches[i].identifier === touchId) {
+                        touch = e.touches[i];
+                        break;
+                    }
+                }
+                if (!touch) return;
+            } else {
+                touch = e;
+            }
+
             const dx = touch.clientX - joystickCenter.x;
             const dy = touch.clientY - joystickCenter.y;
-            const dist = Math.min(Math.hypot(dx, dy), 35);
+            const maxDist = 40;
+            const dist = Math.min(Math.hypot(dx, dy), maxDist);
             const angle = Math.atan2(dy, dx);
 
             const knobX = Math.cos(angle) * dist;
             const knobY = Math.sin(angle) * dist;
 
             joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
-            moveInput.x = knobX / 35;
-            moveInput.y = knobY / 35;
+            moveInput.x = knobX / maxDist;
+            moveInput.y = knobY / maxDist;
         }
 
-        function handleEnd() {
+        function handleEnd(e) {
+            if (!joystickActive) return;
+            if (e.changedTouches) {
+                let ended = false;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === touchId) {
+                        ended = true;
+                        break;
+                    }
+                }
+                if (!ended) return;
+            }
             joystickActive = false;
+            touchId = null;
             joystickKnob.style.transform = `translate(0px, 0px)`;
             moveInput = { x: 0, y: 0 };
         }
 
-        joystickContainer.addEventListener('touchstart', handleStart);
-        window.addEventListener('touchmove', handleMove);
+        joystickContainer.addEventListener('touchstart', handleStart, { passive: false });
+        window.addEventListener('touchmove', handleMove, { passive: false });
         window.addEventListener('touchend', handleEnd);
+        window.addEventListener('touchcancel', handleEnd);
+
         joystickContainer.addEventListener('mousedown', handleStart);
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleEnd);
 
-        document.getElementById('btn-dash').addEventListener('click', () => {
+        document.getElementById('btn-dash').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            triggerDash();
+        });
+        document.getElementById('btn-dash').addEventListener('click', triggerDash);
+
+        function triggerDash() {
             if (isDashing) return;
             isDashing = true;
-            setTimeout(() => isDashing = false, 1000);
-        });
+            setTimeout(() => isDashing = false, 1200);
+        }
 
-        document.getElementById('btn-bite').addEventListener('click', () => {
+        document.getElementById('btn-bite').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            triggerBite();
+        });
+        document.getElementById('btn-bite').addEventListener('click', triggerBite);
+
+        function triggerBite() {
             const sharkPos = sharkContainer.position;
             for (let i = preyList.length - 1; i >= 0; i--) {
                 const prey = preyList[i];
-                if (prey.position.distanceTo(sharkPos) < 4.5) {
+                if (prey.position.distanceTo(sharkPos) < 6.0) {
                     scene.remove(prey);
                     preyList.splice(i, 1);
                     score += 100;
@@ -267,32 +311,16 @@
                     document.getElementById('eaten').innerText = eatenCount;
                 }
             }
-        });
+        }
 
-        let cameraAngleYaw = 0;
-        let cameraAnglePitch = 0.2;
-        let isDraggingCam = false;
-        let prevTouch = { x: 0, y: 0 };
+        let targetPitch = 0;
+        let targetYaw = 0;
+        let currentPitch = 0;
+        let currentYaw = 0;
 
-        window.addEventListener('pointerdown', (e) => {
-            if (e.clientX > window.innerWidth / 2) {
-                isDraggingCam = true;
-                prevTouch = { x: e.clientX, y: e.clientY };
-            }
-        });
-
-        window.addEventListener('pointermove', (e) => {
-            if (!isDraggingCam) return;
-            const dx = e.clientX - prevTouch.x;
-            const dy = e.clientY - prevTouch.y;
-
-            cameraAngleYaw -= dx * 0.005;
-            cameraAnglePitch = Math.max(-0.4, Math.min(0.6, cameraAnglePitch + dy * 0.005));
-
-            prevTouch = { x: e.clientX, y: e.clientY };
-        });
-
-        window.addEventListener('pointerup', () => isDraggingCam = false);
+        const cameraOffset = new THREE.Vector3(0, 5, 22);
+        const currentCamPos = new THREE.Vector3();
+        const currentTargetPos = new THREE.Vector3();
 
         function animate() {
             requestAnimationFrame(animate);
@@ -300,21 +328,34 @@
 
             if (mixer) mixer.update(delta);
 
-            const speed = isDashing ? 0.35 : 0.15;
+            const speed = isDashing ? 0.45 : 0.22;
 
-            if (Math.abs(moveInput.x) > 0.05 || Math.abs(moveInput.y) > 0.05) {
-                sharkContainer.rotation.y -= moveInput.x * 0.03;
-                sharkContainer.translateZ(moveInput.y * speed);
-                sharkContainer.position.y = Math.max(-28, Math.min(10, sharkContainer.position.y - moveInput.y * 0.05));
+            if (Math.hypot(moveInput.x, moveInput.y) > 0.05) {
+                targetYaw -= moveInput.x * 0.035;
+                targetPitch = THREE.MathUtils.clamp(targetPitch - moveInput.y * 0.025, -0.6, 0.6);
+            } else {
+                targetPitch = THREE.MathUtils.lerp(targetPitch, 0, 0.02);
             }
 
-            const camDist = 10;
-            const camX = sharkContainer.position.x + camDist * Math.sin(cameraAngleYaw) * Math.cos(cameraAnglePitch);
-            const camY = sharkContainer.position.y + camDist * Math.sin(cameraAnglePitch) + 2;
-            const camZ = sharkContainer.position.z + camDist * Math.cos(cameraAngleYaw) * Math.cos(cameraAnglePitch);
+            currentYaw = THREE.MathUtils.lerp(currentYaw, targetYaw, 0.08);
+            currentPitch = THREE.MathUtils.lerp(currentPitch, targetPitch, 0.08);
 
-            camera.position.set(camX, camY, camZ);
-            camera.lookAt(sharkContainer.position.x, sharkContainer.position.y, sharkContainer.position.z);
+            sharkContainer.rotation.identity();
+            sharkContainer.rotation.y = currentYaw;
+            sharkContainer.rotateX(currentPitch);
+
+            const moveDir = new THREE.Vector3(0, 0, -1).applyQuaternion(sharkContainer.quaternion);
+            sharkContainer.position.addScaledVector(moveDir, speed);
+            sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -45, 15);
+
+            const idealCamPos = cameraOffset.clone().applyQuaternion(sharkContainer.quaternion).add(sharkContainer.position);
+            const idealTarget = sharkContainer.position.clone().add(new THREE.Vector3(0, 1, 0));
+
+            currentCamPos.lerp(idealCamPos, 0.06);
+            currentTargetPos.lerp(idealTarget, 0.08);
+
+            camera.position.copy(currentCamPos);
+            camera.lookAt(currentTargetPos);
 
             preyList.forEach(prey => {
                 prey.translateZ(prey.userData.speed);
