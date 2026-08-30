@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Game - Texture Originali e Animazione Fluida</title>
+    <title>3D Game - Velocità Controllata</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
@@ -73,7 +73,6 @@
         let cameraMode = 0;
 
         let walkCycle = 0;
-        let bodyParts = [];
 
         const raycaster = new THREE.Raycaster();
         const collidableObjects = [];
@@ -90,7 +89,6 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
             document.body.appendChild(renderer.domElement);
 
-            // Luci bilanciate per non "bruciare" o sbiancare le texture originali
             const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
             scene.add(ambientLight);
 
@@ -159,21 +157,15 @@
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
 
-                // MANTENIMENTO TOTALE DELLE TEXTURES E COLORI ORIGINALI DEL FILE GLB
                 characterMesh.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
                         if (child.material) {
-                            // Impedisce l'effetto "bianco abbagliante" regolando la rugosità
                             child.material.roughness = 0.7;
                             child.material.metalness = 0.1;
                             child.material.needsUpdate = true;
                         }
-                    }
-                    // Raccoglie tutte le parti o ossa per permettere il movimento di camminata
-                    if (child.isBone || child.type === "Bone" || child.isObject3D) {
-                        bodyParts.push(child);
                     }
                 });
 
@@ -359,7 +351,8 @@
             updatePhysics();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
-            const speed = 0.075;
+            // VELOCITÀ RIDOTTA E BILANCIATA (nei limiti ideali di camminata)
+            const speed = 0.04; 
 
             if (inputMag > 0.1) {
                 const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
@@ -379,13 +372,11 @@
                 targetZ.z += moveDir.z;
                 if (canMoveTo(targetZ)) playerPos.z = targetZ.z;
 
-                // MOVIMENTO FLUIDO DEL CORPO E USCITA DALLA T-POSE
-                walkCycle += delta * 12 * inputMag;
+                walkCycle += delta * 8 * inputMag;
                 if (characterMesh) {
-                    // Oscillazione naturale del passo e rotazione del busto per sbloccare la T-pose
-                    characterMesh.position.y = Math.abs(Math.sin(walkCycle)) * 0.02;
-                    characterMesh.rotation.z = Math.cos(walkCycle * 0.5) * 0.04;
-                    characterMesh.rotation.x = Math.sin(walkCycle) * 0.05;
+                    characterMesh.position.y = Math.abs(Math.sin(walkCycle)) * 0.015;
+                    characterMesh.rotation.z = Math.cos(walkCycle * 0.5) * 0.03;
+                    characterMesh.rotation.x = Math.sin(walkCycle) * 0.04;
                 }
             } else {
                 walkCycle = 0;
