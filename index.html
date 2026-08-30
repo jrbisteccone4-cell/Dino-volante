@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Singola Mappa Ottimizzata</title>
+    <title>3D Game - Versione Corretta</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -50,9 +50,9 @@
 
     <div id="hud">
         STATO: <span id="status-text">AVVIO...</span><br>
-        POS: X:<span id="posX">0</span> Y:<span id="posY">0</span> Z:<span id="posZ">0</span>
+        POS: X:<span id="posX">8.0</span> Y:<span id="posY">0</span> Z:<span id="posZ">0</span>
     </div>
-    <div id="status-log">Inizializzazione mappa...</div>
+    <div id="status-log">Mappa pronta. Usa il joystick per camminare.</div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="btn-jump" class="btn-action">SALTA</div>
@@ -70,12 +70,17 @@
 
         const clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
-        let playerPos = new THREE.Vector3(8.0, 0, 0); // Spawn impostato a X: 8.0
+        let playerPos = new THREE.Vector3(8.0, 0, 0); // X impostata a 8.0 come richiesto
         let playerRotation = 0;
         let cameraYaw = 0;
         let cameraPitch = 0.15;
         let isMapLoaded = false;
         let cameraMode = 0;
+
+        // Gestione Salto e Fisica
+        let isJumping = false;
+        let jumpVelocity = 0;
+        const gravity = 0.015;
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
@@ -93,15 +98,15 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            // Illuminazione bilanciata per valorizzare i colori della pelle e dell'ambiente
-            const ambientLight = new THREE.AmbientLight(0xfff5ec, 1.4);
+            // Illuminazione forte e bilanciata
+            const ambientLight = new THREE.AmbientLight(0xfff5ec, 1.5);
             scene.add(ambientLight);
 
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.9);
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
             hemiLight.position.set(0, 20, 0);
             scene.add(hemiLight);
 
-            const mainLight = new THREE.DirectionalLight(0xfff3e0, 1.1);
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
             mainLight.position.set(10, 30, 10);
             scene.add(mainLight);
 
@@ -138,7 +143,7 @@
                         }
                     });
 
-                    playerPos.set(8.0, 0, 0); // Posizione di spawn iniziale precisa
+                    playerPos.set(8.0, 0, 0); 
                     isMapLoaded = true; 
                     document.getElementById('status-text').innerText = "PRONTO";
                     log("Mappa caricata con successo!");
@@ -164,18 +169,13 @@
                     if (child.isMesh) {
                         child.castShadow = false; 
                         child.receiveShadow = false;
-                        if (child.material) {
-                            // Corregge l'incarnato troppo bianco/cadaverico dando una tonalità calda e umana
-                            if (child.material.color) {
-                                let col = child.material.color;
-                                if (col.r > 0.75 && col.g > 0.75 && col.b > 0.75) {
-                                    child.material.color.setHex(0xffdfc4); // Tonalità pelle calda
-                                }
-                            }
-                            child.material.roughness = 0.5;
-                            child.material.metalness = 0.1;
-                            child.material.needsUpdate = true;
-                        }
+                        
+                        // Forziamo un materiale con colore della pelle caldo ed evitare il bianco cadaverico
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: 0xe0ac69, // Tonalità pelle umana realistica
+                            roughness: 0.5,
+                            metalness: 0.1
+                        });
                     }
                 });
 
@@ -195,7 +195,7 @@
                     mixer = new THREE.AnimationMixer(characterMesh);
                     walkAction = mixer.clipAction(gltf.animations[0]);
                     walkAction.setLoop(THREE.LoopRepeat);
-                    walkAction.stop(); // Fermo all'avvio per evitare fluttuazioni statiche
+                    walkAction.stop(); 
                     log("Personaggio pronto!");
                 } else {
                     log("Personaggio pronto (senza animazioni)");
@@ -281,8 +281,13 @@
                 moveInput.y = (dy / maxDist);
             }
 
+            // Attivazione pulsante Salto con fisica
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                if (!isJumping) {
+                    isJumping = true;
+                    jumpVelocity = 0.22; // Forza del salto
+                }
             }, { passive: false });
 
             document.getElementById('btn-cam').addEventListener('touchstart', (e) => {
@@ -339,12 +344,25 @@
                 nextZ.z += moveDir.z;
                 if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
 
-                if (walkAction && !walkAction.isRunning()) {
-                    walkAction.play();
+                // Sincronizza la velocità dell'animazione con il movimento per evitare l'effetto scivolamento
+                if (walkAction) {
+                    walkAction.timeScale = inputMag * 2.5;
+                    if (!walkAction.isRunning()) walkAction.play();
                 }
             } else {
                 if (walkAction && walkAction.isRunning()) {
                     walkAction.stop();
+                }
+            }
+
+            // Gestione della fisica del salto
+            if (isJumping) {
+                playerPos.y += jumpVelocity;
+                jumpVelocity -= gravity;
+                if (playerPos.y <= 0) {
+                    playerPos.y = 0;
+                    isJumping = false;
+                    jumpVelocity = 0;
                 }
             }
 
