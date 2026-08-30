@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Spawn Regolabile</title>
+    <title>3D Game - Definitivo con Collisioni</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -72,17 +72,23 @@
 
         const clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
-        let playerPos = new THREE.Vector3(0, 0.5, 0);
+        let playerPos = new THREE.Vector3(0, 0, 0);
         let playerRotation = 0;
         let cameraYaw = 0;
         let cameraPitch = 0.15;
         let isMapLoaded = false;
         let cameraMode = 0;
 
-        // Configurazione delle coordinate esatte di spawn per ogni mappa
+        const raycaster = new THREE.Raycaster();
+        let collidableObjects = [];
+
+        // =========================================================================
+        // CONFIGURAZIONE SPAWN E COORDINATE PER MAPPA
+        // Modifica x, y, z per decidere esattamente dove far spawnare il personaggio
+        // =========================================================================
         const mapSpawnPoints = {
-            'mappa.glb': { x: 0, y: 0.5, z: 0 },
-            'mappa2.glb': { x: 0, y: 0.5, z: 0 }
+            'mappa.glb': { x: 0, y: 0, z: 0 },
+            'mappa2.glb': { x: -89.5, y: 0.5, z: -4.6 } // Esempio con le coordinate della tua seconda mappa
         };
 
         function init() {
@@ -125,16 +131,20 @@
                     }
 
                     mapMesh = gltf.scene;
+                    collidableObjects = [];
                     scene.add(mapMesh);
 
                     mapMesh.traverse((child) => {
-                        if (child.isMesh && child.material) {
-                            child.material.side = THREE.DoubleSide;
+                        if (child.isMesh) {
+                            if (child.material) {
+                                child.material.side = THREE.DoubleSide;
+                            }
+                            collidableObjects.push(child);
                         }
                     });
 
-                    // Imposta lo spawn specifico per questa mappa
-                    const spawn = mapSpawnPoints[filename] || { x: 0, y: 0.5, z: 0 };
+                    // Applica lo spawn configurato per questa mappa
+                    const spawn = mapSpawnPoints[filename] || { x: 0, y: 0, z: 0 };
                     playerPos.set(spawn.x, spawn.y, spawn.z);
 
                     isMapLoaded = true; 
@@ -180,7 +190,7 @@
                     mixer = new THREE.AnimationMixer(characterMesh);
                     const action = mixer.clipAction(gltf.animations[0]);
                     action.play();
-                    log("Animazione avviata!");
+                    log("Personaggio e animazioni pronti!");
                 } else {
                     log("Personaggio pronto!");
                 }
@@ -282,6 +292,30 @@
             }, { passive: false });
         }
 
+        // Controllo collisioni per evitare di attraversare i muri
+        function canMoveTo(targetPos) {
+            if (collidableObjects.length === 0) return true;
+
+            const origin = targetPos.clone();
+            origin.y += 0.4; // Altezza petto/corpo
+
+            const directions = [
+                new THREE.Vector3(1, 0, 0),
+                new THREE.Vector3(-1, 0, 0),
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(0, 0, -1)
+            ];
+
+            for (let dir of directions) {
+                raycaster.set(origin, dir);
+                const hits = raycaster.intersectObjects(collidableObjects, true);
+                if (hits.length > 0 && hits[0].distance < 0.3) {
+                    return false; // Muro vicino, blocca il movimento
+                }
+            }
+            return true;
+        }
+
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
@@ -301,8 +335,14 @@
                     Math.cos(moveAngle) * speed * inputMag
                 );
 
-                playerPos.x += moveDir.x;
-                playerPos.z += moveDir.z;
+                // Controllo collisioni asse X e Z separati per scivolare lungo i muri
+                let nextX = playerPos.clone();
+                nextX.x += moveDir.x;
+                if (canMoveTo(nextX)) playerPos.x = nextX.x;
+
+                let nextZ = playerPos.clone();
+                nextZ.z += moveDir.z;
+                if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
             }
 
             if (playerGroup) {
@@ -310,6 +350,7 @@
                 playerGroup.rotation.y = playerRotation;
             }
 
+            // Gestione telecamera con protezione anti-attraversamento muri
             if (cameraMode === 0) {
                 const targetDist = 2.5;
                 const headPos = playerPos.clone().add(new THREE.Vector3(0, 0.8, 0));
@@ -320,7 +361,16 @@
                     -Math.cos(cameraYaw) * Math.cos(cameraPitch)
                 ).normalize();
 
-                camera.position.copy(headPos).add(camDir.multiplyScalar(targetDist));
+                // Raggio per evitare che la telecamera attraversi i muri alle spalle
+                raycaster.set(headPos, camDir);
+                const camHits = raycaster.intersectObjects(collidableObjects, true);
+
+                let actualDist = targetDist;
+                if (camHits.length > 0 && camHits[0].distance < targetDist) {
+                    actualDist = Math.max(0.3, camHits[0].distance - 0.1);
+                }
+
+                camera.position.copy(headPos).add(camDir.multiplyScalar(actualDist));
                 camera.lookAt(playerPos.x, playerPos.y + 0.8, playerPos.z);
             } else {
                 camera.position.set(playerPos.x, playerPos.y + 0.85, playerPos.z);
