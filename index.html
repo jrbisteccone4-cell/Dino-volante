@@ -135,16 +135,8 @@
                 
                 scene.add(mapMesh);
 
-                playerPos.set(0, 0, 0);
-                
-                raycaster.set(new THREE.Vector3(0, 10, 0), new THREE.Vector3(0, -1, 0));
-                const hits = raycaster.intersectObjects(collidableObjects, true);
-
-                if (hits.length > 0) {
-                    playerPos.y = hits[0].point.y;
-                } else {
-                    playerPos.y = 0.1;
-                }
+                // Posizionamento diretto al centro con Y = 0 (floor standard dopo la normalizzazione della mappa)
+                playerPos.set(0, 0.1, 0);
 
                 verticalVelocity = 0;
                 isGrounded = true;
