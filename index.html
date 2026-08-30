@@ -5,34 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>3D Shark Game</title>
     <style>
-        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #011326; font-family: sans-serif; }
-        canvas { display: block; width: 100%; height: 100%; }
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #011326;
+            font-family: sans-serif;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
 
         #hud {
-            position: absolute; top: 15px; left: 15px; color: #fff; font-size: 16px; font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8); pointer-events: none; z-index: 10;
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 10;
         }
 
         #joystick-container {
-            position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px;
-            background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%; touch-action: none; z-index: 10;
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            touch-action: none;
+            z-index: 10;
         }
         #joystick-knob {
-            position: absolute; top: 35px; left: 35px; width: 50px; height: 50px;
-            background: #ffffff; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); pointer-events: none;
+            position: absolute;
+            top: 35px;
+            left: 35px;
+            width: 50px;
+            height: 50px;
+            background: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            pointer-events: none;
         }
 
         .btn-action {
-            position: absolute; width: 75px; height: 75px; border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.6); color: white; font-weight: bold; font-size: 14px;
-            display: flex; align-items: center; justify-content: center; touch-action: manipulation;
-            z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer;
+            position: absolute;
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            cursor: pointer;
         }
-        .btn-action:active { transform: scale(0.9); }
-        #btn-bite { bottom: 35px; right: 30px; background: rgba(220, 53, 69, 0.85); }
-        #btn-dash { bottom: 125px; right: 35px; background: rgba(255, 193, 7, 0.85); color: #000; }
+        .btn-action:active {
+            transform: scale(0.9);
+        }
+        #btn-bite {
+            bottom: 35px;
+            right: 30px;
+            background: rgba(220, 53, 69, 0.85);
+        }
+        #btn-dash {
+            bottom: 125px;
+            right: 35px;
+            background: rgba(255, 193, 7, 0.85);
+            color: #000;
+        }
     </style>
 
     <script type="importmap">
@@ -46,8 +105,14 @@
 </head>
 <body>
 
-    <div id="hud">Punti: <span id="score">0</span> | Prede Divorate: <span id="eaten">0</span></div>
-    <div id="joystick-container"><div id="joystick-knob"></div></div>
+    <div id="hud">
+        Punti: <span id="score">0</span> | Prede Divorate: <span id="eaten">0</span>
+    </div>
+
+    <div id="joystick-container">
+        <div id="joystick-knob"></div>
+    </div>
+
     <div id="btn-dash" class="btn-action">SCATTO</div>
     <div id="btn-bite" class="btn-action">MORDI</div>
 
@@ -83,23 +148,16 @@
         const sharkContainer = new THREE.Group();
         scene.add(sharkContainer);
 
-        // Modello visibile da subito
-        const tempMat = new THREE.MeshPhongMaterial({ color: 0x3b5998, flatShading: true });
-        const tempGeo = new THREE.ConeGeometry(1.2, 5, 8);
-        tempGeo.rotateX(Math.PI / 2);
-        const tempMesh = new THREE.Mesh(tempGeo, tempMat);
-        sharkContainer.add(tempMesh);
-
         let mixer = null;
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
 
-        // Caricamento con il nome file originale
+        // Carica il nuovo file squalo.glb
         loader.load(
-            './Squalo%20che%20nuota.glb',
+            './squalo.glb',
             (gltf) => {
-                sharkContainer.remove(tempMesh);
                 const loadedMesh = gltf.scene;
+
                 const box = new THREE.Box3().setFromObject(loadedMesh);
                 const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
@@ -111,6 +169,7 @@
 
                 const center = box.getCenter(new THREE.Vector3());
                 loadedMesh.position.sub(center.multiplyScalar(loadedMesh.scale.x));
+
                 sharkContainer.add(loadedMesh);
 
                 if (gltf.animations && gltf.animations.length > 0) {
@@ -120,7 +179,7 @@
                 }
             },
             undefined,
-            (err) => console.log("Caricamento del modello in corso...")
+            (err) => console.error("Errore nel caricamento del modello squalo.glb:", err)
         );
 
         const preyList = [];
