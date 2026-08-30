@@ -25,7 +25,6 @@
             height: 100%;
         }
 
-        /* HUD Overlay */
         #hud {
             position: absolute;
             top: 15px;
@@ -38,7 +37,6 @@
             z-index: 10;
         }
 
-        /* Joystick Virtuale (Sinistra) */
         #joystick-container {
             position: absolute;
             bottom: 30px;
@@ -62,7 +60,6 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
-        /* Pulsanti d'Azione (Destra) */
         .btn-action {
             position: absolute;
             width: 70px;
@@ -137,7 +134,7 @@
         document.body.appendChild(renderer.domElement);
 
         // 2. ILLUMINAZIONE MARINA
-        const ambientLight = new THREE.AmbientLight(0xdff0ff, 1.5);
+        const ambientLight = new THREE.AmbientLight(0xdff0ff, 1.8);
         scene.add(ambientLight);
 
         const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -152,7 +149,7 @@
         seabed.position.y = -30;
         scene.add(seabed);
 
-        // 4. CONTENITORE E CARICAMENTO SQUALO 3D (.GLB)
+        // 4. CONTENITORE E CARICAMENTO SQUALO 3D
         const sharkContainer = new THREE.Group();
         scene.add(sharkContainer);
 
@@ -161,38 +158,30 @@
         const clock = new THREE.Clock();
 
         const loader = new GLTFLoader();
-        
-        // Carica il file dello squalo
-        const modelPath = './Squalo%20che%20nuota.glb';
 
+        // Caricamento con il nuovo nome file "squalo.glb"
         loader.load(
-            modelPath,
+            './squalo.glb',
             (gltf) => {
                 sharkMesh = gltf.scene;
 
-                // Ottimizzazione delle texture del modello
-                sharkMesh.traverse((child) => {
-                    if (child.isMesh && child.material.map) {
-                        child.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
-                        child.material.map.minFilter = THREE.LinearMipmapLinearFilter;
-                        child.material.map.magFilter = THREE.LinearFilter;
-                        child.material.needsUpdate = true;
-                    }
-                });
-
-                // Calcola e adatta automaticamente la dimensione dello squalo
+                // Calcolo automatico della scala ottimale
                 const box = new THREE.Box3().setFromObject(sharkMesh);
                 const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
                 
                 if (maxDim > 0) {
-                    const targetScale = 4.5 / maxDim;
+                    const targetScale = 5 / maxDim;
                     sharkMesh.scale.set(targetScale, targetScale, targetScale);
                 }
 
+                // Centra la maglia del modello nel contenitore
+                const center = box.getCenter(new THREE.Vector3());
+                sharkMesh.position.sub(center.multiplyScalar(sharkMesh.scale.x));
+
                 sharkContainer.add(sharkMesh);
 
-                // Attiva l'animazione di nuoto
+                // Attiva l'animazione se presente nel file 3D
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(sharkMesh);
                     const action = mixer.clipAction(gltf.animations[0]);
@@ -201,11 +190,11 @@
             },
             undefined,
             (error) => {
-                console.error("Errore durante il caricamento del file 3D:", error);
+                console.error("Errore caricamento squalo.glb:", error);
             }
         );
 
-        // 5. PREDE MARIN
+        // 5. PREDE MARINE
         const preyList = [];
         const preyGeo = new THREE.ConeGeometry(0.3, 1, 6);
         preyGeo.rotateX(Math.PI / 2);
@@ -333,13 +322,13 @@
                 sharkContainer.position.y = Math.max(-28, Math.min(10, sharkContainer.position.y - moveInput.y * 0.05));
             }
 
-            const camDist = 8;
+            const camDist = 9;
             const camX = sharkContainer.position.x + camDist * Math.sin(cameraAngleYaw) * Math.cos(cameraAnglePitch);
-            const camY = sharkContainer.position.y + camDist * Math.sin(cameraAnglePitch) + 1.5;
+            const camY = sharkContainer.position.y + camDist * Math.sin(cameraAnglePitch) + 2;
             const camZ = sharkContainer.position.z + camDist * Math.cos(cameraAngleYaw) * Math.cos(cameraAnglePitch);
 
             camera.position.set(camX, camY, camZ);
-            camera.lookAt(sharkContainer.position.x, sharkContainer.position.y + 0.5, sharkContainer.position.z);
+            camera.lookAt(sharkContainer.position.x, sharkContainer.position.y, sharkContainer.position.z);
 
             preyList.forEach(prey => {
                 prey.translateZ(prey.userData.speed);
