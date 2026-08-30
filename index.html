@@ -16,7 +16,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #010b14;
+            background-color: #011326;
             font-family: sans-serif;
         }
         canvas {
@@ -43,8 +43,8 @@
             left: 30px;
             width: 120px;
             height: 120px;
-            background: rgba(255, 255, 255, 0.15);
-            border: 2px solid rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
             border-radius: 50%;
             touch-action: none;
             z-index: 10;
@@ -122,30 +122,26 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x011326);
-        scene.fog = new THREE.FogExp2(0x011326, 0.008);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xdff0ff, 2.0);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
         scene.add(ambientLight);
 
-        const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
-        sunLight.position.set(30, 100, 30);
-        scene.add(sunLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        dirLight.position.set(20, 50, 20);
+        scene.add(dirLight);
 
-        const seabedGeo = new THREE.PlaneGeometry(800, 800, 32, 32);
-        const seabedMat = new THREE.MeshStandardMaterial({ color: 0x0f2a1d, roughness: 0.9 });
+        const seabedGeo = new THREE.PlaneGeometry(800, 800);
+        const seabedMat = new THREE.MeshBasicMaterial({ color: 0x07202e });
         const seabed = new THREE.Mesh(seabedGeo, seabedMat);
         seabed.rotation.x = -Math.PI / 2;
-        seabed.position.y = -50;
+        seabed.position.y = -40;
         scene.add(seabed);
 
         const sharkContainer = new THREE.Group();
@@ -182,20 +178,26 @@
                 }
             },
             undefined,
-            (err) => console.error("Errore caricamento modello 3D:", err)
+            (err) => {
+                console.error("Errore caricamento modello:", err);
+                const fallbackGeo = new THREE.ConeGeometry(1, 4, 8);
+                fallbackGeo.rotateX(Math.PI / 2);
+                const fallbackMat = new THREE.MeshBasicMaterial({ color: 0x00aaff });
+                sharkContainer.add(new THREE.Mesh(fallbackGeo, fallbackMat));
+            }
         );
 
         const preyList = [];
         const preyGeo = new THREE.ConeGeometry(0.4, 1.2, 6);
         preyGeo.rotateX(Math.PI / 2);
 
-        for (let i = 0; i < 80; i++) {
-            const mat = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff, roughness: 0.3 });
+        for (let i = 0; i < 70; i++) {
+            const mat = new THREE.MeshBasicMaterial({ color: Math.random() * 0xffffff });
             const fish = new THREE.Mesh(preyGeo, mat);
             fish.position.set(
-                (Math.random() - 0.5) * 300,
-                Math.random() * 40 - 20,
-                (Math.random() - 0.5) * 300
+                (Math.random() - 0.5) * 250,
+                Math.random() * 30 - 15,
+                (Math.random() - 0.5) * 250
             );
             fish.userData = { speed: Math.random() * 0.08 + 0.03 };
             scene.add(fish);
@@ -280,25 +282,13 @@
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleEnd);
 
-        document.getElementById('btn-dash').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            triggerDash();
-        });
-        document.getElementById('btn-dash').addEventListener('click', triggerDash);
-
-        function triggerDash() {
+        document.getElementById('btn-dash').addEventListener('click', () => {
             if (isDashing) return;
             isDashing = true;
             setTimeout(() => isDashing = false, 1200);
-        }
-
-        document.getElementById('btn-bite').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            triggerBite();
         });
-        document.getElementById('btn-bite').addEventListener('click', triggerBite);
 
-        function triggerBite() {
+        document.getElementById('btn-bite').addEventListener('click', () => {
             const sharkPos = sharkContainer.position;
             for (let i = preyList.length - 1; i >= 0; i--) {
                 const prey = preyList[i];
@@ -311,14 +301,14 @@
                     document.getElementById('eaten').innerText = eatenCount;
                 }
             }
-        }
+        });
 
         let targetPitch = 0;
         let targetYaw = 0;
         let currentPitch = 0;
         let currentYaw = 0;
 
-        const cameraOffset = new THREE.Vector3(0, 5, 22);
+        const cameraOffset = new THREE.Vector3(0, 6, 25);
         const currentCamPos = new THREE.Vector3();
         const currentTargetPos = new THREE.Vector3();
 
@@ -346,12 +336,12 @@
 
             const moveDir = new THREE.Vector3(0, 0, -1).applyQuaternion(sharkContainer.quaternion);
             sharkContainer.position.addScaledVector(moveDir, speed);
-            sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -45, 15);
+            sharkContainer.position.y = THREE.MathUtils.clamp(sharkContainer.position.y, -35, 15);
 
             const idealCamPos = cameraOffset.clone().applyQuaternion(sharkContainer.quaternion).add(sharkContainer.position);
             const idealTarget = sharkContainer.position.clone().add(new THREE.Vector3(0, 1, 0));
 
-            currentCamPos.lerp(idealCamPos, 0.06);
+            currentCamPos.lerp(idealCamPos, 0.08);
             currentTargetPos.lerp(idealTarget, 0.08);
 
             camera.position.copy(currentCamPos);
