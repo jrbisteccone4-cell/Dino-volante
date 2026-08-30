@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Movimento Naturale Senza Scivolamento</title>
+    <title>3D Game - Movimento con Inerzia Reale</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; position: fixed; }
@@ -77,9 +77,8 @@
         let isMapLoaded = false;
         let cameraMode = 0;
 
-        // Nuove variabili per la fisica del movimento senza scivolamento
-        let currentVelocity = new THREE.Vector3(0, 0, 0);
-        let currentSpeed = 0;
+        // Vettore di velocità vettoriale per una vera inerzia e attrito
+        let playerVelocity = new THREE.Vector3(0, 0, 0);
 
         let isJumping = false;
         let jumpVelocity = 0;
@@ -321,41 +320,54 @@
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             
             if (isMapLoaded) {
-                const isRunning = inputMag > 0.75;
-                const targetSpeed = (inputMag > 0.05) ? (isRunning ? 0.065 : 0.032) * inputMag : 0;
-
-                // Smorzamento inerziale: la velocità cresce o decresce dolcemente (niente scivolamento)
-                currentSpeed = THREE.MathUtils.lerp(currentSpeed, targetSpeed, 0.15);
+                let targetVelocity = new THREE.Vector3(0, 0, 0);
 
                 if (inputMag > 0.05) {
+                    const isRunning = inputMag > 0.75;
+                    const maxSpeed = isRunning ? 0.065 : 0.032;
                     const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
                     
-                    // Rotazione fluida del personaggio verso la direzione di marcia
+                    // Rotazione fluida del personaggio
                     let diff = moveAngle - playerRotation;
                     while (diff < -Math.PI) diff += Math.PI * 2;
                     while (diff > Math.PI) diff -= Math.PI * 2;
                     playerRotation += diff * 0.2;
 
-                    const moveDir = new THREE.Vector3(
-                        Math.sin(moveAngle) * currentSpeed,
+                    targetVelocity.set(
+                        Math.sin(moveAngle) * maxSpeed * inputMag,
                         0,
-                        Math.cos(moveAngle) * currentSpeed
+                        Math.cos(moveAngle) * maxSpeed * inputMag
                     );
-
-                    let nextX = playerPos.clone();
-                    nextX.x += moveDir.x;
-                    if (canMoveTo(nextX)) playerPos.x = nextX.x;
-
-                    let nextZ = playerPos.clone();
-                    nextZ.z += moveDir.z;
-                    if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
                 }
 
-                // Sincronizzazione precisa dell'animazione rispetto alla velocità reale
+                // Inerzia vettoriale: la velocità reale insegue quella target con un fattore di smorzamento (attrito)
+                playerVelocity.lerp(targetVelocity, 0.1);
+
+                // Applicazione del movimento basato sulla velocità inerziale effettiva
+                if (playerVelocity.lengthSq() > 0.000001) {
+                    let nextX = playerPos.clone();
+                    nextX.x += playerVelocity.x;
+                    if (canMoveTo(nextX)) {
+                        playerPos.x = nextX.x;
+                    } else {
+                        playerVelocity.x = 0;
+                    }
+
+                    let nextZ = playerPos.clone();
+                    nextZ.z += playerVelocity.z;
+                    if (canMoveTo(nextZ)) {
+                        playerPos.z = nextZ.z;
+                    } else {
+                        playerVelocity.z = 0;
+                    }
+                }
+
+                // Gestione fluida dell'animazione in base alla velocità reale calcolata
                 if (walkAction) {
-                    const animWeightTarget = (currentSpeed > 0.002) ? 1.0 : 0.0;
+                    const speedMag = playerVelocity.length();
+                    const animWeightTarget = (speedMag > 0.001) ? 1.0 : 0.0;
                     walkAction.weight = THREE.MathUtils.lerp(walkAction.weight, animWeightTarget, 0.2);
-                    walkAction.timeScale = Math.max(0.2, currentSpeed * 25.0); // Scala l'animazione in base al movimento effettivo
+                    walkAction.timeScale = Math.max(0.2, speedMag * 25.0);
                     
                     if (walkAction.weight > 0.05 && !walkAction.isRunning()) {
                         walkAction.play();
