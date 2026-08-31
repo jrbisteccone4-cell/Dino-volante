@@ -122,14 +122,14 @@
         }
 
         function createFullPerimeterWalls() {
+            // Colore giallo allineato alla tonalità classica delle pareti delle Backrooms
             const wallMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0xd4c15d, 
+                color: 0xe3d37a, 
                 roughness: 0.8 
             });
 
             const wallHeight = 30;
 
-            // Limiti impostati esattamente sulle coordinate da te fornite
             const minX = -44.1;
             const maxX = 48.7;
             const minZ = -50.0;
@@ -146,25 +146,25 @@
             scene.add(northWall);
             collidableObjects.push(northWall);
 
-            // 2. Muro Sud (esattamente a Z: 188.3)
+            // 2. Muro Sud
             const southWall = new THREE.Mesh(new THREE.BoxGeometry(widthX, wallHeight, 2), wallMaterial);
             southWall.position.set(centerX, wallHeight / 2, maxZ);
             scene.add(southWall);
             collidableObjects.push(southWall);
 
-            // 3. Muro Ovest (esattamente a X: -44.1)
+            // 3. Muro Ovest
             const westWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, depthZ), wallMaterial);
             westWall.position.set(minX, wallHeight / 2, centerZ);
             scene.add(westWall);
             collidableObjects.push(westWall);
 
-            // 4. Muro Est (esattamente a X: 48.7)
+            // 4. Muro Est
             const eastWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, depthZ), wallMaterial);
             eastWall.position.set(maxX, wallHeight / 2, centerZ);
             scene.add(eastWall);
             collidableObjects.push(eastWall);
 
-            log("Perimetro completo generato sulle coordinate esatte.");
+            log("Perimetro completo generato con il colore giallo coordinato.");
         }
 
         function loadMap() {
@@ -185,7 +185,6 @@
                     }
                 });
 
-                // Genera tutto il perimetro chiuso con i bordi precisi
                 createFullPerimeterWalls();
 
                 playerPos.set(8.0, 0, 0); 
