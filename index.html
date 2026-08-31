@@ -173,39 +173,51 @@
         function loadCharacter() {
             log("Caricamento personaggio.glb...");
             const loader = new THREE.GLTFLoader();
-            loader.load('personaggio.glb', (gltf) => {
-                characterModel = gltf.scene;
-
-                const box = new THREE.Box3().setFromObject(characterModel);
-                const size = box.getSize(new THREE.Vector3());
-                const center = box.getCenter(new THREE.Vector3());
-
-                characterModel.position.x = -center.x;
-                characterModel.position.z = -center.z;
-                characterModel.position.y = -box.min.y;
-
-                const maxDim = Math.max(size.x, size.y, size.z);
-                if (maxDim > 0) {
-                    const scaleFactor = 1.8 / maxDim;
-                    characterModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
-                }
-
-                characterModel.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                        if (child.material) {
-                            child.material.side = THREE.DoubleSide;
-                        }
-                    }
+            
+            // Tentativo con percorso relativo pulito (funziona su GitHub Pages)
+            loader.load('./personaggio.glb', (gltf) => {
+                onCharacterLoaded(gltf);
+            }, undefined, (error1) => {
+                console.warn("Primo tentativo fallito, provo percorso assoluto...", error1);
+                // Secondo tentativo di fallback forzato
+                loader.load('personaggio.glb', (gltf) => {
+                    onCharacterLoaded(gltf);
+                }, undefined, (error2) => {
+                    console.error("Errore critico caricamento personaggio:", error2);
+                    log("Errore: impossibile caricare personaggio.glb", true);
                 });
-
-                scene.add(characterModel);
-                log("Personaggio caricato!", false);
-            }, undefined, (error) => {
-                console.error(error);
-                log("Errore caricamento personaggio.glb", true);
             });
+        }
+
+        function onCharacterLoaded(gltf) {
+            characterModel = gltf.scene;
+
+            const box = new THREE.Box3().setFromObject(characterModel);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+
+            characterModel.position.x = -center.x;
+            characterModel.position.z = -center.z;
+            characterModel.position.y = -box.min.y;
+
+            const maxDim = Math.max(size.x, size.y, size.z);
+            if (maxDim > 0) {
+                const scaleFactor = 1.8 / maxDim;
+                characterModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            }
+
+            characterModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (child.material) {
+                        child.material.side = THREE.DoubleSide;
+                    }
+                }
+            });
+
+            scene.add(characterModel);
+            log("Personaggio caricato con successo!", false);
         }
 
         function loadMap() {
