@@ -101,7 +101,7 @@
                 loaderScreen.style.opacity = '0';
                 setTimeout(() => { loaderScreen.style.display = 'none'; }, 500);
                 document.getElementById('status-text').innerText = "PRONTO";
-                log("Mani caricate con successo!");
+                log("Mani posizionate in basso correttamente!");
             }
         }
 
@@ -174,10 +174,11 @@
 
                 camera.add(handsMesh);
                 
-                // Posizione corretta senza rotazioni strane
-                handsMesh.position.set(0, -0.5, -0.5);
+                // Spostate drasticamente in basso (Y: -1.8) e in avanti (Z: -0.8) 
+                // così restano confinate nella parte inferiore dello schermo senza tagliare i polsi
+                handsMesh.position.set(0, -1.8, -0.8);
                 handsMesh.rotation.set(0, 0, 0); 
-                handsMesh.scale.set(0.7, 0.7, 0.7);
+                handsMesh.scale.set(0.6, 0.6, 0.6);
 
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(handsMesh);
