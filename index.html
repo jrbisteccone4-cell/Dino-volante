@@ -92,7 +92,7 @@
         let cameraPitch = 0;
         let isMapLoaded = false;
 
-        let singleRat = null; // Il nostro topo singolo di prova
+        let singleRat = null;
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
@@ -164,16 +164,18 @@
         }
 
         function loadSingleRat() {
-            log("Caricamento topo singolo di prova...");
+            log("Caricamento del topo sulla mappa...");
             const loader = new THREE.GLTFLoader();
             
             loader.load('topo.glb', (gltf) => {
                 singleRat = gltf.scene;
                 
-                // Forziamo una scala grande per sicurezza
-                singleRat.scale.set(5, 5, 5);
+                // SCALA RIDOTTA DI MOLTO (modificala se lo vedi troppo piccolo o grande)
+                singleRat.scale.set(0.15, 0.15, 0.15);
                 
-                // Rendi visibili tutti i materiali anche dall'interno se necessario
+                // Posizionalo leggermente davanti al punto di partenza (es. X: 8.0, Z: -2.0)
+                singleRat.position.set(8.0, 0, -2.0);
+
                 singleRat.traverse((child) => {
                     if (child.isMesh && child.material) {
                         child.material.side = THREE.DoubleSide;
@@ -181,7 +183,7 @@
                 });
 
                 scene.add(singleRat);
-                log("Topo caricato con successo! Guarda davanti a te.", false);
+                log("Topo posizionato sulla mappa!", false);
             }, undefined, (error) => {
                 console.error(error);
                 log("ERRORE: Impossibile trovare 'topo.glb'", true);
@@ -389,17 +391,6 @@
                 playerPos.z + Math.cos(cameraYaw) * 5
             );
             camera.lookAt(lookTarget);
-
-            // ANCORIAMO IL TOPO FISSO A 2 METRI DAVANTI A TE PER VEDERLO SUBITO
-            if (singleRat) {
-                const forwardDist = 2.0;
-                singleRat.position.set(
-                    playerPos.x + Math.sin(cameraYaw) * forwardDist,
-                    playerPos.y, 
-                    playerPos.z + Math.cos(cameraYaw) * forwardDist
-                );
-                singleRat.lookAt(playerPos.x, playerPos.y, playerPos.z);
-            }
 
             document.getElementById('posX').innerText = playerPos.x.toFixed(1);
             document.getElementById('posY').innerText = playerPos.y.toFixed(1);
