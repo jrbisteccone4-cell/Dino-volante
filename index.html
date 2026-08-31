@@ -164,52 +164,71 @@
             collidableObjects.push(eastWall);
         }
 
+        function spawnRats(templateMesh = null) {
+            for (let i = 0; i < numRats; i++) {
+                let rat;
+                if (templateMesh) {
+                    rat = templateMesh.clone(true);
+                } else {
+                    // Fallback geometrico se topo.glb non carica o è vuoto
+                    const geo = new THREE.BoxGeometry(0.5, 0.3, 1.0);
+                    const mat = new THREE.MeshStandardMaterial({ color: 0x885533 });
+                    rat = new THREE.Mesh(geo, mat);
+                }
+
+                rat.position.set(
+                    THREE.MathUtils.randFloat(-20, 35),
+                    0.2,
+                    THREE.MathUtils.randFloat(-30, 100)
+                );
+
+                rat.userData = {
+                    speed: THREE.MathUtils.randFloat(1.0, 2.0),
+                    direction: new THREE.Vector3(
+                        Math.random() - 0.5, 
+                        0, 
+                        Math.random() - 0.5
+                    ).normalize()
+                };
+
+                scene.add(rat);
+                rats.push(rat);
+            }
+            log(`Generati con successo ${numRats} elementi nella mappa!`, false);
+        }
+
         function loadRats() {
-            log("Caricamento prototipo topo.glb...");
+            log("Caricamento topo.glb...");
             const loader = new THREE.GLTFLoader();
             
             loader.load('topo.glb', (gltf) => {
-                const baseRat = gltf.scene;
-                log("topo.glb caricato! Creazione cloni visibili...", false);
+                const model = gltf.scene;
                 
-                for (let i = 0; i < numRats; i++) {
-                    const rat = baseRat.clone(true);
-                    
-                    rat.scale.set(0.15, 0.15, 0.15);
-                    
-                    // Posizionamento distribuito in modo sicuro nella mappa
-                    rat.position.set(
-                        THREE.MathUtils.randFloat(-20, 35),
-                        0,
-                        THREE.MathUtils.randFloat(-30, 100)
-                    );
+                // Centratura e ridimensionamento automatico basato sui confini reali del modello
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                
+                model.position.sub(center); // Centra l'origine sull'oggetto
+                
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scaleFactor = maxDim > 0 ? (0.8 / maxDim) : 0.15;
+                model.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-                    rat.userData = {
-                        speed: THREE.MathUtils.randFloat(1.0, 2.0),
-                        direction: new THREE.Vector3(
-                            Math.random() - 0.5, 
-                            0, 
-                            Math.random() - 0.5
-                        ).normalize()
-                    };
-
-                    rat.traverse((child) => {
-                        if (child.isMesh) {
-                            child.visible = true;
-                            if (child.material) {
-                                child.material.side = THREE.DoubleSide;
-                            }
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.visible = true;
+                        if (child.material) {
+                            child.material.side = THREE.DoubleSide;
                         }
-                    });
+                    }
+                });
 
-                    scene.add(rat);
-                    rats.push(rat);
-                }
-
-                log(`Tutti i ${numRats} topi sono stati posizionati correttamente!`, false);
+                spawnRats(model);
             }, undefined, (error) => {
-                console.error(error);
-                log("ERRORE: topo.glb non trovato o file non valido", true);
+                console.warn("Impossibile caricare topo.glb, uso il fallback di sicurezza.", error);
+                log("AVVISO: topo.glb non trovato, uso cubi segnaposto.", true);
+                spawnRats(null); // Attiva i cubi di sicurezza
             });
         }
 
@@ -440,7 +459,7 @@
 
             document.getElementById('posX').innerText = playerPos.x.toFixed(1);
             document.getElementById('posY').innerText = playerPos.y.toFixed(1);
-            document.getElementById('posZ').innerText = playerPos.posZ ? playerPos.posZ.toFixed(1) : playerPos.z.toFixed(1);
+            document.getElementById('posZ').innerText = playerPos.z.toFixed(1);
 
             renderer.render(scene, camera);
         }
