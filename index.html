@@ -92,7 +92,6 @@
         let cameraPitch = 0;
         let isMapLoaded = false;
 
-        let ratTemplate = null;
         const rats = [];
         const numRats = 50;
 
@@ -166,22 +165,23 @@
         }
 
         function loadRats() {
-            log("Caricamento di topo.glb...");
+            log("Caricamento prototipo topo.glb...");
             const loader = new THREE.GLTFLoader();
             
             loader.load('topo.glb', (gltf) => {
-                ratTemplate = gltf.scene;
-                log("topo.glb caricato con successo! Generazione cloni...", false);
+                const baseRat = gltf.scene;
+                log("topo.glb caricato! Creazione cloni visibili...", false);
                 
                 for (let i = 0; i < numRats; i++) {
-                    const rat = ratTemplate.clone();
+                    const rat = baseRat.clone(true);
                     
                     rat.scale.set(0.15, 0.15, 0.15);
                     
+                    // Posizionamento distribuito in modo sicuro nella mappa
                     rat.position.set(
-                        THREE.MathUtils.randFloat(-35, 40),
+                        THREE.MathUtils.randFloat(-20, 35),
                         0,
-                        THREE.MathUtils.randFloat(-40, 170)
+                        THREE.MathUtils.randFloat(-30, 100)
                     );
 
                     rat.userData = {
@@ -195,8 +195,10 @@
 
                     rat.traverse((child) => {
                         if (child.isMesh) {
-                            child.material.side = THREE.DoubleSide;
-                            child.castShadow = true;
+                            child.visible = true;
+                            if (child.material) {
+                                child.material.side = THREE.DoubleSide;
+                            }
                         }
                     });
 
@@ -204,10 +206,10 @@
                     rats.push(rat);
                 }
 
-                log(`Tutti i ${numRats} topi sono attivi!`, false);
+                log(`Tutti i ${numRats} topi sono stati posizionati correttamente!`, false);
             }, undefined, (error) => {
                 console.error(error);
-                log("ERRORE: topo.glb non trovato o non leggibile", true);
+                log("ERRORE: topo.glb non trovato o file non valido", true);
             });
         }
 
@@ -438,7 +440,7 @@
 
             document.getElementById('posX').innerText = playerPos.x.toFixed(1);
             document.getElementById('posY').innerText = playerPos.y.toFixed(1);
-            document.getElementById('posZ').innerText = playerPos.z.toFixed(1);
+            document.getElementById('posZ').innerText = playerPos.posZ ? playerPos.posZ.toFixed(1) : playerPos.z.toFixed(1);
 
             renderer.render(scene, camera);
         }
