@@ -101,7 +101,7 @@
                 loaderScreen.style.opacity = '0';
                 setTimeout(() => { loaderScreen.style.display = 'none'; }, 500);
                 document.getElementById('status-text').innerText = "PRONTO";
-                log("Mani caricate con successo!");
+                log("Mani posizionate correttamente!");
             }
         }
 
@@ -172,10 +172,15 @@
             loader.load('personaggio.glb', (gltf) => {
                 handsMesh = gltf.scene;
 
-                // Agganciate alla camera e posizionate correttamente in basso al centro
                 camera.add(handsMesh);
-                handsMesh.position.set(0, -1.2, -0.6);
-                handsMesh.scale.set(0.8, 0.8, 0.8);
+                
+                // Spostate più in basso e più avanti per evitare il taglio dei polsi
+                handsMesh.position.set(0, -0.6, -1.0);
+                
+                // Rotazione iniziale per orientare i palmi verso l'interno/avanti se necessario
+                handsMesh.rotation.set(0, Math.PI, 0); 
+                
+                handsMesh.scale.set(0.7, 0.7, 0.7);
 
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(handsMesh);
