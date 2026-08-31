@@ -173,7 +173,6 @@
         function loadCharacter() {
             log("Caricamento personaggio.glb...");
             const loader = new THREE.GLTFLoader();
-            // Cerca il file caricato su GitHub
             loader.load('personaggio.glb', (gltf) => {
                 characterModel = gltf.scene;
 
@@ -195,21 +194,17 @@
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
+                        if (child.material) {
+                            child.material.side = THREE.DoubleSide;
+                        }
                     }
                 });
 
                 scene.add(characterModel);
-                log("Personaggio caricato con successo!", false);
+                log("Personaggio caricato!", false);
             }, undefined, (error) => {
-                console.warn("Impossibile caricare personaggio.glb", error);
-                log("Devi caricare il file personaggio.glb su GitHub!", true);
-                
-                // Segnaposto temporaneo finché non carichi il file online
-                const geo = new THREE.CapsuleGeometry(0.3, 1, 4, 8);
-                const mat = new THREE.MeshStandardMaterial({ color: 0x00ffcc });
-                characterModel = new THREE.Mesh(geo, mat);
-                characterModel.position.y = 0.8;
-                scene.add(characterModel);
+                console.error(error);
+                log("Errore caricamento personaggio.glb", true);
             });
         }
 
