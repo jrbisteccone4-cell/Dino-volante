@@ -170,18 +170,20 @@
             loader.load('topo.glb', (gltf) => {
                 ratTemplate = gltf.scene;
                 
+                const minX = -42.0, maxX = 46.0;
+                const minZ = -48.0, maxZ = 180.0;
+
                 for (let i = 0; i < numRats; i++) {
                     const rat = ratTemplate.clone();
                     
-                    // Spawn di test intorno al giocatore per assicurarci di vederli subito
                     rat.position.set(
-                        8.0 + THREE.MathUtils.randFloat(-6, 6),
+                        THREE.MathUtils.randFloat(minX, maxX),
                         0,
-                        THREE.MathUtils.randFloat(-6, 6)
+                        THREE.MathUtils.randFloat(minZ, maxZ)
                     );
                     
-                    // Scala ingrandita per evitare problemi di invisibilità legati alle dimensioni originali del modello
-                    rat.scale.set(3, 3, 3);
+                    // Scala iniziale per il modello 3D (modificala se il topo risulta troppo piccolo o grande)
+                    rat.scale.set(1, 1, 1);
 
                     rat.userData = {
                         speed: THREE.MathUtils.randFloat(1.0, 2.5),
@@ -196,9 +198,9 @@
                     rats.push(rat);
                 }
 
-                log("Topi caricati intorno a te!");
+                log("50 topi 3D caricati e in movimento!");
             }, undefined, (error) => {
-                log("Errore caricamento topo.glb");
+                log("Errore caricamento topo.glb (Verifica il server locale)");
                 console.error("Errore caricamento topo.glb:", error);
             });
         }
@@ -222,7 +224,7 @@
                 });
 
                 createFullPerimeterWalls();
-                loadRats();
+                loadRats(); // Caricamento dei topi 3D
 
                 playerPos.set(8.0, 0, 0); 
                 isMapLoaded = true; 
@@ -397,6 +399,7 @@
                     }
                 }
 
+                // Movimento dei topi 3D
                 for (let i = 0; i < rats.length; i++) {
                     const rat = rats[i];
                     rat.position.addScaledVector(rat.userData.direction, rat.userData.speed * delta);
