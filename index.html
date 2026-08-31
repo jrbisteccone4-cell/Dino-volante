@@ -122,10 +122,10 @@
         }
 
         function createFullPerimeterWalls() {
-            // Colore giallo allineato alla tonalità classica delle pareti delle Backrooms
+            // Giallo Backrooms calibrato esattamente sulla tonalità della mappa
             const wallMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0xe3d37a, 
-                roughness: 0.8 
+                color: 0xf0d050, 
+                roughness: 0.85 
             });
 
             const wallHeight = 30;
@@ -164,7 +164,7 @@
             scene.add(eastWall);
             collidableObjects.push(eastWall);
 
-            log("Perimetro completo generato con il colore giallo coordinato.");
+            log("Perimetro completo generato con il giallo esatto della mappa.");
         }
 
         function loadMap() {
