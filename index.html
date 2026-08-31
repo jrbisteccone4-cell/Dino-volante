@@ -6,7 +6,7 @@
     <title>3D Game - Backrooms</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0a0a0a; font-family: sans-serif; position: fixed; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #2b261d; font-family: sans-serif; position: fixed; }
         canvas { display: block; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 1; }
 
         #menu-screen {
@@ -93,10 +93,18 @@
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
 
+        // Definizione dei confini perimetrali per i muri fisici
+        const MAP_BOUNDS = {
+            minX: -50,
+            maxX: 50,
+            minZ: -50,
+            maxZ: 210
+        };
+
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87ceeb); 
-            scene.fog = new THREE.FogExp2(0x87ceeb, 0.02);
+            scene.background = new THREE.Color(0x2b261d); 
+            scene.fog = new THREE.FogExp2(0x2b261d, 0.015);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
             scene.add(camera);
@@ -121,6 +129,50 @@
             animate();
         }
 
+        function createPerimeterWalls() {
+            // Materiale visivo per i muri perimetrali (colore simile alle pareti delle backrooms)
+            const wallMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xd4c15d, 
+                roughness: 0.8 
+            });
+
+            const wallHeight = 25; // Altezza dei muri perimetrali
+            const widthX = MAP_BOUNDS.maxX - MAP_BOUNDS.minX;
+            const depthZ = MAP_BOUNDS.maxZ - MAP_BOUNDS.minZ;
+            const centerX = (MAP_BOUNDS.maxX + MAP_BOUNDS.minX) / 2;
+            const centerZ = (MAP_BOUNDS.maxZ + MAP_BOUNDS.minZ) / 2;
+
+            // Muro Nord (minZ)
+            const northGeo = new THREE.BoxGeometry(widthX, wallHeight, 2);
+            const northWall = new THREE.Mesh(northGeo, wallMaterial);
+            northWall.position.set(centerX, wallHeight / 2, MAP_BOUNDS.minZ);
+            scene.add(northWall);
+            collidableObjects.push(northWall);
+
+            // Muro Sud (maxZ)
+            const southGeo = new THREE.BoxGeometry(widthX, wallHeight, 2);
+            const southWall = new THREE.Mesh(southGeo, wallMaterial);
+            southWall.position.set(centerX, wallHeight / 2, MAP_BOUNDS.maxZ);
+            scene.add(southWall);
+            collidableObjects.push(southWall);
+
+            // Muro Ovest (minX)
+            const westGeo = new THREE.BoxGeometry(2, wallHeight, depthZ);
+            const westWall = new THREE.Mesh(westGeo, wallMaterial);
+            westWall.position.set(MAP_BOUNDS.minX, wallHeight / 2, centerZ);
+            scene.add(westWall);
+            collidableObjects.push(westWall);
+
+            // Muro Est (maxX)
+            const eastGeo = new THREE.BoxGeometry(2, wallHeight, depthZ);
+            const eastWall = new THREE.Mesh(eastGeo, wallMaterial);
+            eastWall.position.set(MAP_BOUNDS.maxX, wallHeight / 2, centerZ);
+            scene.add(eastWall);
+            collidableObjects.push(eastWall);
+
+            log("Muri perimetrali fisici generati.");
+        }
+
         function loadMap() {
             log("Caricamento mappa.glb...");
             const loader = new THREE.GLTFLoader();
@@ -139,9 +191,12 @@
                     }
                 });
 
+                // Genera i muri fisici tutt'intorno alla mappa caricata
+                createPerimeterWalls();
+
                 playerPos.set(8.0, 0, 0); 
                 isMapLoaded = true; 
-                log("Mappa caricata.");
+                log("Mappa caricata con successo.");
                 
                 document.getElementById('menu-title-text').innerText = "BACKROOMS 3D";
                 document.getElementById('btn-start').style.display = 'block';
@@ -251,7 +306,7 @@
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (isGrounded) {
-                    playerVelocityY = 4.5; // Spinta iniziale calibrata sul delta time
+                    playerVelocityY = 4.5;
                     isGrounded = false;
                 }
             }, { passive: false });
@@ -278,14 +333,12 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            // Calcolo del Delta Time per garantire la massima fluidità indipendente dai fotogrammi
             const delta = Math.min(clock.getDelta(), 0.1);
-
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             
             if (isMapLoaded) {
                 if (inputMag > 0.05) {
-                    const currentSpeed = 2.0 * inputMag * delta; // Velocità normalizzata col tempo
+                    const currentSpeed = 2.0 * inputMag * delta;
                     const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
 
                     const moveDir = new THREE.Vector3(
@@ -303,10 +356,9 @@
                     if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
                 }
 
-                // Gestione gravità e salto fluidificata con il delta time
                 if (!isGrounded) {
                     playerPos.y += playerVelocityY * delta;
-                    playerVelocityY -= 12.0 * delta; // Forza di gravità costante e fluida
+                    playerVelocityY -= 12.0 * delta;
 
                     if (playerPos.y <= 0) {
                         playerPos.y = 0;
