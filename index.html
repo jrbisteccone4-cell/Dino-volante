@@ -101,7 +101,7 @@
                 loaderScreen.style.opacity = '0';
                 setTimeout(() => { loaderScreen.style.display = 'none'; }, 500);
                 document.getElementById('status-text').innerText = "PRONTO";
-                log("Mani posizionate in basso ai lati!");
+                log("Mani agganciate correttamente tramite gruppo container!");
             }
         }
 
@@ -172,13 +172,17 @@
             loader.load('personaggio.glb', (gltf) => {
                 handsMesh = gltf.scene;
 
-                camera.add(handsMesh);
+                // Creazione del gruppo container per isolare l'origine sballata del file GLB
+                const handsContainer = new THREE.Group();
                 
-                // Spostate lateralmente (X: ±0.55) verso i comandi e in basso/avanti (Y: -1.2, Z: -0.6) 
-                // con una leggera inclinazione per farle convergere verso il centro ed evitare tagli dei polsi.
-                handsMesh.position.set(0, -1.2, -0.6);
-                handsMesh.rotation.set(0.2, 0, 0); 
-                handsMesh.scale.set(0.55, 0.55, 0.55);
+                // Compensa l'origine interna del modello 3D
+                handsMesh.position.set(0, -0.5, 0); 
+                handsContainer.add(handsMesh);
+
+                // Posizionamento complessivo attaccato alla camera (zona bassa e laterale vicina ai comandi)
+                camera.add(handsContainer);
+                handsContainer.position.set(0, -1.0, -0.7);
+                handsContainer.scale.set(0.6, 0.6, 0.6);
 
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(handsMesh);
@@ -356,7 +360,7 @@
         window.addEventListener('resize', () => {
             if (!camera || !renderer) return;
             camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionManager?.();
+            camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
