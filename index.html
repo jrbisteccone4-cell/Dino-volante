@@ -92,7 +92,9 @@
         let cameraPitch = 0;
         let isMapLoaded = false;
 
-        let singleRat = null;
+        let ratTemplate = null;
+        const rats = [];
+        const numRats = 50;
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
@@ -163,30 +165,45 @@
             collidableObjects.push(eastWall);
         }
 
-        function loadSingleRat() {
-            log("Caricamento del topo vicino a te...");
+        function loadRats() {
+            log("Caricamento dei 50 topi sulla mappa...");
             const loader = new THREE.GLTFLoader();
             
             loader.load('topo.glb', (gltf) => {
-                singleRat = gltf.scene;
+                ratTemplate = gltf.scene;
                 
-                singleRat.scale.set(0.15, 0.15, 0.15);
-                // SPAWN VICINO AL GIOCATORE (Player parte a X: 8.0, Z: 0. Lo mettiamo a Z: -1.0, proprio davanti)
-                singleRat.position.set(8.0, 0, -1.0);
+                for (let i = 0; i < numRats; i++) {
+                    const rat = ratTemplate.clone();
+                    
+                    rat.scale.set(0.15, 0.15, 0.15);
+                    
+                    // Distribuiti casualmente all'interno dei limiti della mappa
+                    rat.position.set(
+                        THREE.MathUtils.randFloat(-40, 45),
+                        0,
+                        THREE.MathUtils.randFloat(-45, 180)
+                    );
 
-                singleRat.userData = {
-                    speed: 1.5,
-                    direction: new THREE.Vector3(1, 0, 0).normalize()
-                };
+                    rat.userData = {
+                        speed: THREE.MathUtils.randFloat(1.0, 2.0),
+                        direction: new THREE.Vector3(
+                            Math.random() - 0.5, 
+                            0, 
+                            Math.random() - 0.5
+                        ).normalize()
+                    };
 
-                singleRat.traverse((child) => {
-                    if (child.isMesh && child.material) {
-                        child.material.side = THREE.DoubleSide;
-                    }
-                });
+                    rat.traverse((child) => {
+                        if (child.isMesh && child.material) {
+                            child.material.side = THREE.DoubleSide;
+                        }
+                    });
 
-                scene.add(singleRat);
-                log("Topo spawnato davanti a te e in movimento!", false);
+                    scene.add(rat);
+                    rats.push(rat);
+                }
+
+                log("50 topi caricati e sparsi con successo!", false);
             }, undefined, (error) => {
                 console.error(error);
                 log("ERRORE: Impossibile trovare 'topo.glb'", true);
@@ -212,7 +229,7 @@
                 });
 
                 createFullPerimeterWalls();
-                loadSingleRat();
+                loadRats();
 
                 playerPos.set(8.0, 0, 0); 
                 isMapLoaded = true; 
@@ -385,22 +402,23 @@
                     }
                 }
 
-                // MOVIMENTO DEL TOPO
-                if (singleRat) {
-                    singleRat.position.addScaledVector(singleRat.userData.direction, singleRat.userData.speed * delta);
+                // MOVIMENTO DI TUTTI I 50 TOPI
+                for (let i = 0; i < rats.length; i++) {
+                    const rat = rats[i];
+                    rat.position.addScaledVector(rat.userData.direction, rat.userData.speed * delta);
                     
-                    const targetLook = singleRat.position.clone().add(singleRat.userData.direction);
-                    singleRat.lookAt(targetLook);
+                    const targetLook = rat.position.clone().add(rat.userData.direction);
+                    rat.lookAt(targetLook);
 
-                    if (singleRat.position.x < -43.0 || singleRat.position.x > 47.5) {
-                        singleRat.userData.direction.x *= -1;
+                    if (rat.position.x < -43.0 || rat.position.x > 47.5) {
+                        rat.userData.direction.x *= -1;
                     }
-                    if (singleRat.position.z < -49.0 || singleRat.position.z > 187.0) {
-                        singleRat.userData.direction.z *= -1;
+                    if (rat.position.z < -49.0 || rat.position.z > 187.0) {
+                        rat.userData.direction.z *= -1;
                     }
 
                     if (Math.random() < 0.02) {
-                        singleRat.userData.direction.set(
+                        rat.userData.direction.set(
                             Math.random() - 0.5,
                             0,
                             Math.random() - 0.5
