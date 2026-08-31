@@ -101,7 +101,7 @@
                 loaderScreen.style.opacity = '0';
                 setTimeout(() => { loaderScreen.style.display = 'none'; }, 500);
                 document.getElementById('status-text').innerText = "PRONTO";
-                log("Mani agganciate correttamente tramite gruppo container!");
+                log("Mani sincronizzate con la visuale!");
             }
         }
 
@@ -172,17 +172,9 @@
             loader.load('personaggio.glb', (gltf) => {
                 handsMesh = gltf.scene;
 
-                // Creazione del gruppo container per isolare l'origine sballata del file GLB
-                const handsContainer = new THREE.Group();
-                
-                // Compensa l'origine interna del modello 3D
-                handsMesh.position.set(0, -0.5, 0); 
-                handsContainer.add(handsMesh);
-
-                // Posizionamento complessivo attaccato alla camera (zona bassa e laterale vicina ai comandi)
-                camera.add(handsContainer);
-                handsContainer.position.set(0, -1.0, -0.7);
-                handsContainer.scale.set(0.6, 0.6, 0.6);
+                // Aggiungiamo direttamente alla scena principale invece che alla camera
+                scene.add(handsMesh);
+                handsMesh.scale.set(0.5, 0.5, 0.5);
 
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(handsMesh);
@@ -337,6 +329,7 @@
 
             if (mixer) mixer.update(delta);
 
+            // Aggiorna la posizione della camera
             camera.position.set(playerPos.x, playerPos.y + 0.8, playerPos.z);
             
             const lookTarget = new THREE.Vector3(
@@ -346,8 +339,16 @@
             );
             camera.lookAt(lookTarget);
 
-            if (!camera.parent && scene) {
-                scene.add(camera);
+            // Posizioniamo le mani solidali alla vista della camera (proprio davanti agli occhi/schermo)
+            if (handsMesh) {
+                // Calcoliamo una posizione leggermente in basso e in avanti rispetto alla camera
+                const offset = new THREE.Vector3(0, -0.6, -0.8);
+                // Applichiamo la rotazione della camera per seguire la visuale
+                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
+                
+                handsMesh.position.copy(camera.position).add(offset);
+                handsMesh.rotation.y = cameraYaw + Math.PI; // Rigirate verso il giocatore/schermo
+                handsMesh.rotation.x = cameraPitch;
             }
 
             document.getElementById('posX').innerText = playerPos.x.toFixed(1);
