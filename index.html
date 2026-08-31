@@ -187,29 +187,27 @@
             let attempts = 0;
             do {
                 pos.set(
-                    THREE.MathUtils.randFloat(-40, 45),
+                    THREE.MathUtils.randFloat(-35, 40),
                     0,
-                    THREE.MathUtils.randFloat(-45, 180)
+                    THREE.MathUtils.randFloat(-40, 170)
                 );
                 attempts++;
-            } while (!canMoveTo(pos) && attempts < 50);
+            } while (!canMoveTo(pos) && attempts < 60);
             return pos;
         }
 
-        function spawnRats(templateMesh = null) {
+        function spawnRats(templateScene = null) {
             for (let i = 0; i < numRats; i++) {
                 let rat;
-                if (templateMesh) {
-                    rat = templateMesh.clone(true);
+                if (templateScene) {
+                    rat = templateScene.clone(true);
                 } else {
                     const geo = new THREE.BoxGeometry(0.5, 0.3, 1.0);
                     const mat = new THREE.MeshStandardMaterial({ color: 0x885533 });
                     rat = new THREE.Mesh(geo, mat);
                 }
 
-                // Posizionamento sicuro ed emerso correttamente dal pavimento
                 const safePos = getSafeSpawnPosition();
-                safePos.y = 0; // Forza il contatto esatto con il suolo
                 rat.position.copy(safePos);
 
                 rat.userData = {
@@ -224,7 +222,7 @@
                 scene.add(rat);
                 rats.push(rat);
             }
-            log(`Generati ${numRats} topi in superficie nei corridoi!`, false);
+            log(`Generati con successo ${numRats} topi nei corridoi!`, false);
         }
 
         function loadRats() {
@@ -234,14 +232,13 @@
             loader.load('topo.glb', (gltf) => {
                 const model = gltf.scene;
                 
-                // Corretta gestione dei confini: posizioniamo la base del modello esattamente a Y = 0
+                // Centriamo la geometria del topo alla base in modo perfetto
                 const box = new THREE.Box3().setFromObject(model);
                 const size = box.getSize(new THREE.Vector3());
                 
-                // Centra X e Z, ma sposta la Y in modo che le zampe poggino a terra (evita l'affondamento)
                 model.position.x = - (box.min.x + box.max.x) / 2;
                 model.position.z = - (box.min.z + box.max.z) / 2;
-                model.position.y = - box.min.y; 
+                model.position.y = - box.min.y; // Poggia esattamente a Y=0
                 
                 const maxDim = Math.max(size.x, size.y, size.z);
                 const scaleFactor = maxDim > 0 ? (0.6 / maxDim) : 0.15;
@@ -256,11 +253,11 @@
                     }
                 });
 
-                // Avvolgiamo in un gruppo contenitore pulito per gestire la posizione globale
-                const wrapper = new THREE.Group();
-                wrapper.add(model);
+                // Creiamo un contenitore pulito per ogni singolo topo clonabile
+                const masterRat = new THREE.Group();
+                masterRat.add(model);
 
-                spawnRats(wrapper);
+                spawnRats(masterRat);
             }, undefined, (error) => {
                 console.warn("Impossibile caricare topo.glb", error);
                 log("AVVISO: topo.glb non trovato, uso cubi segnaposto.", true);
