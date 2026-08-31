@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Colori Originali</title>
+    <title>3D Game - Mani in Prima Persona</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0a0a0a; font-family: sans-serif; position: fixed; }
@@ -52,8 +52,7 @@
             z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; text-align: center;
         }
         .btn-action:active { transform: scale(0.9); }
-        #btn-cam { bottom: 30px; right: 20px; background: #007acc; }
-        #btn-jump { bottom: 110px; right: 20px; background: #28a745; }
+        #btn-jump { bottom: 30px; right: 20px; background: #28a745; }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -63,7 +62,7 @@
 
     <div id="loading-screen">
         <div class="spinner"></div>
-        <div id="loading-text">CARICAMENTO MONDO 3D...</div>
+        <div id="loading-text">CARICAMENTO GIOCO...</div>
     </div>
 
     <div id="hud">
@@ -73,8 +72,7 @@
     <div id="status-log">Inizializzazione...</div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
-    <div id="btn-jump" class="btn-action">SALTA</div>
-    <div id="btn-cam" class="btn-action">VISTA</div>
+    <div id="btn-jump" class="btn-action">INTERAGISCI</div>
 
     <script>
         function log(msg) { 
@@ -82,34 +80,28 @@
             document.getElementById('status-log').innerText = msg; 
         }
 
-        let scene, camera, renderer, playerGroup, characterMesh, mapMesh;
+        let scene, camera, renderer, handsMesh, mapMesh;
         let mixer = null;
-        let walkAction = null;
+        let actionAnim = null;
 
         const clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
         let playerPos = new THREE.Vector3(8.0, 0, 0);
-        let playerRotation = 0;
         let cameraYaw = 0;
-        let cameraPitch = 0.15;
+        let cameraPitch = 0;
         let isMapLoaded = false;
-        let isCharLoaded = false;
-        let cameraMode = 0;
-
-        let isJumping = false;
-        let jumpVelocity = 0;
-        const gravity = 0.018;
+        let isHandsLoaded = false;
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
 
         function checkEverythingLoaded() {
-            if (isMapLoaded && isCharLoaded) {
+            if (isMapLoaded && isHandsLoaded) {
                 const loaderScreen = document.getElementById('loading-screen');
                 loaderScreen.style.opacity = '0';
                 setTimeout(() => { loaderScreen.style.display = 'none'; }, 500);
                 document.getElementById('status-text').innerText = "PRONTO";
-                log("Tutto pronto! Buon divertimento.");
+                log("Mani caricate con successo!");
             }
         }
 
@@ -133,7 +125,7 @@
             mainLight.position.set(10, 30, 10);
             scene.add(mainLight);
 
-            loadCharacter();
+            loadHands();
             loadMap();
             setupControls();
 
@@ -141,7 +133,7 @@
         }
 
         function loadMap() {
-            log("Scaricamento mappa.glb...");
+            log("Caricamento mappa.glb...");
             const loader = new THREE.GLTFLoader();
 
             loader.load('mappa.glb', (gltf) => {
@@ -173,42 +165,34 @@
             });
         }
 
-        function loadCharacter() {
-            playerGroup = new THREE.Group();
-            scene.add(playerGroup);
-            log("Scaricamento personaggio.glb...");
-
+        function loadHands() {
+            log("Caricamento personaggio.glb (mani)...");
             const loader = new THREE.GLTFLoader();
+
             loader.load('personaggio.glb', (gltf) => {
-                characterMesh = gltf.scene;
+                handsMesh = gltf.scene;
 
-                // RIMOSSA LA MODIFICA FORZATA DEL COLORE: ora usa i colori e le texture originali del file .glb
-
-                const box = new THREE.Box3().setFromObject(characterMesh);
-                const size = box.getSize(new THREE.Vector3());
-                const scaleFactor = 1.15 / (size.y || 1);
-                characterMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
-
-                const updatedBox = new THREE.Box3().setFromObject(characterMesh);
-                characterMesh.position.y = -updatedBox.min.y;
-
-                playerGroup.add(characterMesh);
+                // Le agganciamo direttamente alla camera così seguono la visuale in prima persona
+                camera.add(handsMesh);
+                
+                // Posizioniamo le mani davanti agli occhi (puoi regolare questi valori se le vedi troppo vicine/lontane)
+                handsMesh.position.set(0, -0.4, -0.5);
+                handsMesh.scale.set(0.8, 0.8, 0.8);
 
                 if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(characterMesh);
-                    walkAction = mixer.clipAction(gltf.animations[0]);
-                    walkAction.setLoop(THREE.LoopRepeat);
-                    walkAction.play();
-                    walkAction.weight = 0;
+                    mixer = new THREE.AnimationMixer(handsMesh);
+                    actionAnim = mixer.clipAction(gltf.animations[0]);
+                    actionAnim.setLoop(THREE.LoopRepeat);
+                    actionAnim.play();
                 }
 
-                isCharLoaded = true;
-                log("Personaggio caricato.");
+                isHandsLoaded = true;
+                log("Mani caricate.");
                 checkEverythingLoaded();
             }, (xhr) => {
                 if (xhr.total) {
                     const pct = Math.floor((xhr.loaded / xhr.total) * 100);
-                    document.getElementById('loading-text').innerText = `PERSONAGGIO: ${pct}%`;
+                    document.getElementById('loading-text').innerText = `MANI: ${pct}%`;
                 }
             }, (error) => {
                 log("Errore caricamento personaggio.glb");
@@ -254,7 +238,7 @@
                         const dy = touch.clientY - lastTouchPos.y;
 
                         cameraYaw -= dx * 0.004;
-                        cameraPitch = Math.max(-0.3, Math.min(0.6, cameraPitch + dy * 0.004));
+                        cameraPitch = Math.max(-0.6, Math.min(0.6, cameraPitch + dy * 0.004));
 
                         lastTouchPos = { x: touch.clientX, y: touch.clientY };
                     }
@@ -293,15 +277,7 @@
 
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (!isJumping) {
-                    isJumping = true;
-                    jumpVelocity = 0.22;
-                }
-            }, { passive: false });
-
-            document.getElementById('btn-cam').addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                cameraMode = (cameraMode + 1) % 2;
+                log("Interazione avviata!");
             }, { passive: false });
         }
 
@@ -329,13 +305,10 @@
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             
-            if (isMapLoaded && isCharLoaded) {
+            if (isMapLoaded && isHandsLoaded) {
                 if (inputMag > 0.05) {
-                    const isRunning = inputMag > 0.75;
-                    const currentSpeed = (isRunning ? 0.045 : 0.022) * inputMag;
-
+                    const currentSpeed = 0.03 * inputMag;
                     const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
-                    playerRotation = moveAngle;
 
                     const moveDir = new THREE.Vector3(
                         Math.sin(moveAngle) * currentSpeed,
@@ -351,64 +324,27 @@
                     nextZ.z += moveDir.z;
                     if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
 
-                    if (walkAction) {
-                        walkAction.weight = 1.0;
-                        walkAction.timeScale = isRunning ? 1.4 : 1.0;
-                        if (!walkAction.isRunning()) walkAction.play();
-                    }
+                    if (actionAnim) actionAnim.timeScale = 1.2;
                 } else {
-                    if (walkAction) {
-                        walkAction.weight = 0.0;
-                        walkAction.stop();
-                    }
-                }
-            }
-
-            if (isJumping) {
-                playerPos.y += jumpVelocity;
-                jumpVelocity -= gravity;
-                if (playerPos.y <= 0) {
-                    playerPos.y = 0;
-                    isJumping = false;
-                    jumpVelocity = 0;
+                    if (actionAnim) actionAnim.timeScale = 0.5;
                 }
             }
 
             if (mixer) mixer.update(delta);
 
-            if (playerGroup) {
-                playerGroup.position.copy(playerPos);
-                playerGroup.rotation.y = playerRotation;
-            }
+            // Aggiorna la posizione della camera (vista in prima persona)
+            camera.position.set(playerPos.x, playerPos.y + 0.8, playerPos.z);
+            
+            const lookTarget = new THREE.Vector3(
+                playerPos.x + Math.sin(cameraYaw) * 5,
+                playerPos.y + 0.8 - cameraPitch * 5,
+                playerPos.z + Math.cos(cameraYaw) * 5
+            );
+            camera.lookAt(lookTarget);
 
-            if (cameraMode === 0) {
-                const targetDist = 2.5;
-                const headPos = playerPos.clone().add(new THREE.Vector3(0, 0.8, 0));
-                
-                const camDir = new THREE.Vector3(
-                    -Math.sin(cameraYaw) * Math.cos(cameraPitch),
-                    Math.sin(cameraPitch),
-                    -Math.cos(cameraYaw) * Math.cos(cameraPitch)
-                ).normalize();
-
-                raycaster.set(headPos, camDir);
-                const camHits = raycaster.intersectObjects(collidableObjects, true);
-
-                let actualDist = targetDist;
-                if (camHits.length > 0 && camHits[0].distance < targetDist) {
-                    actualDist = Math.max(0.3, camHits[0].distance - 0.1);
-                }
-
-                camera.position.copy(headPos).add(camDir.multiplyScalar(actualDist));
-                camera.lookAt(playerPos.x, playerPos.y + 0.8, playerPos.z);
-            } else {
-                camera.position.set(playerPos.x, playerPos.y + 0.85, playerPos.z);
-                const lookTarget = new THREE.Vector3(
-                    playerPos.x + Math.sin(cameraYaw) * 5,
-                    playerPos.y + 0.85 - Math.sin(cameraPitch) * 5,
-                    playerPos.z + Math.cos(cameraYaw) * 5
-                );
-                camera.lookAt(lookTarget);
+            // Assicuriamoci che la camera contenga la scena
+            if (!camera.parent && scene) {
+                scene.add(camera);
             }
 
             document.getElementById('posX').innerText = playerPos.x.toFixed(1);
