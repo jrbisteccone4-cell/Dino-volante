@@ -172,11 +172,9 @@
             loader.load('personaggio.glb', (gltf) => {
                 handsMesh = gltf.scene;
 
-                // Le agganciamo direttamente alla camera così seguono la visuale in prima persona
+                // Agganciate alla camera e posizionate correttamente in basso al centro
                 camera.add(handsMesh);
-                
-                // Posizioniamo le mani davanti agli occhi (puoi regolare questi valori se le vedi troppo vicine/lontane)
-                handsMesh.position.set(0, -0.4, -0.5);
+                handsMesh.position.set(0, -1.2, -0.6);
                 handsMesh.scale.set(0.8, 0.8, 0.8);
 
                 if (gltf.animations && gltf.animations.length > 0) {
@@ -332,7 +330,6 @@
 
             if (mixer) mixer.update(delta);
 
-            // Aggiorna la posizione della camera (vista in prima persona)
             camera.position.set(playerPos.x, playerPos.y + 0.8, playerPos.z);
             
             const lookTarget = new THREE.Vector3(
@@ -342,7 +339,6 @@
             );
             camera.lookAt(lookTarget);
 
-            // Assicuriamoci che la camera contenga la scena
             if (!camera.parent && scene) {
                 scene.add(camera);
             }
