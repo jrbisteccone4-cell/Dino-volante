@@ -90,7 +90,6 @@
         let cameraPitch = 0;
         let isMapLoaded = false;
 
-        // Variabili per i topi
         let ratTemplate = null;
         const rats = [];
         const numRats = 50;
@@ -133,7 +132,6 @@
             });
 
             const wallHeight = 30;
-
             const minX = -44.1;
             const maxX = 48.7;
             const minZ = -50.0;
@@ -172,20 +170,18 @@
             loader.load('topo.glb', (gltf) => {
                 ratTemplate = gltf.scene;
                 
-                const minX = -42.0, maxX = 46.0;
-                const minZ = -48.0, maxZ = 180.0;
-
                 for (let i = 0; i < numRats; i++) {
                     const rat = ratTemplate.clone();
                     
+                    // Spawn di test intorno al giocatore per assicurarci di vederli subito
                     rat.position.set(
-                        THREE.MathUtils.randFloat(minX, maxX),
+                        8.0 + THREE.MathUtils.randFloat(-6, 6),
                         0,
-                        THREE.MathUtils.randFloat(minZ, maxZ)
+                        THREE.MathUtils.randFloat(-6, 6)
                     );
                     
-                    const scale = THREE.MathUtils.randFloat(0.8, 1.2);
-                    rat.scale.set(scale, scale, scale);
+                    // Scala ingrandita per evitare problemi di invisibilità legati alle dimensioni originali del modello
+                    rat.scale.set(3, 3, 3);
 
                     rat.userData = {
                         speed: THREE.MathUtils.randFloat(1.0, 2.5),
@@ -200,8 +196,9 @@
                     rats.push(rat);
                 }
 
-                log("Topi caricati e in movimento.");
+                log("Topi caricati intorno a te!");
             }, undefined, (error) => {
+                log("Errore caricamento topo.glb");
                 console.error("Errore caricamento topo.glb:", error);
             });
         }
@@ -225,7 +222,7 @@
                 });
 
                 createFullPerimeterWalls();
-                loadRats(); // Avvia il caricamento dei topi dopo la mappa
+                loadRats();
 
                 playerPos.set(8.0, 0, 0); 
                 isMapLoaded = true; 
@@ -370,7 +367,6 @@
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             
             if (isMapLoaded) {
-                // Movimento Giocatore
                 if (inputMag > 0.05) {
                     const currentSpeed = 2.0 * inputMag * delta;
                     const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
@@ -401,7 +397,6 @@
                     }
                 }
 
-                // Movimento dei topi
                 for (let i = 0; i < rats.length; i++) {
                     const rat = rats[i];
                     rat.position.addScaledVector(rat.userData.direction, rat.userData.speed * delta);
