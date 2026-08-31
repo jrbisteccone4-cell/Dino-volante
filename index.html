@@ -101,7 +101,7 @@
                 loaderScreen.style.opacity = '0';
                 setTimeout(() => { loaderScreen.style.display = 'none'; }, 500);
                 document.getElementById('status-text').innerText = "PRONTO";
-                log("Mani sincronizzate con la visuale!");
+                log("Mani posizionate correttamente con scala di sicurezza!");
             }
         }
 
@@ -111,6 +111,7 @@
             scene.fog = new THREE.FogExp2(0x87ceeb, 0.02);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+            scene.add(camera); // FONDAMENTALE: aggiunge la camera alla scena affinché i figli (mani) vengano renderizzati
 
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -172,9 +173,15 @@
             loader.load('personaggio.glb', (gltf) => {
                 handsMesh = gltf.scene;
 
-                // Aggiungiamo direttamente alla scena principale invece che alla camera
-                scene.add(handsMesh);
-                handsMesh.scale.set(0.5, 0.5, 0.5);
+                // Scala di sicurezza ridotta per evitare che il modello esca fuori dallo schermo o risulti immenso
+                handsMesh.scale.set(0.1, 0.1, 0.1); 
+
+                // Agganciamo le mani direttamente alla telecamera
+                camera.add(handsMesh);
+                
+                // Posizionamento esatto in basso ai lati (corrispondente alle frecce dello sketch)
+                handsMesh.position.set(0, -0.7, -1.2); 
+                handsMesh.rotation.set(0, 0, 0);
 
                 if (gltf.animations && gltf.animations.length > 0) {
                     mixer = new THREE.AnimationMixer(handsMesh);
@@ -184,7 +191,7 @@
                 }
 
                 isHandsLoaded = true;
-                log("Mani caricate.");
+                log("Mani caricate con successo!");
                 checkEverythingLoaded();
             }, (xhr) => {
                 if (xhr.total) {
@@ -329,7 +336,6 @@
 
             if (mixer) mixer.update(delta);
 
-            // Aggiorna la posizione della camera
             camera.position.set(playerPos.x, playerPos.y + 0.8, playerPos.z);
             
             const lookTarget = new THREE.Vector3(
@@ -338,18 +344,6 @@
                 playerPos.z + Math.cos(cameraYaw) * 5
             );
             camera.lookAt(lookTarget);
-
-            // Posizioniamo le mani solidali alla vista della camera (proprio davanti agli occhi/schermo)
-            if (handsMesh) {
-                // Calcoliamo una posizione leggermente in basso e in avanti rispetto alla camera
-                const offset = new THREE.Vector3(0, -0.6, -0.8);
-                // Applichiamo la rotazione della camera per seguire la visuale
-                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
-                
-                handsMesh.position.copy(camera.position).add(offset);
-                handsMesh.rotation.y = cameraYaw + Math.PI; // Rigirate verso il giocatore/schermo
-                handsMesh.rotation.x = cameraPitch;
-            }
 
             document.getElementById('posX').innerText = playerPos.x.toFixed(1);
             document.getElementById('posY').innerText = playerPos.y.toFixed(1);
