@@ -93,14 +93,6 @@
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
 
-        // Definizione dei confini perimetrali per i muri fisici
-        const MAP_BOUNDS = {
-            minX: -50,
-            maxX: 50,
-            minZ: -50,
-            maxZ: 210
-        };
-
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x2b261d); 
@@ -129,48 +121,28 @@
             animate();
         }
 
-        function createPerimeterWalls() {
-            // Materiale visivo per i muri perimetrali (colore simile alle pareti delle backrooms)
+        function createCustomWalls() {
             const wallMaterial = new THREE.MeshStandardMaterial({ 
                 color: 0xd4c15d, 
                 roughness: 0.8 
             });
 
-            const wallHeight = 25; // Altezza dei muri perimetrali
-            const widthX = MAP_BOUNDS.maxX - MAP_BOUNDS.minX;
-            const depthZ = MAP_BOUNDS.maxZ - MAP_BOUNDS.minZ;
-            const centerX = (MAP_BOUNDS.maxX + MAP_BOUNDS.minX) / 2;
-            const centerZ = (MAP_BOUNDS.maxZ + MAP_BOUNDS.minZ) / 2;
+            const wallHeight = 30;
 
-            // Muro Nord (minZ)
-            const northGeo = new THREE.BoxGeometry(widthX, wallHeight, 2);
-            const northWall = new THREE.Mesh(northGeo, wallMaterial);
-            northWall.position.set(centerX, wallHeight / 2, MAP_BOUNDS.minZ);
-            scene.add(northWall);
-            collidableObjects.push(northWall);
+            // Muro personalizzato richiesto da X: -44.1 Z:188.1 a X: 48.7 Z:188.3
+            const startX = -44.1;
+            const endX = 48.7;
+            const centerZ = (188.1 + 188.3) / 2;
+            const lengthX = endX - startX;
+            const centerX = (startX + endX) / 2;
 
-            // Muro Sud (maxZ)
-            const southGeo = new THREE.BoxGeometry(widthX, wallHeight, 2);
-            const southWall = new THREE.Mesh(southGeo, wallMaterial);
-            southWall.position.set(centerX, wallHeight / 2, MAP_BOUNDS.maxZ);
-            scene.add(southWall);
-            collidableObjects.push(southWall);
+            const customWallGeo = new THREE.BoxGeometry(lengthX, wallHeight, 2);
+            const customWall = new THREE.Mesh(customWallGeo, wallMaterial);
+            customWall.position.set(centerX, wallHeight / 2, centerZ);
+            scene.add(customWall);
+            collidableObjects.push(customWall);
 
-            // Muro Ovest (minX)
-            const westGeo = new THREE.BoxGeometry(2, wallHeight, depthZ);
-            const westWall = new THREE.Mesh(westGeo, wallMaterial);
-            westWall.position.set(MAP_BOUNDS.minX, wallHeight / 2, centerZ);
-            scene.add(westWall);
-            collidableObjects.push(westWall);
-
-            // Muro Est (maxX)
-            const eastGeo = new THREE.BoxGeometry(2, wallHeight, depthZ);
-            const eastWall = new THREE.Mesh(eastGeo, wallMaterial);
-            eastWall.position.set(MAP_BOUNDS.maxX, wallHeight / 2, centerZ);
-            scene.add(eastWall);
-            collidableObjects.push(eastWall);
-
-            log("Muri perimetrali fisici generati.");
+            log("Muro personalizzato creato tra le coordinate specificate.");
         }
 
         function loadMap() {
@@ -191,8 +163,8 @@
                     }
                 });
 
-                // Genera i muri fisici tutt'intorno alla mappa caricata
-                createPerimeterWalls();
+                // Crea il muro esattamente nel punto richiesto
+                createCustomWalls();
 
                 playerPos.set(8.0, 0, 0); 
                 isMapLoaded = true; 
