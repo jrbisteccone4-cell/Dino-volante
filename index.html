@@ -121,7 +121,7 @@
             animate();
         }
 
-        function createCustomWalls() {
+        function createFullPerimeterWalls() {
             const wallMaterial = new THREE.MeshStandardMaterial({ 
                 color: 0xd4c15d, 
                 roughness: 0.8 
@@ -129,20 +129,42 @@
 
             const wallHeight = 30;
 
-            // Muro personalizzato richiesto da X: -44.1 Z:188.1 a X: 48.7 Z:188.3
-            const startX = -44.1;
-            const endX = 48.7;
-            const centerZ = (188.1 + 188.3) / 2;
-            const lengthX = endX - startX;
-            const centerX = (startX + endX) / 2;
+            // Limiti impostati esattamente sulle coordinate da te fornite
+            const minX = -44.1;
+            const maxX = 48.7;
+            const minZ = -50.0;
+            const maxZ = 188.3;
 
-            const customWallGeo = new THREE.BoxGeometry(lengthX, wallHeight, 2);
-            const customWall = new THREE.Mesh(customWallGeo, wallMaterial);
-            customWall.position.set(centerX, wallHeight / 2, centerZ);
-            scene.add(customWall);
-            collidableObjects.push(customWall);
+            const widthX = maxX - minX;
+            const depthZ = maxZ - minZ;
+            const centerX = (maxX + minX) / 2;
+            const centerZ = (maxZ + minZ) / 2;
 
-            log("Muro personalizzato creato tra le coordinate specificate.");
+            // 1. Muro Nord
+            const northWall = new THREE.Mesh(new THREE.BoxGeometry(widthX, wallHeight, 2), wallMaterial);
+            northWall.position.set(centerX, wallHeight / 2, minZ);
+            scene.add(northWall);
+            collidableObjects.push(northWall);
+
+            // 2. Muro Sud (esattamente a Z: 188.3)
+            const southWall = new THREE.Mesh(new THREE.BoxGeometry(widthX, wallHeight, 2), wallMaterial);
+            southWall.position.set(centerX, wallHeight / 2, maxZ);
+            scene.add(southWall);
+            collidableObjects.push(southWall);
+
+            // 3. Muro Ovest (esattamente a X: -44.1)
+            const westWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, depthZ), wallMaterial);
+            westWall.position.set(minX, wallHeight / 2, centerZ);
+            scene.add(westWall);
+            collidableObjects.push(westWall);
+
+            // 4. Muro Est (esattamente a X: 48.7)
+            const eastWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, depthZ), wallMaterial);
+            eastWall.position.set(maxX, wallHeight / 2, centerZ);
+            scene.add(eastWall);
+            collidableObjects.push(eastWall);
+
+            log("Perimetro completo generato sulle coordinate esatte.");
         }
 
         function loadMap() {
@@ -163,8 +185,8 @@
                     }
                 });
 
-                // Crea il muro esattamente nel punto richiesto
-                createCustomWalls();
+                // Genera tutto il perimetro chiuso con i bordi precisi
+                createFullPerimeterWalls();
 
                 playerPos.set(8.0, 0, 0); 
                 isMapLoaded = true; 
