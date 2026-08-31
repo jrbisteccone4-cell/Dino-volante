@@ -113,10 +113,10 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
             mainLight.position.set(10, 30, 10);
             scene.add(mainLight);
 
@@ -166,22 +166,22 @@
         }
 
         function loadRats() {
-            log("Caricamento dei 50 topi sulla mappa...");
+            log("Caricamento di topo.glb...");
             const loader = new THREE.GLTFLoader();
             
             loader.load('topo.glb', (gltf) => {
                 ratTemplate = gltf.scene;
+                log("topo.glb caricato con successo! Generazione cloni...", false);
                 
                 for (let i = 0; i < numRats; i++) {
                     const rat = ratTemplate.clone();
                     
                     rat.scale.set(0.15, 0.15, 0.15);
                     
-                    // Distribuiti casualmente all'interno dei limiti della mappa
                     rat.position.set(
-                        THREE.MathUtils.randFloat(-40, 45),
+                        THREE.MathUtils.randFloat(-35, 40),
                         0,
-                        THREE.MathUtils.randFloat(-45, 180)
+                        THREE.MathUtils.randFloat(-40, 170)
                     );
 
                     rat.userData = {
@@ -194,8 +194,9 @@
                     };
 
                     rat.traverse((child) => {
-                        if (child.isMesh && child.material) {
+                        if (child.isMesh) {
                             child.material.side = THREE.DoubleSide;
+                            child.castShadow = true;
                         }
                     });
 
@@ -203,10 +204,10 @@
                     rats.push(rat);
                 }
 
-                log("50 topi caricati e sparsi con successo!", false);
+                log(`Tutti i ${numRats} topi sono attivi!`, false);
             }, undefined, (error) => {
                 console.error(error);
-                log("ERRORE: Impossibile trovare 'topo.glb'", true);
+                log("ERRORE: topo.glb non trovato o non leggibile", true);
             });
         }
 
@@ -402,7 +403,6 @@
                     }
                 }
 
-                // MOVIMENTO DI TUTTI I 50 TOPI
                 for (let i = 0; i < rats.length; i++) {
                     const rat = rats[i];
                     rat.position.addScaledVector(rat.userData.direction, rat.userData.speed * delta);
