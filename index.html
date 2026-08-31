@@ -3,18 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Mani in Prima Persona</title>
+    <title>3D Game - Backrooms</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0a0a0a; font-family: sans-serif; position: fixed; }
         canvas { display: block; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 1; }
 
-        #loading-screen {
+        #loading-screen, #menu-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #0a0a0a; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 99999;
             color: white; transition: opacity 0.5s ease;
         }
+        #menu-screen { background: rgba(10, 10, 10, 0.95); z-index: 88888; display: none; }
+        
         .spinner {
             width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.2);
             border-top: 5px solid #00ffcc; border-radius: 50%;
@@ -23,36 +25,43 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #loading-text { font-size: 14px; font-family: monospace; font-weight: bold; color: #00ffcc; letter-spacing: 1px; }
 
+        .menu-title { font-size: 28px; font-weight: bold; color: #00ffcc; margin-bottom: 30px; font-family: monospace; letter-spacing: 2px; }
+        .menu-btn {
+            width: 200px; padding: 15px; margin: 10px; background: #111; border: 2px solid #00ffcc;
+            color: #00ffcc; font-size: 16px; font-weight: bold; font-family: monospace;
+            border-radius: 8px; cursor: pointer; text-align: center; box-shadow: 0 4px 10px rgba(0,255,204,0.2);
+        }
+        .menu-btn:active { transform: scale(0.95); background: #00ffcc; color: #111; }
+
         #hud {
             position: absolute; top: 80px; left: 15px; color: #222; font-size: 13px; font-weight: bold;
             font-family: monospace; pointer-events: none; z-index: 10; background: rgba(255,255,255,0.9);
-            padding: 8px 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            padding: 8px 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: none;
         }
 
         #status-log {
             position: absolute; top: 130px; left: 15px; color: #00ffcc; font-size: 12px;
             font-family: monospace; pointer-events: none; z-index: 10; font-weight: bold;
-            background: rgba(0,0,0,0.85); padding: 8px 12px; border-radius: 4px; max-width: 90vw;
+            background: rgba(0,0,0,0.85); padding: 8px 12px; border-radius: 4px; max-width: 90vw; display: none;
         }
 
         #joystick-container {
             position: absolute; bottom: 30px; left: 20px; width: 120px; height: 120px;
             background: rgba(0, 0, 0, 0.35); border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%; touch-action: none; z-index: 10;
+            border-radius: 50%; touch-action: none; z-index: 10; display: none;
         }
         #joystick-knob {
             position: absolute; top: 37px; left: 37px; width: 46px; height: 46px;
             background: #222; border: 2px solid #fff; border-radius: 50%; pointer-events: none;
         }
 
-        .btn-action {
-            position: absolute; width: 68px; height: 68px; border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.6); color: white; font-weight: bold; font-size: 11px;
-            display: flex; align-items: center; justify-content: center; touch-action: none;
-            z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; text-align: center;
+        #btn-jump {
+            position: absolute; bottom: 30px; right: 20px; width: 68px; height: 68px; border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.6); color: white; font-weight: bold; font-size: 12px;
+            display: none; align-items: center; justify-content: center; touch-action: none;
+            z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); background: #ff9900; cursor: pointer;
         }
-        .btn-action:active { transform: scale(0.9); }
-        #btn-jump { bottom: 30px; right: 20px; background: #28a745; }
+        #btn-jump:active { transform: scale(0.9); }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -65,14 +74,20 @@
         <div id="loading-text">CARICAMENTO GIOCO...</div>
     </div>
 
+    <div id="menu-screen">
+        <div class="menu-title">BACKROOMS 3D</div>
+        <div class="menu-btn" id="btn-start">START</div>
+        <div class="menu-btn" id="btn-exit">EXIT</div>
+    </div>
+
     <div id="hud">
-        STATO: <span id="status-text">CARICAMENTO</span><br>
+        STATO: <span id="status-text">PRONTO</span><br>
         POS: X:<span id="posX">8.0</span> Y:<span id="posY">0</span> Z:<span id="posZ">0</span>
     </div>
     <div id="status-log">Inizializzazione...</div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
-    <div id="btn-jump" class="btn-action">INTERAGISCI</div>
+    <div id="btn-jump">SALTA</div>
 
     <script>
         function log(msg) { 
@@ -80,30 +95,18 @@
             document.getElementById('status-log').innerText = msg; 
         }
 
-        let scene, camera, renderer, handsMesh, mapMesh;
-        let mixer = null;
-        let actionAnim = null;
-
-        const clock = new THREE.Clock();
+        let scene, camera, renderer, mapMesh;
+        let clock = new THREE.Clock();
         let moveInput = { x: 0, y: 0 };
         let playerPos = new THREE.Vector3(8.0, 0, 0);
+        let playerVelocityY = 0;
+        let isGrounded = true;
         let cameraYaw = 0;
         let cameraPitch = 0;
         let isMapLoaded = false;
-        let isHandsLoaded = false;
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
-
-        function checkEverythingLoaded() {
-            if (isMapLoaded && isHandsLoaded) {
-                const loaderScreen = document.getElementById('loading-screen');
-                loaderScreen.style.opacity = '0';
-                setTimeout(() => { loaderScreen.style.display = 'none'; }, 500);
-                document.getElementById('status-text').innerText = "PRONTO";
-                log("Mani posizionate correttamente con scala di sicurezza!");
-            }
-        }
 
         function init() {
             scene = new THREE.Scene();
@@ -111,7 +114,7 @@
             scene.fog = new THREE.FogExp2(0x87ceeb, 0.02);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-            scene.add(camera); // FONDAMENTALE: aggiunge la camera alla scena affinché i figli (mani) vengano renderizzati
+            scene.add(camera);
 
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -126,8 +129,8 @@
             mainLight.position.set(10, 30, 10);
             scene.add(mainLight);
 
-            loadHands();
             loadMap();
+            setupMenu();
             setupControls();
 
             animate();
@@ -154,11 +157,19 @@
                 playerPos.set(8.0, 0, 0); 
                 isMapLoaded = true; 
                 log("Mappa caricata.");
-                checkEverythingLoaded();
+                
+                // Nasconde il caricamento e mostra il menu iniziale originale
+                const loaderScreen = document.getElementById('loading-screen');
+                loaderScreen.style.opacity = '0';
+                setTimeout(() => { 
+                    loaderScreen.style.display = 'none'; 
+                    document.getElementById('menu-screen').style.display = 'flex';
+                }, 500);
+
             }, (xhr) => {
                 if (xhr.total) {
                     const pct = Math.floor((xhr.loaded / xhr.total) * 100);
-                    document.getElementById('loading-text').innerText = `MAPPA: ${pct}%`;
+                    document.getElementById('loading-text').innerText = `MANO: ${pct}%`;
                 }
             }, (error) => {
                 log("Errore caricamento mappa.glb");
@@ -166,41 +177,18 @@
             });
         }
 
-        function loadHands() {
-            log("Caricamento personaggio.glb (mani)...");
-            const loader = new THREE.GLTFLoader();
+        function setupMenu() {
+            document.getElementById('btn-start').addEventListener('click', () => {
+                document.getElementById('menu-screen').style.display = 'none';
+                document.getElementById('hud').style.display = 'block';
+                document.getElementById('status-log').style.display = 'block';
+                document.getElementById('joystick-container').style.display = 'block';
+                document.getElementById('btn-jump').style.display = 'flex';
+                log("Buona fortuna nelle Backrooms!");
+            });
 
-            loader.load('personaggio.glb', (gltf) => {
-                handsMesh = gltf.scene;
-
-                // Scala di sicurezza ridotta per evitare che il modello esca fuori dallo schermo o risulti immenso
-                handsMesh.scale.set(0.1, 0.1, 0.1); 
-
-                // Agganciamo le mani direttamente alla telecamera
-                camera.add(handsMesh);
-                
-                // Posizionamento esatto in basso ai lati (corrispondente alle frecce dello sketch)
-                handsMesh.position.set(0, -0.7, -1.2); 
-                handsMesh.rotation.set(0, 0, 0);
-
-                if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(handsMesh);
-                    actionAnim = mixer.clipAction(gltf.animations[0]);
-                    actionAnim.setLoop(THREE.LoopRepeat);
-                    actionAnim.play();
-                }
-
-                isHandsLoaded = true;
-                log("Mani caricate con successo!");
-                checkEverythingLoaded();
-            }, (xhr) => {
-                if (xhr.total) {
-                    const pct = Math.floor((xhr.loaded / xhr.total) * 100);
-                    document.getElementById('loading-text').innerText = `MANI: ${pct}%`;
-                }
-            }, (error) => {
-                log("Errore caricamento personaggio.glb");
-                console.error(error);
+            document.getElementById('btn-exit').addEventListener('click', () => {
+                alert("Gioco chiuso o ricaricabile.");
             });
         }
 
@@ -281,7 +269,10 @@
 
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                log("Interazione avviata!");
+                if (isGrounded) {
+                    playerVelocityY = 0.12;
+                    isGrounded = false;
+                }
             }, { passive: false });
         }
 
@@ -305,11 +296,10 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            const delta = clock.getDelta();
 
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             
-            if (isMapLoaded && isHandsLoaded) {
+            if (isMapLoaded) {
                 if (inputMag > 0.05) {
                     const currentSpeed = 0.03 * inputMag;
                     const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
@@ -327,14 +317,18 @@
                     let nextZ = playerPos.clone();
                     nextZ.z += moveDir.z;
                     if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
+                }
 
-                    if (actionAnim) actionAnim.timeScale = 1.2;
+                // Gestione gravità e salto
+                playerPos.y += playerVelocityY;
+                if (playerPos.y > 0) {
+                    playerVelocityY -= 0.008; // Gravità
                 } else {
-                    if (actionAnim) actionAnim.timeScale = 0.5;
+                    playerPos.y = 0;
+                    playerVelocityY = 0;
+                    isGrounded = true;
                 }
             }
-
-            if (mixer) mixer.update(delta);
 
             camera.position.set(playerPos.x, playerPos.y + 0.8, playerPos.z);
             
