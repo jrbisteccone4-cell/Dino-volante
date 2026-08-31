@@ -164,17 +164,20 @@
         }
 
         function loadSingleRat() {
-            log("Caricamento del topo sulla mappa...");
+            log("Caricamento del topo vicino a te...");
             const loader = new THREE.GLTFLoader();
             
             loader.load('topo.glb', (gltf) => {
                 singleRat = gltf.scene;
                 
-                // SCALA RIDOTTA DI MOLTO (modificala se lo vedi troppo piccolo o grande)
                 singleRat.scale.set(0.15, 0.15, 0.15);
-                
-                // Posizionalo leggermente davanti al punto di partenza (es. X: 8.0, Z: -2.0)
-                singleRat.position.set(8.0, 0, -2.0);
+                // SPAWN VICINO AL GIOCATORE (Player parte a X: 8.0, Z: 0. Lo mettiamo a Z: -1.0, proprio davanti)
+                singleRat.position.set(8.0, 0, -1.0);
+
+                singleRat.userData = {
+                    speed: 1.5,
+                    direction: new THREE.Vector3(1, 0, 0).normalize()
+                };
 
                 singleRat.traverse((child) => {
                     if (child.isMesh && child.material) {
@@ -183,7 +186,7 @@
                 });
 
                 scene.add(singleRat);
-                log("Topo posizionato sulla mappa!", false);
+                log("Topo spawnato davanti a te e in movimento!", false);
             }, undefined, (error) => {
                 console.error(error);
                 log("ERRORE: Impossibile trovare 'topo.glb'", true);
@@ -379,6 +382,29 @@
                         playerPos.y = 0;
                         playerVelocityY = 0;
                         isGrounded = true;
+                    }
+                }
+
+                // MOVIMENTO DEL TOPO
+                if (singleRat) {
+                    singleRat.position.addScaledVector(singleRat.userData.direction, singleRat.userData.speed * delta);
+                    
+                    const targetLook = singleRat.position.clone().add(singleRat.userData.direction);
+                    singleRat.lookAt(targetLook);
+
+                    if (singleRat.position.x < -43.0 || singleRat.position.x > 47.5) {
+                        singleRat.userData.direction.x *= -1;
+                    }
+                    if (singleRat.position.z < -49.0 || singleRat.position.z > 187.0) {
+                        singleRat.userData.direction.z *= -1;
+                    }
+
+                    if (Math.random() < 0.02) {
+                        singleRat.userData.direction.set(
+                            Math.random() - 0.5,
+                            0,
+                            Math.random() - 0.5
+                        ).normalize();
                     }
                 }
             }
