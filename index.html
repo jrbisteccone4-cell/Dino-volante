@@ -94,6 +94,7 @@
 
         const rats = [];
         const numRats = 50;
+        let ratGeometrySource = null;
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
@@ -127,21 +128,11 @@
         }
 
         function createFullPerimeterWalls() {
-            const wallMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0xf0d050, 
-                roughness: 0.85 
-            });
-
+            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xf0d050, roughness: 0.85 });
             const wallHeight = 30;
-            const minX = -44.1;
-            const maxX = 48.7;
-            const minZ = -50.0;
-            const maxZ = 188.3;
-
-            const widthX = maxX - minX;
-            const depthZ = maxZ - minZ;
-            const centerX = (maxX + minX) / 2;
-            const centerZ = (maxZ + minZ) / 2;
+            const minX = -44.1, maxX = 48.7, minZ = -50.0, maxZ = 188.3;
+            const widthX = maxX - minX, depthZ = maxZ - minZ;
+            const centerX = (maxX + minX) / 2, centerZ = (maxZ + minZ) / 2;
 
             const northWall = new THREE.Mesh(new THREE.BoxGeometry(widthX, wallHeight, 2), wallMaterial);
             northWall.position.set(centerX, wallHeight / 2, minZ);
@@ -196,19 +187,19 @@
             return pos;
         }
 
-        function spawnRats(templateScene = null) {
+        function spawnAllRats() {
             for (let i = 0; i < numRats; i++) {
                 let rat;
-                if (templateScene) {
-                    rat = templateScene.clone(true);
+                if (ratGeometrySource) {
+                    rat = ratGeometrySource.clone(true);
                 } else {
                     const geo = new THREE.BoxGeometry(0.5, 0.3, 1.0);
                     const mat = new THREE.MeshStandardMaterial({ color: 0x885533 });
                     rat = new THREE.Mesh(geo, mat);
                 }
 
-                const safePos = getSafeSpawnPosition();
-                rat.position.copy(safePos);
+                rat.position.copy(getSafeSpawnPosition());
+                rat.position.y = 0; // Garantisce che poggi sul pavimento
 
                 rat.userData = {
                     speed: THREE.MathUtils.randFloat(1.0, 2.0),
@@ -222,7 +213,7 @@
                 scene.add(rat);
                 rats.push(rat);
             }
-            log(`Generati con successo ${numRats} topi nei corridoi!`, false);
+            log(`Generati ${numRats} topi indipendenti e liberi nella mappa!`, false);
         }
 
         function loadRats() {
@@ -232,14 +223,14 @@
             loader.load('topo.glb', (gltf) => {
                 const model = gltf.scene;
                 
-                // Centriamo la geometria del topo alla base in modo perfetto
+                // Normalizzazione assoluta della geometria del singolo topo
                 const box = new THREE.Box3().setFromObject(model);
                 const size = box.getSize(new THREE.Vector3());
-                
-                model.position.x = - (box.min.x + box.max.x) / 2;
-                model.position.z = - (box.min.z + box.max.z) / 2;
-                model.position.y = - box.min.y; // Poggia esattamente a Y=0
-                
+                const center = box.getCenter(new THREE.Vector3());
+
+                model.position.sub(center);
+                model.position.y += size.y / 2; // Riporta le zampe esattamente a zero
+
                 const maxDim = Math.max(size.x, size.y, size.z);
                 const scaleFactor = maxDim > 0 ? (0.6 / maxDim) : 0.15;
                 model.scale.set(scaleFactor, scaleFactor, scaleFactor);
@@ -253,15 +244,13 @@
                     }
                 });
 
-                // Creiamo un contenitore pulito per ogni singolo topo clonabile
-                const masterRat = new THREE.Group();
-                masterRat.add(model);
-
-                spawnRats(masterRat);
+                ratGeometrySource = model;
+                spawnAllRats();
             }, undefined, (error) => {
                 console.warn("Impossibile caricare topo.glb", error);
                 log("AVVISO: topo.glb non trovato, uso cubi segnaposto.", true);
-                spawnRats(null);
+                ratGeometrySource = null;
+                spawnAllRats();
             });
         }
 
