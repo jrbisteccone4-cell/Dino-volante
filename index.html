@@ -48,7 +48,7 @@
         #btn-jump {
             position: absolute; bottom: 30px; right: 20px; width: 68px; height: 68px; border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.6); color: white; font-weight: bold; font-size: 12px;
-            display: none; align-items: center; justifyContent: center; touch-action: none;
+            display: none; align-items: center; justify-content: center; touch-action: none;
             z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3); background: #ff9900; cursor: pointer;
         }
         #btn-jump:active { transform: scale(0.9); }
@@ -176,17 +176,14 @@
             loader.load('personaggio.glb', (gltf) => {
                 characterModel = gltf.scene;
 
-                // Correzione automatica del pivot e centratura basata sul bounding box
                 const box = new THREE.Box3().setFromObject(characterModel);
                 const size = box.getSize(new THREE.Vector3());
                 const center = box.getCenter(new THREE.Vector3());
 
-                // Centra la mesh rispetto al proprio baricentro e poggia le basi a Y = 0
                 characterModel.position.x = -center.x;
                 characterModel.position.z = -center.z;
                 characterModel.position.y = -box.min.y;
 
-                // Scala automatica se il modello è troppo grande o troppo piccolo (es. altezza target ~ 1.8 metri)
                 const maxDim = Math.max(size.x, size.y, size.z);
                 if (maxDim > 0) {
                     const scaleFactor = 1.8 / maxDim;
@@ -203,13 +200,18 @@
                     }
                 });
 
-                // Posizioniamo il personaggio vicino allo spawn iniziale del giocatore
-                characterModel.position.set(5.0, 0, 0);
                 scene.add(characterModel);
                 log("Personaggio caricato con successo!", false);
             }, undefined, (error) => {
                 console.warn("Impossibile caricare personaggio.glb", error);
-                log("AVVISO: personaggio.glb non trovato.", true);
+                log("ATTENZIONE: personaggio.glb non trovato, uso un cubo segnaposto.", true);
+                
+                // Fallback di sicurezza se il file non viene trovato
+                const geo = new THREE.BoxGeometry(0.6, 1.8, 0.6);
+                const mat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+                characterModel = new THREE.Mesh(geo, mat);
+                characterModel.position.y = 0.9;
+                scene.add(characterModel);
             });
         }
 
@@ -385,6 +387,14 @@
                         playerVelocityY = 0;
                         isGrounded = true;
                     }
+                }
+
+                // Aggiorna la posizione del personaggio in base ai movimenti del giocatore
+                if (characterModel) {
+                    characterModel.position.x = playerPos.x;
+                    characterModel.position.y = playerPos.y;
+                    characterModel.position.z = playerPos.z;
+                    characterModel.rotation.y = cameraYaw + Math.PI;
                 }
             }
 
