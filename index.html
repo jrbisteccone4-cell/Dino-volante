@@ -207,8 +207,10 @@
                     rat = new THREE.Mesh(geo, mat);
                 }
 
-                // Posizionamento sicuro fuori dai muri
-                rat.position.copy(getSafeSpawnPosition());
+                // Posizionamento sicuro ed emerso correttamente dal pavimento
+                const safePos = getSafeSpawnPosition();
+                safePos.y = 0; // Forza il contatto esatto con il suolo
+                rat.position.copy(safePos);
 
                 rat.userData = {
                     speed: THREE.MathUtils.randFloat(1.0, 2.0),
@@ -222,7 +224,7 @@
                 scene.add(rat);
                 rats.push(rat);
             }
-            log(`Generati ${numRats} topi liberi nei corridoi!`, false);
+            log(`Generati ${numRats} topi in superficie nei corridoi!`, false);
         }
 
         function loadRats() {
@@ -232,14 +234,17 @@
             loader.load('topo.glb', (gltf) => {
                 const model = gltf.scene;
                 
+                // Corretta gestione dei confini: posizioniamo la base del modello esattamente a Y = 0
                 const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3());
                 
-                model.position.sub(center);
+                // Centra X e Z, ma sposta la Y in modo che le zampe poggino a terra (evita l'affondamento)
+                model.position.x = - (box.min.x + box.max.x) / 2;
+                model.position.z = - (box.min.z + box.max.z) / 2;
+                model.position.y = - box.min.y; 
                 
                 const maxDim = Math.max(size.x, size.y, size.z);
-                const scaleFactor = maxDim > 0 ? (0.8 / maxDim) : 0.15;
+                const scaleFactor = maxDim > 0 ? (0.6 / maxDim) : 0.15;
                 model.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
                 model.traverse((child) => {
@@ -251,7 +256,11 @@
                     }
                 });
 
-                spawnRats(model);
+                // Avvolgiamo in un gruppo contenitore pulito per gestire la posizione globale
+                const wrapper = new THREE.Group();
+                wrapper.add(model);
+
+                spawnRats(wrapper);
             }, undefined, (error) => {
                 console.warn("Impossibile caricare topo.glb", error);
                 log("AVVISO: topo.glb non trovato, uso cubi segnaposto.", true);
