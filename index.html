@@ -164,23 +164,51 @@
             collidableObjects.push(eastWall);
         }
 
+        function canMoveTo(targetPos) {
+            if (collidableObjects.length === 0) return true;
+            const origin = targetPos.clone();
+            origin.y += 0.4;
+            const directions = [
+                new THREE.Vector3(1, 0, 0),
+                new THREE.Vector3(-1, 0, 0),
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(0, 0, -1)
+            ];
+            for (let dir of directions) {
+                raycaster.set(origin, dir);
+                const hits = raycaster.intersectObjects(collidableObjects, true);
+                if (hits.length > 0 && hits[0].distance < 0.4) return false;
+            }
+            return true;
+        }
+
+        function getSafeSpawnPosition() {
+            let pos = new THREE.Vector3();
+            let attempts = 0;
+            do {
+                pos.set(
+                    THREE.MathUtils.randFloat(-40, 45),
+                    0,
+                    THREE.MathUtils.randFloat(-45, 180)
+                );
+                attempts++;
+            } while (!canMoveTo(pos) && attempts < 50);
+            return pos;
+        }
+
         function spawnRats(templateMesh = null) {
             for (let i = 0; i < numRats; i++) {
                 let rat;
                 if (templateMesh) {
                     rat = templateMesh.clone(true);
                 } else {
-                    // Fallback geometrico se topo.glb non carica o è vuoto
                     const geo = new THREE.BoxGeometry(0.5, 0.3, 1.0);
                     const mat = new THREE.MeshStandardMaterial({ color: 0x885533 });
                     rat = new THREE.Mesh(geo, mat);
                 }
 
-                rat.position.set(
-                    THREE.MathUtils.randFloat(-20, 35),
-                    0.2,
-                    THREE.MathUtils.randFloat(-30, 100)
-                );
+                // Posizionamento sicuro fuori dai muri
+                rat.position.copy(getSafeSpawnPosition());
 
                 rat.userData = {
                     speed: THREE.MathUtils.randFloat(1.0, 2.0),
@@ -194,7 +222,7 @@
                 scene.add(rat);
                 rats.push(rat);
             }
-            log(`Generati con successo ${numRats} elementi nella mappa!`, false);
+            log(`Generati ${numRats} topi liberi nei corridoi!`, false);
         }
 
         function loadRats() {
@@ -204,12 +232,11 @@
             loader.load('topo.glb', (gltf) => {
                 const model = gltf.scene;
                 
-                // Centratura e ridimensionamento automatico basato sui confini reali del modello
                 const box = new THREE.Box3().setFromObject(model);
                 const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3());
                 
-                model.position.sub(center); // Centra l'origine sull'oggetto
+                model.position.sub(center);
                 
                 const maxDim = Math.max(size.x, size.y, size.z);
                 const scaleFactor = maxDim > 0 ? (0.8 / maxDim) : 0.15;
@@ -226,9 +253,9 @@
 
                 spawnRats(model);
             }, undefined, (error) => {
-                console.warn("Impossibile caricare topo.glb, uso il fallback di sicurezza.", error);
+                console.warn("Impossibile caricare topo.glb", error);
                 log("AVVISO: topo.glb non trovato, uso cubi segnaposto.", true);
-                spawnRats(null); // Attiva i cubi di sicurezza
+                spawnRats(null);
             });
         }
 
@@ -367,24 +394,6 @@
                     isGrounded = false;
                 }
             }, { passive: false });
-        }
-
-        function canMoveTo(targetPos) {
-            if (collidableObjects.length === 0) return true;
-            const origin = targetPos.clone();
-            origin.y += 0.4;
-            const directions = [
-                new THREE.Vector3(1, 0, 0),
-                new THREE.Vector3(-1, 0, 0),
-                new THREE.Vector3(0, 0, 1),
-                new THREE.Vector3(0, 0, -1)
-            ];
-            for (let dir of directions) {
-                raycaster.set(origin, dir);
-                const hits = raycaster.intersectObjects(collidableObjects, true);
-                if (hits.length > 0 && hits[0].distance < 0.3) return false;
-            }
-            return true;
         }
 
         function animate() {
