@@ -9,22 +9,12 @@
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0a0a0a; font-family: sans-serif; position: fixed; }
         canvas { display: block; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 1; }
 
-        #loading-screen, #menu-screen {
+        #menu-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #0a0a0a; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 99999;
-            color: white; transition: opacity 0.5s ease;
+            background: rgba(10, 10, 10, 0.95); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 88888;
         }
-        #menu-screen { background: rgba(10, 10, 10, 0.95); z-index: 88888; display: none; }
         
-        .spinner {
-            width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.2);
-            border-top: 5px solid #00ffcc; border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 20px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #loading-text { font-size: 14px; font-family: monospace; font-weight: bold; color: #00ffcc; letter-spacing: 1px; }
-
         .menu-title { font-size: 28px; font-weight: bold; color: #00ffcc; margin-bottom: 30px; font-family: monospace; letter-spacing: 2px; }
         .menu-btn {
             width: 200px; padding: 15px; margin: 10px; background: #111; border: 2px solid #00ffcc;
@@ -69,15 +59,10 @@
 </head>
 <body>
 
-    <div id="loading-screen">
-        <div class="spinner"></div>
-        <div id="loading-text">CARICAMENTO GIOCO...</div>
-    </div>
-
     <div id="menu-screen">
-        <div class="menu-title">BACKROOMS 3D</div>
-        <div class="menu-btn" id="btn-start">START</div>
-        <div class="menu-btn" id="btn-exit">EXIT</div>
+        <div class="menu-title" id="menu-title-text">MAP: 0%</div>
+        <div class="menu-btn" id="btn-start" style="display: none;">START</div>
+        <div class="menu-btn" id="btn-exit" style="display: none;">EXIT</div>
     </div>
 
     <div id="hud">
@@ -158,18 +143,15 @@
                 isMapLoaded = true; 
                 log("Mappa caricata.");
                 
-                // Nasconde il caricamento e mostra il menu iniziale originale
-                const loaderScreen = document.getElementById('loading-screen');
-                loaderScreen.style.opacity = '0';
-                setTimeout(() => { 
-                    loaderScreen.style.display = 'none'; 
-                    document.getElementById('menu-screen').style.display = 'flex';
-                }, 500);
+                // Mostra i pulsanti Start ed Exit al completamento del caricamento mappa
+                document.getElementById('menu-title-text').innerText = "BACKROOMS 3D";
+                document.getElementById('btn-start').style.display = 'block';
+                document.getElementById('btn-exit').style.display = 'block';
 
             }, (xhr) => {
                 if (xhr.total) {
                     const pct = Math.floor((xhr.loaded / xhr.total) * 100);
-                    document.getElementById('loading-text').innerText = `MANO: ${pct}%`;
+                    document.getElementById('menu-title-text').innerText = `MAP: ${pct}%`;
                 }
             }, (error) => {
                 log("Errore caricamento mappa.glb");
