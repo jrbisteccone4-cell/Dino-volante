@@ -171,16 +171,13 @@
         }
 
         function createFallbackCharacter() {
-            // Crea un omino geometrico di emergenza se il file GLB non si carica
             const group = new THREE.Group();
             const mat = new THREE.MeshStandardMaterial({ color: 0xff0055, roughness: 0.5 });
             
-            // Corpo
             const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.3), mat);
             body.position.y = 0.6;
             group.add(body);
 
-            // Testa
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mat);
             head.position.y = 1.4;
             group.add(head);
@@ -222,8 +219,7 @@
                 scene.add(characterModel);
                 log("Personaggio caricato con successo!", false);
             }, undefined, (error) => {
-                console.warn("File personaggio non trovato o troppo grande, uso omino di riserva.", error);
-                // Fallback automatico: se fallisce, crea il personaggio geometrico
+                console.warn("File personaggio non trovato, uso omino di riserva.", error);
                 characterModel = createFallbackCharacter();
                 scene.add(characterModel);
                 log("Modalità compatibile attiva (Personaggio pronto)", false);
@@ -407,12 +403,18 @@
                 }
             }
 
-            camera.position.set(playerPos.x, playerPos.y + 0.8, playerPos.z);
+            // VISUALE IN TERZA PERSONA (Telecamera dietro e sopra il personaggio)
+            const cameraDist = 3.0;
+            camera.position.set(
+                playerPos.x - Math.sin(cameraYaw) * cameraDist,
+                playerPos.y + 1.8,
+                playerPos.z - Math.cos(cameraYaw) * cameraDist
+            );
             
             const lookTarget = new THREE.Vector3(
-                playerPos.x + Math.sin(cameraYaw) * 5,
-                playerPos.y + 0.8 - cameraPitch * 5,
-                playerPos.z + Math.cos(cameraYaw) * 5
+                playerPos.x,
+                playerPos.y + 1.0 - cameraPitch * 3,
+                playerPos.z
             );
             camera.lookAt(lookTarget);
 
