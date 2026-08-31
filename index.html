@@ -90,6 +90,11 @@
         let cameraPitch = 0;
         let isMapLoaded = false;
 
+        // Variabili per i topi
+        let ratTemplate = null;
+        const rats = [];
+        const numRats = 50;
+
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
 
@@ -122,7 +127,6 @@
         }
 
         function createFullPerimeterWalls() {
-            // Giallo Backrooms calibrato esattamente sulla tonalità della mappa
             const wallMaterial = new THREE.MeshStandardMaterial({ 
                 color: 0xf0d050, 
                 roughness: 0.85 
@@ -140,31 +144,66 @@
             const centerX = (maxX + minX) / 2;
             const centerZ = (maxZ + minZ) / 2;
 
-            // 1. Muro Nord
             const northWall = new THREE.Mesh(new THREE.BoxGeometry(widthX, wallHeight, 2), wallMaterial);
             northWall.position.set(centerX, wallHeight / 2, minZ);
             scene.add(northWall);
             collidableObjects.push(northWall);
 
-            // 2. Muro Sud
             const southWall = new THREE.Mesh(new THREE.BoxGeometry(widthX, wallHeight, 2), wallMaterial);
             southWall.position.set(centerX, wallHeight / 2, maxZ);
             scene.add(southWall);
             collidableObjects.push(southWall);
 
-            // 3. Muro Ovest
             const westWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, depthZ), wallMaterial);
             westWall.position.set(minX, wallHeight / 2, centerZ);
             scene.add(westWall);
             collidableObjects.push(westWall);
 
-            // 4. Muro Est
             const eastWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, depthZ), wallMaterial);
             eastWall.position.set(maxX, wallHeight / 2, centerZ);
             scene.add(eastWall);
             collidableObjects.push(eastWall);
 
-            log("Perimetro completo generato con il giallo esatto della mappa.");
+            log("Perimetro completo generato.");
+        }
+
+        function loadRats() {
+            const loader = new THREE.GLTFLoader();
+            loader.load('topo.glb', (gltf) => {
+                ratTemplate = gltf.scene;
+                
+                const minX = -42.0, maxX = 46.0;
+                const minZ = -48.0, maxZ = 180.0;
+
+                for (let i = 0; i < numRats; i++) {
+                    const rat = ratTemplate.clone();
+                    
+                    rat.position.set(
+                        THREE.MathUtils.randFloat(minX, maxX),
+                        0,
+                        THREE.MathUtils.randFloat(minZ, maxZ)
+                    );
+                    
+                    const scale = THREE.MathUtils.randFloat(0.8, 1.2);
+                    rat.scale.set(scale, scale, scale);
+
+                    rat.userData = {
+                        speed: THREE.MathUtils.randFloat(1.0, 2.5),
+                        direction: new THREE.Vector3(
+                            Math.random() - 0.5, 
+                            0, 
+                            Math.random() - 0.5
+                        ).normalize()
+                    };
+
+                    scene.add(rat);
+                    rats.push(rat);
+                }
+
+                log("Topi caricati e in movimento.");
+            }, undefined, (error) => {
+                console.error("Errore caricamento topo.glb:", error);
+            });
         }
 
         function loadMap() {
@@ -186,6 +225,7 @@
                 });
 
                 createFullPerimeterWalls();
+                loadRats(); // Avvia il caricamento dei topi dopo la mappa
 
                 playerPos.set(8.0, 0, 0); 
                 isMapLoaded = true; 
@@ -330,6 +370,7 @@
             const inputMag = Math.hypot(moveInput.x, moveInput.y);
             
             if (isMapLoaded) {
+                // Movimento Giocatore
                 if (inputMag > 0.05) {
                     const currentSpeed = 2.0 * inputMag * delta;
                     const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
@@ -357,6 +398,30 @@
                         playerPos.y = 0;
                         playerVelocityY = 0;
                         isGrounded = true;
+                    }
+                }
+
+                // Movimento dei topi
+                for (let i = 0; i < rats.length; i++) {
+                    const rat = rats[i];
+                    rat.position.addScaledVector(rat.userData.direction, rat.userData.speed * delta);
+                    
+                    const targetLook = rat.position.clone().add(rat.userData.direction);
+                    rat.lookAt(targetLook);
+
+                    if (rat.position.x < -43.0 || rat.position.x > 47.5) {
+                        rat.userData.direction.x *= -1;
+                    }
+                    if (rat.position.z < -49.0 || rat.position.z > 187.0) {
+                        rat.userData.direction.z *= -1;
+                    }
+
+                    if (Math.random() < 0.01) {
+                        rat.userData.direction.set(
+                            Math.random() - 0.5,
+                            0,
+                            Math.random() - 0.5
+                        ).normalize();
                     }
                 }
             }
