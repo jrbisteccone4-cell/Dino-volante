@@ -92,10 +92,6 @@
         let cameraPitch = 0;
         let isMapLoaded = false;
 
-        const rats = [];
-        const numRats = 50;
-        let ratTemplate = null;
-
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
 
@@ -173,88 +169,6 @@
             return true;
         }
 
-        function getSafeSpawnPosition() {
-            let pos = new THREE.Vector3();
-            let attempts = 0;
-            do {
-                pos.set(
-                    THREE.MathUtils.randFloat(-35, 40),
-                    0,
-                    THREE.MathUtils.randFloat(-40, 170)
-                );
-                attempts++;
-            } while (!canMoveTo(pos) && attempts < 60);
-            return pos;
-        }
-
-        function spawnAllRats() {
-            for (let i = 0; i < numRats; i++) {
-                let rat;
-                if (ratTemplate) {
-                    rat = ratTemplate.clone(true);
-                } else {
-                    const geo = new THREE.BoxGeometry(0.5, 0.3, 1.0);
-                    const mat = new THREE.MeshStandardMaterial({ color: 0x885533 });
-                    rat = new THREE.Mesh(geo, mat);
-                }
-
-                const safePos = getSafeSpawnPosition();
-                rat.position.set(safePos.x, 0, safePos.z); // Y fisso a 0 sul pavimento
-
-                rat.userData = {
-                    speed: THREE.MathUtils.randFloat(1.0, 2.0),
-                    direction: new THREE.Vector3(
-                        Math.random() - 0.5, 
-                        0, 
-                        Math.random() - 0.5
-                    ).normalize()
-                };
-
-                scene.add(rat);
-                rats.push(rat);
-            }
-            log(`Generati ${numRats} topi corretti e sparsi nei corridoi!`, false);
-        }
-
-        function loadRats() {
-            log("Caricamento topo.glb...");
-            const loader = new THREE.GLTFLoader();
-            
-            loader.load('topo.glb', (gltf) => {
-                const model = gltf.scene;
-                
-                // Calcoliamo i confini reali del modello caricato
-                const box = new THREE.Box3().setFromObject(model);
-                const size = box.getSize(new THREE.Vector3());
-                
-                // Centriamo perfettamente il pivot sul baricentro orizzontale e alla base verticale (min.y)
-                model.position.x = - (box.min.x + box.max.x) / 2;
-                model.position.z = - (box.min.z + box.max.z) / 2;
-                model.position.y = - box.min.y; // Solleva esattamente il modello per appoggiare le zampe a zero
-
-                const maxDim = Math.max(size.x, size.y, size.z);
-                const scaleFactor = maxDim > 0 ? (0.6 / maxDim) : 0.15;
-                model.scale.set(scaleFactor, scaleFactor, scaleFactor);
-
-                model.traverse((child) => {
-                    if (child.isMesh) {
-                        child.visible = true;
-                        if (child.material) {
-                            child.material.side = THREE.DoubleSide;
-                        }
-                    }
-                });
-
-                ratTemplate = model;
-                spawnAllRats();
-            }, undefined, (error) => {
-                console.warn("Impossibile caricare topo.glb", error);
-                log("AVVISO: topo.glb non trovato, uso cubi segnaposto.", true);
-                ratTemplate = null;
-                spawnAllRats();
-            });
-        }
-
         function loadMap() {
             log("Caricamento mappa.glb...");
             const loader = new THREE.GLTFLoader();
@@ -274,11 +188,11 @@
                 });
 
                 createFullPerimeterWalls();
-                loadRats();
 
                 playerPos.set(8.0, 0, 0); 
                 isMapLoaded = true; 
                 
+                log("Mappa caricata correttamente.", false);
                 document.getElementById('menu-title-text').innerText = "BACKROOMS 3D";
                 document.getElementById('btn-start').style.display = 'block';
                 document.getElementById('btn-exit').style.display = 'block';
@@ -426,30 +340,6 @@
                         playerPos.y = 0;
                         playerVelocityY = 0;
                         isGrounded = true;
-                    }
-                }
-
-                for (let i = 0; i < rats.length; i++) {
-                    const rat = rats[i];
-                    rat.position.addScaledVector(rat.userData.direction, rat.userData.speed * delta);
-                    rat.position.y = 0; // Forziamo rigorosamente il pavimento a zero per ogni fotogramma
-                    
-                    const targetLook = rat.position.clone().add(rat.userData.direction);
-                    rat.lookAt(targetLook);
-
-                    if (rat.position.x < -43.0 || rat.position.x > 47.5) {
-                        rat.userData.direction.x *= -1;
-                    }
-                    if (rat.position.z < -49.0 || rat.position.z > 187.0) {
-                        rat.userData.direction.z *= -1;
-                    }
-
-                    if (Math.random() < 0.02) {
-                        rat.userData.direction.set(
-                            Math.random() - 0.5,
-                            0,
-                            Math.random() - 0.5
-                        ).normalize();
                     }
                 }
             }
