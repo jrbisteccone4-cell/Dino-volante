@@ -170,54 +170,64 @@
             return true;
         }
 
+        function createFallbackCharacter() {
+            // Crea un omino geometrico di emergenza se il file GLB non si carica
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0xff0055, roughness: 0.5 });
+            
+            // Corpo
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.3), mat);
+            body.position.y = 0.6;
+            group.add(body);
+
+            // Testa
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mat);
+            head.position.y = 1.4;
+            group.add(head);
+
+            return group;
+        }
+
         function loadCharacter() {
             log("Caricamento personaggio.glb...");
             const loader = new THREE.GLTFLoader();
             
-            // Tentativo con percorso relativo pulito (funziona su GitHub Pages)
-            loader.load('./personaggio.glb', (gltf) => {
-                onCharacterLoaded(gltf);
-            }, undefined, (error1) => {
-                console.warn("Primo tentativo fallito, provo percorso assoluto...", error1);
-                // Secondo tentativo di fallback forzato
-                loader.load('personaggio.glb', (gltf) => {
-                    onCharacterLoaded(gltf);
-                }, undefined, (error2) => {
-                    console.error("Errore critico caricamento personaggio:", error2);
-                    log("Errore: impossibile caricare personaggio.glb", true);
-                });
-            });
-        }
+            loader.load('personaggio.glb', (gltf) => {
+                characterModel = gltf.scene;
 
-        function onCharacterLoaded(gltf) {
-            characterModel = gltf.scene;
+                const box = new THREE.Box3().setFromObject(characterModel);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
 
-            const box = new THREE.Box3().setFromObject(characterModel);
-            const size = box.getSize(new THREE.Vector3());
-            const center = box.getCenter(new THREE.Vector3());
+                characterModel.position.x = -center.x;
+                characterModel.position.z = -center.z;
+                characterModel.position.y = -box.min.y;
 
-            characterModel.position.x = -center.x;
-            characterModel.position.z = -center.z;
-            characterModel.position.y = -box.min.y;
-
-            const maxDim = Math.max(size.x, size.y, size.z);
-            if (maxDim > 0) {
-                const scaleFactor = 1.8 / maxDim;
-                characterModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
-            }
-
-            characterModel.traverse((child) => {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    if (child.material) {
-                        child.material.side = THREE.DoubleSide;
-                    }
+                const maxDim = Math.max(size.x, size.y, size.z);
+                if (maxDim > 0) {
+                    const scaleFactor = 1.8 / maxDim;
+                    characterModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 }
-            });
 
-            scene.add(characterModel);
-            log("Personaggio caricato con successo!", false);
+                characterModel.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        if (child.material) {
+                            child.material.side = THREE.DoubleSide;
+                        }
+                    }
+                });
+
+                scene.add(characterModel);
+                log("Personaggio caricato con successo!", false);
+            }, undefined, (error) => {
+                console.warn("File personaggio non trovato o troppo grande, uso omino di riserva.", error);
+                // Fallback automatico: se fallisce, crea il personaggio geometrico
+                characterModel = createFallbackCharacter();
+                scene.add(characterModel);
+                log("Modalità compatibile attiva (Personaggio pronto)", false);
+            });
         }
 
         function loadMap() {
