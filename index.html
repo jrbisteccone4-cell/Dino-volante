@@ -30,7 +30,7 @@
         }
 
         #status-log {
-            position: absolute; top: 130px; left: 15px; color: #ff5555; font-size: 12px;
+            position: absolute; top: 130px; left: 15px; color: #00ffcc; font-size: 12px;
             font-family: monospace; pointer-events: none; z-index: 10; font-weight: bold;
             background: rgba(0,0,0,0.85); padding: 8px 12px; border-radius: 4px; max-width: 90vw; display: none;
         }
@@ -92,9 +92,7 @@
         let cameraPitch = 0;
         let isMapLoaded = false;
 
-        let ratTemplate = null;
-        const rats = [];
-        const numRats = 50;
+        let singleRat = null; // Il nostro topo singolo di prova
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
@@ -165,43 +163,28 @@
             collidableObjects.push(eastWall);
         }
 
-        function loadRats() {
-            log("Tentativo di caricamento di topo.glb...");
+        function loadSingleRat() {
+            log("Caricamento topo singolo di prova...");
             const loader = new THREE.GLTFLoader();
             
             loader.load('topo.glb', (gltf) => {
-                ratTemplate = gltf.scene;
+                singleRat = gltf.scene;
                 
-                for (let i = 0; i < numRats; i++) {
-                    const rat = ratTemplate.clone();
-                    
-                    // SPAWN FORZATO VICINO AL GIOCATORE (X: 8.0, Z: 0) per vederli subito
-                    rat.position.set(
-                        8.0 + THREE.MathUtils.randFloat(-5, 5),
-                        0,
-                        THREE.MathUtils.randFloat(-5, 5)
-                    );
-                    
-                    // SCALA MAGNIFICATA (Modificala se risultano troppo grandi/piccoli dopo averli visti)
-                    rat.scale.set(2, 2, 2);
+                // Forziamo una scala grande per sicurezza
+                singleRat.scale.set(5, 5, 5);
+                
+                // Rendi visibili tutti i materiali anche dall'interno se necessario
+                singleRat.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        child.material.side = THREE.DoubleSide;
+                    }
+                });
 
-                    rat.userData = {
-                        speed: THREE.MathUtils.randFloat(1.0, 2.5),
-                        direction: new THREE.Vector3(
-                            Math.random() - 0.5, 
-                            0, 
-                            Math.random() - 0.5
-                        ).normalize()
-                    };
-
-                    scene.add(rat);
-                    rats.push(rat);
-                }
-
-                log("Successo! 50 topi 3D caricati.", false);
+                scene.add(singleRat);
+                log("Topo caricato con successo! Guarda davanti a te.", false);
             }, undefined, (error) => {
-                console.error("Errore caricamento topo.glb:", error);
-                log("ERRORE: Impossibile trovare 'topo.glb'. Avvia con un Server Locale (es. Live Server)!", true);
+                console.error(error);
+                log("ERRORE: Impossibile trovare 'topo.glb'", true);
             });
         }
 
@@ -224,7 +207,7 @@
                 });
 
                 createFullPerimeterWalls();
-                loadRats();
+                loadSingleRat();
 
                 playerPos.set(8.0, 0, 0); 
                 isMapLoaded = true; 
@@ -396,29 +379,6 @@
                         isGrounded = true;
                     }
                 }
-
-                for (let i = 0; i < rats.length; i++) {
-                    const rat = rats[i];
-                    rat.position.addScaledVector(rat.userData.direction, rat.userData.speed * delta);
-                    
-                    const targetLook = rat.position.clone().add(rat.userData.direction);
-                    rat.lookAt(targetLook);
-
-                    if (rat.position.x < -43.0 || rat.position.x > 47.5) {
-                        rat.userData.direction.x *= -1;
-                    }
-                    if (rat.position.z < -49.0 || rat.position.z > 187.0) {
-                        rat.userData.direction.z *= -1;
-                    }
-
-                    if (Math.random() < 0.01) {
-                        rat.userData.direction.set(
-                            Math.random() - 0.5,
-                            0,
-                            Math.random() - 0.5
-                        ).normalize();
-                    }
-                }
             }
 
             camera.position.set(playerPos.x, playerPos.y + 0.8, playerPos.z);
@@ -429,6 +389,17 @@
                 playerPos.z + Math.cos(cameraYaw) * 5
             );
             camera.lookAt(lookTarget);
+
+            // ANCORIAMO IL TOPO FISSO A 2 METRI DAVANTI A TE PER VEDERLO SUBITO
+            if (singleRat) {
+                const forwardDist = 2.0;
+                singleRat.position.set(
+                    playerPos.x + Math.sin(cameraYaw) * forwardDist,
+                    playerPos.y, 
+                    playerPos.z + Math.cos(cameraYaw) * forwardDist
+                );
+                singleRat.lookAt(playerPos.x, playerPos.y, playerPos.z);
+            }
 
             document.getElementById('posX').innerText = playerPos.x.toFixed(1);
             document.getElementById('posY').innerText = playerPos.y.toFixed(1);
