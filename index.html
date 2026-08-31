@@ -94,7 +94,7 @@
 
         const rats = [];
         const numRats = 50;
-        let ratGeometrySource = null;
+        let ratTemplate = null;
 
         const raycaster = new THREE.Raycaster();
         let collidableObjects = [];
@@ -190,16 +190,16 @@
         function spawnAllRats() {
             for (let i = 0; i < numRats; i++) {
                 let rat;
-                if (ratGeometrySource) {
-                    rat = ratGeometrySource.clone(true);
+                if (ratTemplate) {
+                    rat = ratTemplate.clone(true);
                 } else {
                     const geo = new THREE.BoxGeometry(0.5, 0.3, 1.0);
                     const mat = new THREE.MeshStandardMaterial({ color: 0x885533 });
                     rat = new THREE.Mesh(geo, mat);
                 }
 
-                rat.position.copy(getSafeSpawnPosition());
-                rat.position.y = 0; // Garantisce che poggi sul pavimento
+                const safePos = getSafeSpawnPosition();
+                rat.position.set(safePos.x, 0, safePos.z); // Y fisso a 0 sul pavimento
 
                 rat.userData = {
                     speed: THREE.MathUtils.randFloat(1.0, 2.0),
@@ -213,7 +213,7 @@
                 scene.add(rat);
                 rats.push(rat);
             }
-            log(`Generati ${numRats} topi indipendenti e liberi nella mappa!`, false);
+            log(`Generati ${numRats} topi corretti e sparsi nei corridoi!`, false);
         }
 
         function loadRats() {
@@ -223,13 +223,14 @@
             loader.load('topo.glb', (gltf) => {
                 const model = gltf.scene;
                 
-                // Normalizzazione assoluta della geometria del singolo topo
+                // Calcoliamo i confini reali del modello caricato
                 const box = new THREE.Box3().setFromObject(model);
                 const size = box.getSize(new THREE.Vector3());
-                const center = box.getCenter(new THREE.Vector3());
-
-                model.position.sub(center);
-                model.position.y += size.y / 2; // Riporta le zampe esattamente a zero
+                
+                // Centriamo perfettamente il pivot sul baricentro orizzontale e alla base verticale (min.y)
+                model.position.x = - (box.min.x + box.max.x) / 2;
+                model.position.z = - (box.min.z + box.max.z) / 2;
+                model.position.y = - box.min.y; // Solleva esattamente il modello per appoggiare le zampe a zero
 
                 const maxDim = Math.max(size.x, size.y, size.z);
                 const scaleFactor = maxDim > 0 ? (0.6 / maxDim) : 0.15;
@@ -244,12 +245,12 @@
                     }
                 });
 
-                ratGeometrySource = model;
+                ratTemplate = model;
                 spawnAllRats();
             }, undefined, (error) => {
                 console.warn("Impossibile caricare topo.glb", error);
                 log("AVVISO: topo.glb non trovato, uso cubi segnaposto.", true);
-                ratGeometrySource = null;
+                ratTemplate = null;
                 spawnAllRats();
             });
         }
@@ -431,6 +432,7 @@
                 for (let i = 0; i < rats.length; i++) {
                     const rat = rats[i];
                     rat.position.addScaledVector(rat.userData.direction, rat.userData.speed * delta);
+                    rat.position.y = 0; // Forziamo rigorosamente il pavimento a zero per ogni fotogramma
                     
                     const targetLook = rat.position.clone().add(rat.userData.direction);
                     rat.lookAt(targetLook);
