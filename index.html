@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Game - Corretto</title>
+    <title>3D Game - Colori Originali</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0a0a0a; font-family: sans-serif; position: fixed; }
@@ -181,6 +181,8 @@
             const loader = new THREE.GLTFLoader();
             loader.load('personaggio.glb', (gltf) => {
                 characterMesh = gltf.scene;
+
+                // RIMOSSA LA MODIFICA FORZATA DEL COLORE: ora usa i colori e le texture originali del file .glb
 
                 const box = new THREE.Box3().setFromObject(characterMesh);
                 const size = box.getSize(new THREE.Vector3());
