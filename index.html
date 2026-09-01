@@ -3,144 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JRBISTECCONE17 | Ultimate Gaming & Streaming Hub</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>Ristorante Il Giardino | Cucina Tradizionale e Innovativa</title>
     <style>
         :root {
-            --bg-dark: #07080c;
-            --surface-dark: #0f111a;
-            --surface-card: #161925;
-            --border-glow: rgba(0, 240, 255, 0.2);
-            --neon-cyan: #00f0ff;
-            --neon-purple: #9d00ff;
-            --accent-pink: #ff007f;
-            --text-main: #f0f2f5;
-            --text-muted: #8b9bb4;
-            --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            --primary-color: #2c3e50;
+            --accent-color: #d4af37; /* Oro elegante */
+            --bg-light: #f9f9f9;
+            --text-color: #333333;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            scroll-behavior: smooth;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            overflow-x: hidden;
+            color: var(--text-color);
             line-height: 1.6;
+            background-color: var(--bg-light);
         }
 
-        h1, h2, h3, h4, .brand-font {
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        /* Header & Navbar */
+        /* Header & Nav */
         header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background-color: rgba(7, 8, 12, 0.9);
-            backdrop-filter: blur(15px);
-            z-index: 1000;
-            border-bottom: 1px solid var(--border-glow);
-        }
-
-        .nav-container {
-            max-width: 1300px;
-            margin: 0 auto;
-            padding: 1.2rem 2rem;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 5%;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
         }
 
-        .brand-box {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            text-decoration: none;
-        }
-
-        .avatar-badge {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: 1.1rem;
-            color: var(--bg-dark);
-            box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
-        }
-
-        .logo-text {
-            font-size: 1.3rem;
-            font-weight: 900;
-            background: linear-gradient(90deg, var(--neon-cyan), var(--text-main));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 0.5px;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-            align-items: center;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: var(--text-muted);
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-transform: uppercase;
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
             letter-spacing: 1px;
-            transition: var(--transition);
+            color: var(--accent-color);
         }
 
-        .nav-links a:hover {
-            color: var(--neon-cyan);
-            text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            transition: color 0.3s;
         }
 
-        .nav-cta {
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)) !important;
-            color: var(--bg-dark) !important;
-            padding: 0.6rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 700 !important;
+        nav a:hover {
+            color: var(--accent-color);
         }
 
         /* Hero Section */
         .hero {
-            min-height: 100vh;
+            height: 100vh;
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1950&q=80') no-repeat center center/cover;
             display: flex;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            padding: 9rem 2rem 5rem;
-            max-width: 1300px;
-            margin: 0 auto;
-            gap: 4rem;
+            text-align: center;
+            color: white;
+            padding: 0 20px;
         }
 
-        .hero-content {
-            flex: 1.2;
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
         }
 
-        .live-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.6rem;
-            background: rgba(255, 0, 127, 0.12);
-            border: 1px solid var(--accent-pink);
-            color: var(--accent-pink);
-            padding: 0.5rem 1.2rem;
-            border-radius: 30px;
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+
+        .btn {
+            background-color: var(--accent-color);
+            color: var(--primary-color);
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Sezioni Generali */
+        section {
+            padding: 5rem 10% 3rem 10%;
+        }
+
+        section h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: var(--primary-color);
+        }
+
+        /* Menu */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .menu-item {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .menu-item h3 {
+            display: flex;
+            justify-content: space-between;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .menu-item span {
+            color: var(--accent-color);
+        }
+
+        .menu-item p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Contatti & Prenotazioni */
+        .contact-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+            background: white;
+            padding: 3rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">IL GIARDINO</div>
+        <nav>
+            <a href="#home">Home</a>
+            <a href="#menu">Menu</a>
+            <a href="#chisiamo">Chi Siamo</a>
+            <a href="#contatti">Prenota</a>
+        </nav>
+    </header>
+
+    <section id="home" class="hero">
+        <h1>Gusta l'Autentica Tradizione</h1>
+        <p>Ingredienti freschi, passione artigianale e un'atmosfera unica nel cuore della città.</p>
+        <a href="#contatti" class="btn">Prenota un Tavolo</a>
+    </section>
+
+    <section id="menu">
+        <h2>Il Nostro Menu</h2>
+        <div class="menu-grid">
+            <div class="menu-item">
+                <h3>Paccheri ai Frutti di Mare <span>€ 18</span></h3>
+                <p>Pasta di Gragnano trafilata al bronzo con pescato fresco del giorno, pomodorini del Vesuvio e sfumatura di vino bianco.</p>
+            </div>
+            <div class="menu-item">
+                <h3>Filetto alla Brace <span>€ 24</span></h3>
+                <p>Carne selezionata cotta alla perfezione, servita con riduzione al balsamico e contorno di patate al forno.</p>
+            </div>
+            <div class="menu-item">
+                <h3>Tiramisù della Casa <span>€ 7</span></h3>
+                <p>La nostra ricetta segreta con mascarpone fresco, savoiardi inzuppati nel caffè espresso e cacao amaro.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="chisiamo" style="background-color: #fff;">
+        <h2>La Nostra Filosofia</h2>
+        <p style="text-align: center; max-width: 800px; margin: 0 auto; font-size: 1.1rem; color: #555;">
+            Fondato nel 2010, il Ristorante Il Giardino unisce il rispetto per le ricette della tradizione locale a un tocco di moderna creatività. Ogni piatto è pensato per raccontare una storia fatta di amore per il territorio e ricerca continua della qualità assoluta.
+        </p>
+    </section>
+
+    <section id="contatti">
+        <h2>Prenota o Contattaci</h2>
+        <div class="contact-container">
+            <div>
+                <h3>Informazioni</h3>
+                <p style="margin-top: 1rem;"><strong>Indirizzo:</strong> Via Roma 123, Città</p>
+                <p><strong>Telefono:</strong> +39 012 3456789</p>
+                <p><strong>Orari:</strong> Lun - Dom: 12:30 - 15:00 / 19:30 - 23:00</p>
+            </div>
+            <form>
+                <div class="form-group">
+                    <label for="nome">Nome e Cognome</label>
+                    <input type="text" id="nome" required>
+                </div>
+                <div class="form-group">
+                    <label for="data">Data e Ora</label>
+                    <input type="datetime-local" id="data" required>
+                </div>
+                <div class="form-group">
+                    <label for="persone">Numero di Persone</label>
+                    <input type="number" id="persone" min="1" max="10" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Conferma Prenotazione</button>
+            </form>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 Ristorante Il Giardino. Tutti i diritti riservati.</p>
+    </footer>
+
+</body>
+</html>
