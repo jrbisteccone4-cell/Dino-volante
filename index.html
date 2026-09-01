@@ -3,254 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ristorante Il Giardino | Cucina Tradizionale e Innovativa</title>
+    <title>Dino-volante - Modello 3D Animato</title>
     <style>
-        :root {
-            --primary-color: #2c3e50;
-            --accent-color: #d4af37; /* Oro elegante */
-            --bg-light: #f9f9f9;
-            --text-color: #333333;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
         body {
-            color: var(--text-color);
-            line-height: 1.6;
-            background-color: var(--bg-light);
+            margin: 0;
+            overflow: hidden;
+            background-color: #0d1117;
         }
-
-        /* Header & Nav */
-        header {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 1rem 5%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-            letter-spacing: 1px;
-            color: var(--accent-color);
-        }
-
-        nav a {
-            color: white;
-            text-decoration: none;
-            margin-left: 20px;
-            transition: color 0.3s;
-        }
-
-        nav a:hover {
-            color: var(--accent-color);
-        }
-
-        /* Hero Section */
-        .hero {
-            height: 100vh;
-            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1950&q=80') no-repeat center center/cover;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            color: white;
-            padding: 0 20px;
-        }
-
-        .hero h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .hero p {
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-            max-width: 600px;
-        }
-
-        .btn {
-            background-color: var(--accent-color);
-            color: var(--primary-color);
-            padding: 12px 30px;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-decoration: none;
-            transition: opacity 0.3s;
-        }
-
-        .btn:hover {
-            opacity: 0.9;
-        }
-
-        /* Sezioni Generali */
-        section {
-            padding: 5rem 10% 3rem 10%;
-        }
-
-        section h2 {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 3rem;
-            color: var(--primary-color);
-        }
-
-        /* Menu */
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        .menu-item {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-
-        .menu-item h3 {
-            display: flex;
-            justify-content: space-between;
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
-        }
-
-        .menu-item span {
-            color: var(--accent-color);
-        }
-
-        .menu-item p {
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        /* Contatti & Prenotazioni */
-        .contact-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 3rem;
-            background: white;
-            padding: 3rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
+        canvas {
             display: block;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
         }
-
-        .form-group input, .form-group textarea {
+        #info {
+            position: absolute;
+            top: 10px;
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
-        /* Footer */
-        footer {
-            background-color: var(--primary-color);
-            color: white;
             text-align: center;
-            padding: 2rem;
-            margin-top: 4rem;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 1rem;
+            pointer-events: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="logo">IL GIARDINO</div>
-        <nav>
-            <a href="#home">Home</a>
-            <a href="#menu">Menu</a>
-            <a href="#chisiamo">Chi Siamo</a>
-            <a href="#contatti">Prenota</a>
-        </nav>
-    </header>
+    <div id="info">Usa il mouse per ruotare e lo zoom per esplorare il personaggio</div>
 
-    <section id="home" class="hero">
-        <h1>Gusta l'Autentica Tradizione</h1>
-        <p>Ingredienti freschi, passione artigianale e un'atmosfera unica nel cuore della città.</p>
-        <a href="#contatti" class="btn">Prenota un Tavolo</a>
-    </section>
+    <!-- Importazione delle librerie Three.js e dei moduli necessari tramite CDN -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
 
-    <section id="menu">
-        <h2>Il Nostro Menu</h2>
-        <div class="menu-grid">
-            <div class="menu-item">
-                <h3>Paccheri ai Frutti di Mare <span>€ 18</span></h3>
-                <p>Pasta di Gragnano trafilata al bronzo con pescato fresco del giorno, pomodorini del Vesuvio e sfumatura di vino bianco.</p>
-            </div>
-            <div class="menu-item">
-                <h3>Filetto alla Brace <span>€ 24</span></h3>
-                <p>Carne selezionata cotta alla perfezione, servita con riduzione al balsamico e contorno di patate al forno.</p>
-            </div>
-            <div class="menu-item">
-                <h3>Tiramisù della Casa <span>€ 7</span></h3>
-                <p>La nostra ricetta segreta con mascarpone fresco, savoiardi inzuppati nel caffè espresso e cacao amaro.</p>
-            </div>
-        </div>
-    </section>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-    <section id="chisiamo" style="background-color: #fff;">
-        <h2>La Nostra Filosofia</h2>
-        <p style="text-align: center; max-width: 800px; margin: 0 auto; font-size: 1.1rem; color: #555;">
-            Fondato nel 2010, il Ristorante Il Giardino unisce il rispetto per le ricette della tradizione locale a un tocco di moderna creatività. Ogni piatto è pensato per raccontare una storia fatta di amore per il territorio e ricerca continua della qualità assoluta.
-        </p>
-    </section>
+        // 1. Inizializzazione della scena, della telecamera e del renderer
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0d1117);
 
-    <section id="contatti">
-        <h2>Prenota o Contattaci</h2>
-        <div class="contact-container">
-            <div>
-                <h3>Informazioni</h3>
-                <p style="margin-top: 1rem;"><strong>Indirizzo:</strong> Via Roma 123, Città</p>
-                <p><strong>Telefono:</strong> +39 012 3456789</p>
-                <p><strong>Orari:</strong> Lun - Dom: 12:30 - 15:00 / 19:30 - 23:00</p>
-            </div>
-            <form>
-                <div class="form-group">
-                    <label for="nome">Nome e Cognome</label>
-                    <input type="text" id="nome" required>
-                </div>
-                <div class="form-group">
-                    <label for="data">Data e Ora</label>
-                    <input type="datetime-local" id="data" required>
-                </div>
-                <div class="form-group">
-                    <label for="persone">Numero di Persone</label>
-                    <input type="number" id="persone" min="1" max="10" required>
-                </div>
-                <button type="submit" class="btn" style="width: 100%;">Conferma Prenotazione</button>
-            </form>
-        </div>
-    </section>
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 5);
 
-    <footer>
-        <p>&copy; 2026 Ristorante Il Giardino. Tutti i diritti riservati.</p>
-    </footer>
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
 
+        // 2. Aggiunta dei controlli di movimento con il mouse
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // 3. Gestione delle luci (Fondamentale per vedere i volumi e i colori del 3D)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
+        directionalLight.position.set(5, 10, 7);
+        scene.add(directionalLight);
+
+        // 4. Variabile per gestire le animazioni interne del modello
+        let mixer;
+        const clock = new THREE.Clock();
+
+        // 5. Caricamento del file .glb (personaggio.glb)
+        const loader = new GLTFLoader();
+        loader.load(
+            'personaggio.glb',
+            function (gltf) {
+                const model = gltf.scene;
+                scene.add(model);
+
+                // Centratura automatica del modello
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                model.position.sub(center); // Riporta il baricentro al centro dell'origine (0,0,0)
+
+                // Se il file .glb contiene animazioni integrate, le avviamo
+                if (gltf.animations && gltf.animations.length > 0) {
+                    mixer = new THREE.AnimationMixer(model);
+                    const action = mixer.clipAction(gltf.animations[0]);
+                    action.play();
+                }
+                
+                console.log("Modello caricato con successo!");
+            },
+            function (xhr) {
+                console.log((xhr.loaded / xhr.total * 100) + '% caricato');
+            },
+            function (error) {
+                console.error('Errore durante il caricamento del modello 3D:', error);
+            }
+        );
+
+        // 6. Ciclo di rendering e aggiornamento dei movimenti in tempo reale
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            if (mixer) {
+                mixer.update(delta); // Aggiorna i frame dell'animazione del personaggio
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // 7. Gestione del ridimensionamento della finestra del browser
+        window.addEventListener('resize', onWindowResize, false);
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
 </body>
 </html>
