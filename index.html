@@ -170,28 +170,15 @@
             return true;
         }
 
-        function createFallbackCharacter() {
-            const group = new THREE.Group();
-            const mat = new THREE.MeshStandardMaterial({ color: 0xff0055, roughness: 0.5 });
-            
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.3), mat);
-            body.position.y = 0.6;
-            group.add(body);
-
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mat);
-            head.position.y = 1.4;
-            group.add(head);
-
-            return group;
-        }
-
         function loadCharacter() {
             log("Caricamento personaggio.glb...");
             const loader = new THREE.GLTFLoader();
             
-            loader.load('personaggio.glb', (gltf) => {
+            // Proviamo a caricarlo direttamente dalla root con percorso relativo pulito
+            loader.load('./personaggio.glb', (gltf) => {
                 characterModel = gltf.scene;
 
+                // Calcola le dimensioni reali per adattarlo perfettamente all'altezza umana (~1.8 metri)
                 const box = new THREE.Box3().setFromObject(characterModel);
                 const size = box.getSize(new THREE.Vector3());
                 const center = box.getCenter(new THREE.Vector3());
@@ -217,12 +204,10 @@
                 });
 
                 scene.add(characterModel);
-                log("Personaggio caricato con successo!", false);
+                log("Personaggio.glb caricato con successo!", false);
             }, undefined, (error) => {
-                console.warn("File personaggio non trovato, uso omino di riserva.", error);
-                characterModel = createFallbackCharacter();
-                scene.add(characterModel);
-                log("Modalità compatibile attiva (Personaggio pronto)", false);
+                console.error("Errore caricamento personaggio.glb:", error);
+                log("ERRORE: Impossibile trovare personaggio.glb", true);
             });
         }
 
@@ -403,7 +388,7 @@
                 }
             }
 
-            // VISUALE IN TERZA PERSONA (Telecamera dietro e sopra il personaggio)
+            // VISUALE IN TERZA PERSONA
             const cameraDist = 3.0;
             camera.position.set(
                 playerPos.x - Math.sin(cameraYaw) * cameraDist,
