@@ -3,130 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dino-volante - Modello 3D Animato</title>
+    <title>Visualizzatore Donna Cyberpunk</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
         body {
             margin: 0;
+            padding: 0;
+            background-color: #050505; /* Sfondo scuro per far risaltare i neon */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
             overflow: hidden;
-            background-color: #0d1117;
-        }
-        canvas {
-            display: block;
-        }
-        #info {
-            position: absolute;
-            top: 10px;
-            width: 100%;
-            text-align: center;
-            color: #ffffff;
+            color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 1rem;
-            pointer-events: none;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Contenitore del visualizzatore */
+        .viewer-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* L'elemento che mostra il 3D */
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            --poster-color: transparent; /* Rimuove il colore di caricamento */
+        }
+
+        /* Istruzioni per l'utente (visibili su mobile) */
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            pointer-events: none; /* Non interferisce con i controlli 3D */
+            animation: fadeOut 4s forwards; /* Scompare dopo 4 secondi */
+            opacity: 1;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; }
         }
     </style>
 </head>
 <body>
 
-    <div id="info">Usa il mouse per ruotare e lo zoom per esplorare il personaggio</div>
+    <div class="viewer-container">
+        <model-viewer 
+            src="donna-cyberpunk.glb" 
+            alt="Modello 3D Donna Cyberpunk"
+            camera-controls 
+            auto-rotate 
+            rotation-per-second="10deg"
+            environment-image="neutral" 
+            exposure="1"
+            shadow-intensity="1"
+            ar
+            quick-look-browsers="safari chrome">
+            
+            <div class="instructions">
+                Tocca e trascina per ruotare | Pizzica per zoomare
+            </div>
 
-    <!-- Importazione delle librerie Three.js e dei moduli necessari tramite CDN -->
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-        }
-      }
-    </script>
+        </model-viewer>
+    </div>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-        // 1. Inizializzazione della scena, della telecamera e del renderer
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0d1117);
-
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2, 5);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        document.body.appendChild(renderer.domElement);
-
-        // 2. Aggiunta dei controlli di movimento con il mouse
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-
-        // 3. Gestione delle luci (Fondamentale per vedere i volumi e i colori del 3D)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
-        scene.add(ambientLight);
-
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
-        directionalLight.position.set(5, 10, 7);
-        scene.add(directionalLight);
-
-        // 4. Variabile per gestire le animazioni interne del modello
-        let mixer;
-        const clock = new THREE.Clock();
-
-        // 5. Caricamento del file .glb (personaggio.glb)
-        const loader = new GLTFLoader();
-        loader.load(
-            'personaggio.glb',
-            function (gltf) {
-                const model = gltf.scene;
-                scene.add(model);
-
-                // Centratura automatica del modello
-                const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                model.position.sub(center); // Riporta il baricentro al centro dell'origine (0,0,0)
-
-                // Se il file .glb contiene animazioni integrate, le avviamo
-                if (gltf.animations && gltf.animations.length > 0) {
-                    mixer = new THREE.AnimationMixer(model);
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.play();
-                }
-                
-                console.log("Modello caricato con successo!");
-            },
-            function (xhr) {
-                console.log((xhr.loaded / xhr.total * 100) + '% caricato');
-            },
-            function (error) {
-                console.error('Errore durante il caricamento del modello 3D:', error);
-            }
-        );
-
-        // 6. Ciclo di rendering e aggiornamento dei movimenti in tempo reale
-        function animate() {
-            requestAnimationFrame(animate);
-
-            const delta = clock.getDelta();
-            if (mixer) {
-                mixer.update(delta); // Aggiorna i frame dell'animazione del personaggio
-            }
-
-            controls.update();
-            renderer.render(scene, camera);
-        }
-
-        animate();
-
-        // 7. Gestione del ridimensionamento della finestra del browser
-        window.addEventListener('resize', onWindowResize, false);
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-    </script>
 </body>
 </html>
