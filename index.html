@@ -3,79 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizzatore Donna Cyberpunk</title>
+    <title>Dino-volante - Modello 3D</title>
+    <!-- Importa lo script di Model Viewer per visualizzare i file .glb -->
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
-            background-color: #050505; /* Sfondo scuro per far risaltare i neon */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            color: #fff;
+            box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* Contenitore del visualizzatore */
-        .viewer-container {
-            width: 100vw;
-            height: 100vh;
-            position: relative;
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
         }
 
-        /* L'elemento che mostra il 3D */
+        header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+
+        p {
+            color: #8b949e;
+            font-size: 1rem;
+        }
+
+        .viewer-container {
+            width: 100%;
+            max-width: 800px;
+            height: 500px;
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
         model-viewer {
             width: 100%;
             height: 100%;
-            --poster-color: transparent; /* Rimuove il colore di caricamento */
+            background-color: #161b22;
         }
 
-        /* Istruzioni per l'utente (visibili su mobile) */
-        .instructions {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0,0,0,0.7);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            pointer-events: none; /* Non interferisce con i controlli 3D */
-            animation: fadeOut 4s forwards; /* Scompare dopo 4 secondi */
-            opacity: 1;
-        }
-
-        @keyframes fadeOut {
-            0% { opacity: 1; }
-            70% { opacity: 1; }
-            100% { opacity: 0; }
+        footer {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #8b949e;
         }
     </style>
 </head>
 <body>
 
-    <div class="viewer-container">
-        <model-viewer 
-            src="donna-cyberpunk.glb" 
-            alt="Modello 3D Donna Cyberpunk"
-            camera-controls 
-            auto-rotate 
-            rotation-per-second="10deg"
-            environment-image="neutral" 
-            exposure="1"
-            shadow-intensity="1"
-            ar
-            quick-look-browsers="safari chrome">
-            
-            <div class="instructions">
-                Tocca e trascina per ruotare | Pizzica per zoomare
-            </div>
+    <header>
+        <h1>Dino-volante</h1>
+        <p>Visualizzatore interattivo del personaggio 3D</p>
+    </header>
 
+    <div class="viewer-container">
+        <!-- Inserisci il file .glb nella stessa cartella -->
+        <model-viewer 
+            src="personaggio.glb" 
+            alt="Personaggio Dino-volante 3D" 
+            auto-rotate 
+            camera-controls 
+            shadow-intensity="1">
         </model-viewer>
     </div>
+
+    <footer>
+        <p>Creato con GitHub Pages</p>
+    </footer>
 
 </body>
 </html>
