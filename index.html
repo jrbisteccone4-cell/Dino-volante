@@ -3,55 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Caffè Partenope | Caffetteria Artigianale Napoli</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>Lumina Store | E-commerce di Tecnologia & Accessori</title>
     <style>
         :root {
-            --bg-color: #FDFBF7;
-            --surface-color: #F4EFE6;
-            --primary-brown: #3C2A21;
-            --accent-brown: #6F4E37;
-            --soft-beige: #D5C7B8;
-            --text-main: #2C221E;
-            --text-muted: #6E635C;
-            --white: #FFFFFF;
-            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --text-main: #334155;
+            --text-light: #64748b;
+            --white: #ffffff;
+            --border: #e2e8f0;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
             line-height: 1.6;
-            overflow-x: hidden;
         }
 
-        h1, h2, h3, .brand-font {
-            font-family: 'Playfair Display', serif;
-        }
-
-        /* Header & Nav */
+        /* Header & Navigation */
         header {
-            position: fixed;
+            background-color: var(--white);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
             top: 0;
-            left: 0;
-            width: 100%;
-            background-color: rgba(253, 251, 247, 0.9);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            border-bottom: 1px solid var(--soft-beige);
+            z-index: 100;
         }
 
         .nav-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 1.2rem 2rem;
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -59,441 +49,498 @@
 
         .logo {
             font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary-brown);
+            font-weight: 800;
+            color: var(--primary);
             text-decoration: none;
             letter-spacing: -0.5px;
         }
 
+        .logo span {
+            color: var(--accent);
+        }
+
         .nav-links {
             display: flex;
-            gap: 2.5rem;
+            gap: 2rem;
             list-style: none;
         }
 
         .nav-links a {
             text-decoration: none;
-            color: var(--text-muted);
+            color: var(--text-main);
             font-weight: 500;
-            font-size: 0.95rem;
-            transition: var(--transition);
+            transition: color 0.2s;
         }
 
         .nav-links a:hover {
-            color: var(--primary-brown);
+            color: var(--accent);
+        }
+
+        .cart-btn {
+            background-color: var(--accent);
+            color: var(--white);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .cart-btn:hover {
+            background-color: var(--accent-hover);
         }
 
         /* Hero Section */
         .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            padding: 8rem 2rem 4rem;
-            max-width: 1200px;
-            margin: 0 auto;
-            gap: 4rem;
-        }
-
-        .hero-content {
-            flex: 1;
-        }
-
-        .hero-tag {
-            display: inline-block;
-            background-color: var(--surface-color);
-            color: var(--accent-brown);
-            padding: 0.5rem 1rem;
-            border-radius: 50px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: var(--white);
+            padding: 5rem 2rem;
+            text-align: center;
         }
 
         .hero h1 {
-            font-size: clamp(2.8rem, 5vw, 4.5rem);
-            color: var(--primary-brown);
-            line-height: 1.1;
-            margin-bottom: 1.5rem;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            font-weight: 800;
         }
 
         .hero p {
-            font-size: 1.1rem;
-            color: var(--text-muted);
-            margin-bottom: 2.5rem;
-            max-width: 500px;
+            font-size: 1.2rem;
+            color: #94a3b8;
+            max-width: 600px;
+            margin: 0 auto 2rem auto;
         }
 
-        .btn {
-            display: inline-block;
-            background-color: var(--primary-brown);
+        .btn-primary {
+            background-color: var(--accent);
             color: var(--white);
-            padding: 0.9rem 2.2rem;
-            border-radius: 50px;
+            padding: 0.8rem 2rem;
+            border-radius: 8px;
             text-decoration: none;
-            font-weight: 500;
-            transition: var(--transition);
-            border: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--primary);
+            text-align: center;
+        }
+
+        /* Filters & Search */
+        .filters {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            background: var(--white);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
             cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
         }
 
-        .btn:hover {
-            background-color: var(--accent-brown);
-            transform: translateY(-2px);
+        .filter-btn.active, .filter-btn:hover {
+            background: var(--accent);
+            color: var(--white);
+            border-color: var(--accent);
         }
 
-        .hero-image {
-            flex: 1;
-            height: 500px;
-            background: linear-gradient(135deg, var(--soft-beige), var(--surface-color));
-            border-radius: 24px;
+        /* Product Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .product-card {
+            background: var(--white);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        .product-image {
+            height: 200px;
+            background-color: #f1f5f9;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(60, 42, 33, 0.08);
+            font-size: 3rem;
+            color: var(--text-light);
         }
 
-        .hero-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        /* Story Section */
-        .story {
-            padding: 7rem 2rem;
-            background-color: var(--surface-color);
-        }
-
-        .story-container {
-            max-width: 800px;
-            margin: 0 auto;
-            text-align: center;
-        }
-
-        .story h2 {
-            font-size: 2.5rem;
-            color: var(--primary-brown);
-            margin-bottom: 1.5rem;
-        }
-
-        .story p {
-            font-size: 1.1rem;
-            color: var(--text-muted);
-            margin-bottom: 1.5rem;
-        }
-
-        /* Menu Section */
-        .menu {
-            padding: 7rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .section-header {
-            text-align: center;
-            max-width: 600px;
-            margin: 0 auto 4rem;
-        }
-
-        .section-header h2 {
-            font-size: 2.5rem;
-            color: var(--primary-brown);
-            margin-bottom: 1rem;
-        }
-
-        .section-header p {
-            color: var(--text-muted);
-        }
-
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2.5rem;
-        }
-
-        .menu-card {
-            background-color: var(--surface-color);
-            padding: 2.5rem;
-            border-radius: 20px;
-            transition: var(--transition);
-        }
-
-        .menu-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(60, 42, 33, 0.05);
-        }
-
-        .menu-card h3 {
-            font-size: 1.5rem;
-            color: var(--primary-brown);
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.8rem;
-            border-bottom: 2px solid var(--soft-beige);
-        }
-
-        .menu-item {
+        .product-info {
+            padding: 1.5rem;
             display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 1.2rem;
+            flex-direction: column;
+            flex-grow: 1;
         }
 
-        .menu-item-name {
-            font-weight: 600;
-            color: var(--text-main);
-        }
-
-        .menu-item-price {
-            font-family: 'Playfair Display', serif;
-            color: var(--accent-brown);
+        .product-category {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
             font-weight: 700;
-        }
-
-        .menu-item-desc {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: -0.8rem;
-            margin-bottom: 1.2rem;
-        }
-
-        /* Contact & Hours Section */
-        .contact {
-            padding: 7rem 2rem;
-            background-color: var(--surface-color);
-        }
-
-        .contact-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 4rem;
-        }
-
-        .contact-info h2 {
-            font-size: 2.5rem;
-            color: var(--primary-brown);
-            margin-bottom: 1.5rem;
-        }
-
-        .contact-info p {
-            color: var(--text-muted);
-            margin-bottom: 2rem;
-        }
-
-        .info-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .info-group h4 {
-            color: var(--primary-brown);
-            font-size: 1.1rem;
-            margin-bottom: 0.3rem;
-        }
-
-        .info-group p {
-            margin-bottom: 0;
-        }
-
-        .contact-form {
-            background-color: var(--bg-color);
-            padding: 3rem;
-            border-radius: 24px;
-            box-shadow: 0 15px 30px rgba(60, 42, 33, 0.03);
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--primary-brown);
             margin-bottom: 0.5rem;
         }
 
-        .form-group input,
-        .form-group textarea {
+        .product-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .product-price {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1.2rem;
+        }
+
+        .add-to-cart {
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            padding: 0.7rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
             width: 100%;
-            padding: 0.9rem 1.2rem;
-            border: 1px solid var(--soft-beige);
-            background-color: var(--bg-color);
-            border-radius: 12px;
-            font-family: inherit;
-            color: var(--text-main);
-            outline: none;
-            transition: var(--transition);
+            margin-top: auto;
+            transition: background 0.2s;
         }
 
-        .form-group input:focus,
-        .form-group textarea:focus {
-            border-color: var(--accent-brown);
+        .add-to-cart:hover {
+            background-color: var(--accent);
         }
 
-        .form-group textarea {
-            resize: vertical;
-            height: 120px;
+        /* Cart Modal / Drawer */
+        .cart-modal {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100%;
+            background: var(--white);
+            box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cart-modal.open {
+            right: 0;
+        }
+
+        .cart-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-cart {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        .cart-body {
+            padding: 1.5rem;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .cart-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            background: var(--bg-color);
+        }
+
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .checkout-btn {
+            background-color: #10b981;
+            color: var(--white);
+            border: none;
+            padding: 0.9rem;
+            width: 100%;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .checkout-btn:hover {
+            background-color: #059669;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 999;
+            display: none;
+        }
+
+        .overlay.active {
+            display: block;
         }
 
         /* Footer */
         footer {
-            background-color: var(--primary-brown);
-            color: var(--white);
+            background-color: var(--primary);
+            color: #94a3b8;
             text-align: center;
-            padding: 2.5rem 2rem;
-            font-size: 0.9rem;
+            padding: 3rem 2rem;
+            margin-top: 5rem;
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .hero {
-                flex-direction: column;
-                text-align: center;
-                padding-top: 7rem;
-            }
-            .hero p {
-                margin: 0 auto 2.5rem;
-            }
-            .nav-links {
-                display: none;
-            }
+        footer p {
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
 
+    <!-- Header -->
     <header>
         <div class="nav-container">
-            <a href="#" class="logo">Caffè Partenope</a>
+            <a href="#" class="logo">Lumina<span>Store</span></a>
             <ul class="nav-links">
-                <li><a href="#storia">La Storia</a></li>
-                <li><a href="#menu">Menu</a></li>
-                <li><a href="#contatti">Contatti e Orari</a></li>
+                <li><a href="#">Home</a></li>
+                <li><a href="#prodotti">Catalogo</a></li>
+                <li><a href="#chi-siamo">Chi Siamo</a></li>
             </ul>
+            <button class="cart-btn" onclick="toggleCart()">
+                🛒 Carrello (<span id="cart-count">0</span>)
+            </button>
         </div>
     </header>
 
+    <!-- Hero -->
     <section class="hero">
-        <div class="hero-content">
-            <span class="hero-tag">Caffetteria Artigianale • Napoli</span>
-            <h1>L'autentico rito del caffè napoletano</h1>
-            <p>Nel cuore di Napoli, un rifugio accogliente dove la tradizione della torrefazione artigianale incontra la dolcezza della nostra pasticceria fatta in casa.</p>
-            <a href="#menu" class="btn">Scopri il Menu</a>
-        </div>
-        <div class="hero-image">
-            <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80" alt="Tazza di caffè artigianale">
-        </div>
+        <h1>Tecnologia al Top per il Tuo Stile</h1>
+        <p>Scopri i migliori gadget, cuffie wireless e accessori smart scelti appositamente per te.</p>
+        <a href="#prodotti" class="btn-primary">Esplora i Prodotti</a>
     </section>
 
-    <section id="storia" class="story">
-        <div class="story-container">
-            <h2>La Nostra Passione</h2>
-            <p>Nato tra i vicoli storici di Napoli, <strong>Caffè Partenope</strong> nasce dal desiderio di custodire e rinnovare l'arte del buon caffè. Ogni chicco viene selezionato con cura dai migliori produttori e torrefatto lentamente secondo il metodo artigianale tramandato di generazione in generazione.</p>
-            <p>Non solo un luogo dove gustare un espresso perfetto, ma uno spazio caldo e minimale pensato per rallentare il tempo, accompagnando ogni tazzina con dolci preparati freschi ogni mattina dalle mani dei nostri pasticceri.</p>
-        </div>
-    </section>
-
-    <section id="menu" class="menu">
-        <div class="section-header">
-            <h2>Il Nostro Menu</h2>
-            <p>Selezioni di caffè pregiati, cappuccini cremosi e dolci artigianali preparati ogni giorno.</p>
-        </div>
-        <div class="menu-grid">
-            <div class="menu-card">
-                <h3>Caffetteria</h3>
-                <div class="menu-item">
-                    <span class="menu-item-name">Espresso Napoletano</span>
-                    <span class="menu-item-price">€ 1.30</span>
-                </div>
-                <div class="menu-item-desc">Corposo, intenso, estratto a regola d'arte con tazza riscaldata.</div>
-
-                <div class="menu-item">
-                    <span class="menu-item-name">Cappuccino Artigianale</span>
-                    <span class="menu-item-price">€ 2.00</span>
-                </div>
-                <div class="menu-item-desc">Latte fresco montato a regola d'arte con micro-schiuma vellutata.</div>
-
-                <div class="menu-item">
-                    <span class="menu-item-name">Caffè Speciale Partenope</span>
-                    <span class="menu-item-price">€ 3.50</span>
-                </div>
-                <div class="menu-item-desc">Crema di caffè artigianale con gocce di cioccolato fondente monorigine.</div>
-            </div>
-
-            <div class="menu-card">
-                <h3>Dolci & Pasticceria</h3>
-                <div class="menu-item">
-                    <span class="menu-item-name">Sfogliatella Riccia</span>
-                    <span class="menu-item-price">€ 2.50</span>
-                </div>
-                <div class="menu-item-desc">Croccante sfoglia artigianale ripiena di ricotta, semolino e canditi.</div>
-
-                <div class="menu-item">
-                    <span class="menu-item-name">Babà al Rum</span>
-                    <span class="menu-item-price">€ 3.00</span>
-                </div>
-                <div class="menu-item-desc">Soffice dolce lievitato bagnato generosamente in rum invecchiato.</div>
-
-                <div class="menu-item">
-                    <span class="menu-item-name">Crostatina Nocciola & Caffè</span>
-                    <span class="menu-item-price">€ 3.80</span>
-                </div>
-                <div class="menu-item-desc">Frolla friabile con ganache al cioccolato fondente ed estratto di caffè.</div>
+    <!-- Main Content -->
+    <div class="container" id="prodotti">
+        <h2 class="section-title">Catalogo Prodotti</h2>
+        
+        <div class="filters">
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterProducts('all')">Tutti</button>
+                <button class="filter-btn" onclick="filterProducts('audio')">Audio</button>
+                <button class="filter-btn" onclick="filterProducts('smartwatch')">Smartwatch</button>
+                <button class="filter-btn" onclick="filterProducts('accessori')">Accessori</button>
             </div>
         </div>
-    </section>
 
-    <section id="contatti" class="contact">
-        <div class="contact-container">
-            <div class="contact-info">
-                <h2>Vieni a trovarci</h2>
-                <p>Siamo nel cuore pulsante di Napoli. Passa a trovarci per un saluto o per prenotare un tavolo riservato.</p>
-                
-                <div class="info-group">
-                    <h4>Indirizzo</h4>
-                    <p>Via Toledo 124, Napoli (NA)</p>
-                </div>
-
-                <div class="info-group">
-                    <h4>Orari di Apertura</h4>
-                    <p>Lunedì – Domenica: 07:00 – 20:30</p>
-                </div>
-
-                <div class="info-group">
-                    <h4>Contatti</h4>
-                    <p>Tel: +39 081 1234567<br>Email: ciao@caffepartenope.it</p>
-                </div>
-            </div>
-
-            <div class="contact-form">
-                <form>
-                    <div class="form-group">
-                        <label for="name">Il tuo Nome</label>
-                        <input type="text" id="name" placeholder="Mario Rossi" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">La tua Email</label>
-                        <input type="email" id="email" placeholder="mario@example.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="message">Messaggio o Prenotazione</label>
-                        <textarea id="message" placeholder="Scrivi qui la tua richiesta..." required></textarea>
-                    </div>
-                    <button type="submit" class="btn" style="width: 100%;">Invia Messaggio</button>
-                </form>
-            </div>
+        <div class="product-grid" id="product-grid">
+            <!-- I prodotti vengono iniettati via JavaScript -->
         </div>
-    </section>
+    </div>
 
+    <!-- Carrello Laterale (Drawer) -->
+    <div class="overlay" id="overlay" onclick="toggleCart()"></div>
+    <div class="cart-modal" id="cart-modal">
+        <div class="cart-header">
+            <h3>Il Tuo Carrello</h3>
+            <button class="close-cart" onclick="toggleCart()">&times;</button>
+        </div>
+        <div class="cart-body" id="cart-items">
+            <p style="color: var(--text-light); text-align: center; margin-top: 2rem;">Il carrello è vuoto.</p>
+        </div>
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span>Totale:</span>
+                <span id="cart-total-price">€ 0.00</span>
+            </div>
+            <button class="checkout-btn" onclick="checkout()">Procedi all'Ordine</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
     <footer>
-        <p>&copy; 2026 Caffè Partenope - Tutti i diritti riservati. Sviluppato con eleganza e semplicità.</p>
+        <p>&copy; 2026 Lumina Store. Tutti i diritti riservati. E-commerce dimostrativo.</p>
     </footer>
 
+    <script>
+        const products = [
+            { id: 1, name: "Cuffie Wireless Pro", category: "audio", price: 89.99, icon: "🎧" },
+            { id: 2, name: "Smartwatch Active S", category: "smartwatch", price: 129.50, icon: "⌚" },
+            { id: 3, name: "Cassa Bluetooth Mini", category: "audio", price: 45.00, icon: "🔊" },
+            { id: 4, name: "Caricatore Wireless Rapido", category: "accessori", price: 29.99, icon: "⚡" },
+            { id: 5, name: "Powerbank 20000mAh", category: "accessori", price: 39.99, icon: "🔋" },
+            { id: 6, name: "Auricolari Sport TWS", category: "audio", price: 59.99, icon: "🎵" }
+        ];
+
+        let cart = [];
+
+        function renderProducts(filter = 'all') {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+
+            const filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
+
+            filtered.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div class="product-image">${product.icon}</div>
+                    <div class="product-info">
+                        <span class="product-category">${product.category}</span>
+                        <h3 class="product-title">${product.name}</h3>
+                        <div class="product-price">€ ${product.price.toFixed(2)}</div>
+                        <button class="add-to-cart" onclick="addToCart(${product.id})">Aggiungi al Carrello</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterProducts(category) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderProducts(category);
+        }
+
+        function toggleCart() {
+            document.getElementById('cart-modal').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            const existingItem = cart.find(item => item.id === productId);
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ ...product, quantity: 1 });
+            }
+
+            updateCartUI();
+            toggleCart();
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.id !== productId);
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const countElem = document.getElementById('cart-count');
+            const itemsElem = document.getElementById('cart-items');
+            const totalElem = document.getElementById('cart-total-price');
+
+            const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+            countElem.innerText = totalCount;
+
+            if (cart.length === 0) {
+                itemsElem.innerHTML = '<p style="color: var(--text-light); text-align: center; margin-top: 2rem;">Il carrello è vuoto.</p>';
+                totalElem.innerText = '€ 0.00';
+                return;
+            }
+
+            itemsElem.innerHTML = '';
+            let totalPrice = 0;
+
+            cart.forEach(item => {
+                totalPrice += item.price * item.quantity;
+                const div = document.createElement('div');
+                div.className = 'cart-item';
+                div.innerHTML = `
+                    <div>
+                        <strong>${item.name}</strong><br>
+                        <small style="color: var(--text-light);">${item.quantity}x € ${item.price.toFixed(2)}</small>
+                    </div>
+                    <button onclick="removeFromCart(${item.id})" style="background:none; border:none; color: #ef4444; cursor:pointer; font-weight:bold;">Rimuovi</button>
+                `;
+                itemsElem.appendChild(div);
+            });
+
+            totalElem.innerText = `€ ${totalPrice.toFixed(2)}`;
+        }
+
+        function checkout() {
+            if (cart.length === 0) {
+                alert('Il carrello è vuoto!');
+                return;
+            }
+            alert('Grazie per il tuo ordine! Questo è un sito e-commerce dimostrativo.');
+            cart = [];
+            updateCartUI();
+            toggleCart();
+        }
+
+        // Inizializza la pagina mostrando tutti i prodotti
+        renderProducts();
+    </script>
 </body>
 </html>
