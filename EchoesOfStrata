@@ -1,0 +1,11 @@
+EchoesOfStrata/
+│
+├── Assets/
+│   ├── Scripts/
+│   │   ├── StrataManager.cs
+│   │   └── AcousticScanner.cs
+│   └── Scenes/
+│       └── MainGame.unity
+│
+├── .gitignore
+└── README.md
