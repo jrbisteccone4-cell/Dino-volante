@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Labyrinth - Direct Touch</title>
+    <title>3D Labyrinth - Absolute Touch Look</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #010103; font-family: monospace; position: fixed; }
@@ -262,8 +262,7 @@
             let joystickPointerId = null;
             let lookPointerId = null;
             let center = { x: 0, y: 0 };
-            let initialTouchX = 0, initialTouchY = 0;
-            let startYaw = 0, startPitch = 0;
+            let lastLookX = 0, lastLookY = 0;
 
             window.addEventListener('pointerdown', (e) => {
                 const rect = container.getBoundingClientRect();
@@ -275,10 +274,8 @@
                 } else {
                     if (lookPointerId === null && e.target.tagName !== 'DIV') {
                         lookPointerId = e.pointerId;
-                        initialTouchX = e.clientX;
-                        initialTouchY = e.clientY;
-                        startYaw = cameraYaw;
-                        startPitch = cameraPitch;
+                        lastLookX = e.clientX;
+                        lastLookY = e.clientY;
                     }
                 }
             });
@@ -293,11 +290,13 @@
                     moveInput.x = dx / 45;
                     moveInput.y = dy / 45;
                 } else if (e.pointerId === lookPointerId) {
-                    // Mappatura diretta: l'angolo di visuale segue esattamente lo spostamento assoluto del dito dal punto di contatto iniziale
-                    const dx = e.clientX - initialTouchX;
-                    const dy = e.clientY - initialTouchY;
-                    cameraYaw = startYaw - (dx * 0.005);
-                    cameraPitch = Math.max(-0.6, Math.min(0.6, startPitch + (dy * 0.005)));
+                    // Cursore/visuale segue direttamente il movimento del dito in tempo reale con alta responsività
+                    const deltaX = e.clientX - lastLookX;
+                    const deltaY = e.clientY - lastLookY;
+                    cameraYaw -= deltaX * 0.007;
+                    cameraPitch = Math.max(-0.6, Math.min(0.6, cameraPitch + deltaY * 0.007));
+                    lastLookX = e.clientX;
+                    lastLookY = e.clientY;
                 }
             });
 
