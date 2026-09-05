@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Labyrinth - Fixed Touch</title>
+    <title>3D Labyrinth - Perfect Touch</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #010103; font-family: monospace; position: fixed; }
@@ -262,7 +262,8 @@
             let joystickPointerId = null;
             let lookPointerId = null;
             let center = { x: 0, y: 0 };
-            let lastLookX = 0, lastLookY = 0;
+            let touchStartX = 0, touchStartY = 0;
+            let initialYaw = 0, initialPitch = 0;
 
             window.addEventListener('pointerdown', (e) => {
                 const rect = container.getBoundingClientRect();
@@ -274,8 +275,10 @@
                 } else {
                     if (lookPointerId === null && e.target.tagName !== 'DIV') {
                         lookPointerId = e.pointerId;
-                        lastLookX = e.clientX;
-                        lastLookY = e.clientY;
+                        touchStartX = e.clientX;
+                        touchStartY = e.clientY;
+                        initialYaw = cameraYaw;
+                        initialPitch = cameraPitch;
                     }
                 }
             });
@@ -290,13 +293,11 @@
                     moveInput.x = dx / 45;
                     moveInput.y = dy / 45;
                 } else if (e.pointerId === lookPointerId) {
-                    // Segni corretti: la visuale segue esattamente la direzione del dito senza inversioni
-                    const deltaX = e.clientX - lastLookX;
-                    const deltaY = e.clientY - lastLookY;
-                    cameraYaw += deltaX * 0.007;
-                    cameraPitch = Math.max(-0.6, Math.min(0.6, cameraPitch - deltaY * 0.007));
-                    lastLookX = e.clientX;
-                    lastLookY = e.clientY;
+                    // Direzione invertita e naturale: se trascini a destra la visuale va a destra, se trascini in alto guarda in alto
+                    const deltaX = e.clientX - touchStartX;
+                    const deltaY = e.clientY - touchStartY;
+                    cameraYaw = initialYaw + (deltaX * 0.007);
+                    cameraPitch = Math.max(-0.6, Math.min(0.6, initialPitch + (deltaY * 0.007)));
                 }
             });
 
