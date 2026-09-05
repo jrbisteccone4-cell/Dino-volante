@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Labyrinth - Slowed Speed</title>
+    <title>3D Labyrinth - Even Slower Speed</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #010103; font-family: monospace; position: fixed; }
@@ -339,8 +339,8 @@
             if (gameStarted) {
                 const mag = Math.hypot(moveInput.x, moveInput.y);
                 if (mag > 0.05) {
-                    // Velocità ridotta da 3.2 a 1.6 per rallentare il movimento del personaggio
-                    const speed = 1.6 * mag * delta;
+                    // Velocità ulteriormente ridotta da 1.6 a 1.0
+                    const speed = 1.0 * mag * delta;
                     
                     const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
                     const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
