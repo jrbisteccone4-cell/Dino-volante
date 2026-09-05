@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Labyrinth - Advanced Edition</title>
+    <title>3D Labyrinth - Fixed Edition</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #050508; font-family: monospace; position: fixed; }
@@ -52,8 +52,8 @@
         .side-btn {
             width: 70px; height: 70px; border-radius: 50%; border: 2px solid #00ffcc;
             color: #00ffcc; font-weight: bold; font-size: 11px; display: flex; align-items: center;
-            justify-content: center; touch-action: none; background: rgba(0, 0, 0, 0.7);
-            box-shadow: 0 0 10px rgba(0,255,204,0.3); text-align: center;
+            justify-content: center; touch-action: none; background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 10px rgba(0,255,204,0.3); text-align: center; cursor: pointer;
         }
         .side-btn:active { background: #00ffcc; color: #000; transform: scale(0.9); }
         #btn-flashlight { border-color: #ffaa00; color: #ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.3); }
@@ -66,13 +66,13 @@
 
     <div id="menu-screen">
         <div class="menu-title">LABIRINTO ESTESO 3D</div>
-        <div class="menu-subtitle">Trova le 8 gemme nascoste ed evita di perderti</div>
+        <div class="menu-subtitle">Trova le 8 gemme nascoste</div>
         <div class="menu-btn" id="btn-start">ENTRA NEL LABIRINTO</div>
     </div>
 
     <div id="victory-screen">
         <div class="menu-title" style="color: #fff; text-shadow: 0 0 10px #00ffcc;">SEI USCITO!</div>
-        <div class="menu-subtitle" style="color: #00ffcc;">Hai recuperato tutte le gemme del labirinto.</div>
+        <div class="menu-subtitle" style="color: #00ffcc;">Hai recuperato tutte le gemme.</div>
         <div class="menu-btn" onclick="location.reload()">RIGIOCA</div>
     </div>
 
@@ -103,7 +103,6 @@
         let flashlight, muzzleFlashLight;
         let gunGroup;
 
-        // Labirinto immenso e intricato (30x30)
         const mapGrid = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
@@ -142,7 +141,6 @@
             scene.background = new THREE.Color(0x030305);
             scene.fog = new THREE.FogExp2(0x030305, 0.09);
 
-            // Risoluzione dello schermo ottimizzata al massimo
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
             scene.add(camera);
 
@@ -151,16 +149,14 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.body.appendChild(renderer.domElement);
 
-            // Illuminazione e Torcia
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
             scene.add(ambientLight);
 
-            flashlight = new THREE.SpotLight(0xffffff, 2.5, 12, Math.PI / 5, 0.5, 1);
+            // Torcia fissa sulla telecamera
+            flashlight = new THREE.SpotLight(0xffffff, 2.5, 15, Math.PI / 4, 0.5, 1);
             camera.add(flashlight);
             flashlight.position.set(0, 0, 0);
             flashlight.target = camera;
-            // Spostata leggermente a sinistra per simulare la mano sinistra
-            flashlight.position.x = -0.2;
 
             buildEnvironment();
             buildGun();
@@ -193,25 +189,19 @@
             ceiling.position.set(mapSizeX/2 - 1, 3, mapSizeZ/2 - 1);
             scene.add(ceiling);
 
-            // Costruzione Labirinto
             for (let z = 0; z < mapGrid.length; z++) {
                 for (let x = 0; x < mapGrid[z].length; x++) {
-                    const posX = x * 2;
-                    const posZ = z * 2;
-
                     if (mapGrid[z][x] === 1) {
                         const wall = new THREE.Mesh(wallGeo, wallMat);
-                        wall.position.set(posX, 1.5, posZ);
+                        wall.position.set(x * 2, 1.5, z * 2);
                         scene.add(wall);
                         colliders.push(new THREE.Box3().setFromObject(wall));
                     }
                 }
             }
 
-            // Gemme nascoste nel vasto labirinto
             const gemGeo = new THREE.OctahedronGeometry(0.35);
             const gemMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.8 });
-            
             const validSpots = [
                 {x: 2, z: 28}, {x: 28, z: 2}, {x: 28, z: 28}, {x: 14, z: 14}, 
                 {x: 2, z: 14}, {x: 28, z: 14}, {x: 14, z: 2}, {x: 14, z: 28}
@@ -225,39 +215,29 @@
             });
         }
 
-        // Creazione Arma Nera a Destra collegata alla Telecamera
         function buildGun() {
             gunGroup = new THREE.Group();
-
             const gunBodyMat = new THREE.MeshStandardMaterial({ color: 0x111113, roughness: 0.3, metalness: 0.8 });
             const slideMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.2, metalness: 0.9 });
             
-            // Impugnatura
-            const gripGeo = new THREE.BoxGeometry(0.08, 0.22, 0.12);
-            const grip = new THREE.Mesh(gripGeo, gunBodyMat);
+            const grip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.12), gunBodyMat);
             grip.position.set(0, -0.12, 0.05);
             grip.rotation.x = 0.3;
             gunGroup.add(grip);
 
-            // Carrello superiore
-            const slideGeo = new THREE.BoxGeometry(0.08, 0.09, 0.35);
-            const slide = new THREE.Mesh(slideGeo, slideMat);
+            const slide = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.09, 0.35), slideMat);
             slide.position.set(0, 0.02, 0);
             gunGroup.add(slide);
 
-            // Canna
-            const barrelGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.15, 8);
-            const barrel = new THREE.Mesh(barrelGeo, slideMat);
+            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.15, 8), slideMat);
             barrel.rotation.x = Math.PI / 2;
             barrel.position.set(0, 0.03, -0.22);
             gunGroup.add(barrel);
 
-            // Luce lampo sparo (Muzzle flash)
             muzzleFlashLight = new THREE.PointLight(0xffaa00, 0, 3);
             muzzleFlashLight.position.set(0, 0.03, -0.3);
             gunGroup.add(muzzleFlashLight);
 
-            // Posizionamento in basso a destra nella visuale in prima persona
             gunGroup.position.set(0.32, -0.32, -0.55);
             camera.add(gunGroup);
         }
@@ -281,7 +261,7 @@
             let center = { x: 0, y: 0 };
             let lastTouch = { x: 0, y: 0 };
 
-            // Controllo tocco migliorato per seguire ovunque il dito sullo schermo per la visuale
+            // Controllo touch curlocore corretto: il dito muove la visuale in modo diretto ovunque a destra
             window.addEventListener('touchstart', (e) => {
                 for (let t of e.changedTouches) {
                     const rect = container.getBoundingClientRect();
@@ -310,8 +290,8 @@
                     } else if (t.identifier === lookId) {
                         const dx = t.clientX - lastTouch.x;
                         const dy = t.clientY - lastTouch.y;
-                        cameraYaw -= dx * 0.0035;
-                        cameraPitch = Math.max(-0.5, Math.min(0.5, cameraPitch + dy * 0.0035));
+                        cameraYaw -= dx * 0.004;
+                        cameraPitch = Math.max(-0.5, Math.min(0.5, cameraPitch + dy * 0.004));
                         lastTouch = { x: t.clientX, y: t.clientY };
                     }
                 }
@@ -330,21 +310,21 @@
             window.addEventListener('touchend', endTouch);
             window.addEventListener('touchcancel', endTouch);
 
-            // Pulsante Torcia
-            document.getElementById('btn-flashlight').addEventListener('touchstart', (e) => {
+            // Tasto Torcia Ripristinato
+            const flashlightBtn = document.getElementById('btn-flashlight');
+            flashlightBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 flashlightOn = !flashlightOn;
                 flashlight.intensity = flashlightOn ? 2.5 : 0;
-                const btn = document.getElementById('btn-flashlight');
-                if (flashlightOn) btn.classList.add('active');
-                else btn.classList.remove('active');
+                if (flashlightOn) flashlightBtn.classList.add('active');
+                else flashlightBtn.classList.remove('active');
             }, { passive: false });
 
-            // Pulsante Spara (Effetto rinculo arma e lampo di luce)
+            // Tasto Spara
             document.getElementById('btn-shoot').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 muzzleFlashLight.intensity = 5;
-                gunGroup.position.z += 0.08; // Rinculo visivo
+                gunGroup.position.z += 0.08;
                 setTimeout(() => {
                     muzzleFlashLight.intensity = 0;
                     gunGroup.position.z -= 0.08;
@@ -371,7 +351,6 @@
                     if (!checkCollision(nextZ)) playerPos.z = nextZ.z;
                 }
 
-                // Rotazione e raccolta automatica gemme vicine
                 gems.forEach((gem) => { 
                     if(gem.visible) {
                         gem.rotation.y += 2.0 * delta;
