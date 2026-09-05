@@ -154,15 +154,14 @@
             collidableObjects.push(eastWall);
         }
 
-        // Sistema di collisione avanzato anti-attraversamento muri (Anti-Portal Bug)
+        // Controllo collisioni rigoroso anti-tunneling
         function canMoveTo(targetPos) {
             if (collidableObjects.length === 0) return true;
             
-            // Controlla a raggio intorno al giocatore per evitare di "bucare" le pareti
             const origin = targetPos.clone();
-            origin.y += 0.5; // Altezza torace
+            origin.y += 0.5; 
             
-            const checkRadius = 0.5; // Spessore del volume di collisione del personaggio
+            const checkRadius = 0.6; // Raggio di sicurezza aumentato
             const directions = [
                 new THREE.Vector3(1, 0, 0),
                 new THREE.Vector3(-1, 0, 0),
@@ -178,7 +177,7 @@
                 raycaster.set(origin, dir);
                 const hits = raycaster.intersectObjects(collidableObjects, true);
                 if (hits.length > 0 && hits[0].distance < checkRadius) {
-                    return false; // Bloccato dal muro
+                    return false; 
                 }
             }
             return true;
@@ -231,7 +230,7 @@
                 mapMesh.traverse((child) => {
                     if (child.isMesh) {
                         if (child.material) {
-                            child.material.side = THREE.DoubleSide; // Rende visibili i muri da entrambi i lati evitando buchi visivi
+                            child.material.side = THREE.DoubleSide;
                         }
                         collidableObjects.push(child);
                     }
@@ -359,23 +358,24 @@
             
             if (isMapLoaded) {
                 if (inputMag > 0.05) {
-                    const currentSpeed = 2.0 * inputMag * delta;
+                    const totalSpeed = 2.0 * inputMag * delta;
                     const moveAngle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
 
-                    const moveDir = new THREE.Vector3(
-                        Math.sin(moveAngle) * currentSpeed,
-                        0,
-                        Math.cos(moveAngle) * currentSpeed
-                    );
+                    // SUB-STEPPING: Divide il movimento in 5 micro-passi per bloccare il tunneling sui muri
+                    const subSteps = 5;
+                    const stepSpeed = totalSpeed / subSteps;
+                    const stepDirX = Math.sin(moveAngle) * stepSpeed;
+                    const stepDirZ = Math.cos(moveAngle) * stepSpeed;
 
-                    // Movimento assi separati per scivolare lungo i muri senza blocchi totali o compenetrazioni
-                    let nextX = playerPos.clone();
-                    nextX.x += moveDir.x;
-                    if (canMoveTo(nextX)) playerPos.x = nextX.x;
+                    for (let i = 0; i < subSteps; i++) {
+                        let nextX = playerPos.clone();
+                        nextX.x += stepDirX;
+                        if (canMoveTo(nextX)) playerPos.x = nextX.x;
 
-                    let nextZ = playerPos.clone();
-                    nextZ.z += moveDir.z;
-                    if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
+                        let nextZ = playerPos.clone();
+                        nextZ.z += stepDirZ;
+                        if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
+                    }
                 }
 
                 if (!isGrounded) {
