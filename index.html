@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Labyrinth - Even Slower Speed</title>
+    <title>3D Labyrinth - Procedural Assets & Audio</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #010103; font-family: monospace; position: fixed; }
@@ -14,7 +14,7 @@
             background: rgba(2, 2, 5, 0.98); display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 99999;
         }
-        .menu-title { font-size: 26px; font-weight: bold; color: #00ffcc; margin-bottom: 10px; text-align: center; letter-spacing: 2px; }
+        .menu-title { font-size: 26px; font-weight: bold; color: #00ffcc; margin-bottom: 10px; text-align: center; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,255,204,0.4); }
         .menu-subtitle { font-size: 13px; color: #888; margin-bottom: 30px; text-align: center; padding: 0 20px; }
         .menu-btn {
             width: 220px; padding: 15px; background: #000; border: 2px solid #00ffcc;
@@ -66,7 +66,7 @@
 
     <div id="menu-screen">
         <div class="menu-title">LABIRINTO 3D PRO</div>
-        <div class="menu-subtitle">Trova le 8 gemme nascoste nel buio</div>
+        <div class="menu-subtitle">Atmosfera avanzata & Audio Sintetizzato</div>
         <div class="menu-btn" id="btn-start">ENTRA NEL LABIRINTO</div>
     </div>
 
@@ -102,6 +102,8 @@
         let flashlightOn = true;
         let flashlight, muzzleFlashLight;
         let gunGroup;
+        let dustParticles;
+        let audioCtx = null;
 
         const mapGrid = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -136,6 +138,96 @@
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
+        // Generatore di texture procedurale per mattoni sulle pareti
+        function createProceduralBrickTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#1c1f28';
+            ctx.fillRect(0, 0, 512, 512);
+
+            ctx.strokeStyle = '#0d0f14';
+            ctx.lineWidth = 6;
+
+            const rows = 16;
+            const cols = 8;
+            const rh = 512 / rows;
+            const cw = 512 / cols;
+
+            for (let i = 0; i <= rows; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * rh);
+                ctx.lineTo(512, i * rh);
+                ctx.stroke();
+            }
+
+            for (let i = 0; i < rows; i++) {
+                const offset = (i % 2) * (cw / 2);
+                for (let j = 0; j <= cols + 1; j++) {
+                    ctx.beginPath();
+                    ctx.moveTo(j * cw - offset, i * rh);
+                    ctx.lineTo(j * cw - offset, (i + 1) * rh);
+                    ctx.stroke();
+                }
+            }
+
+            // Disturbo visivo superficiale (effetto pietra ruvida)
+            for (let k = 0; k < 20000; k++) {
+                const x = Math.random() * 512;
+                const y = Math.random() * 512;
+                ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.08)';
+                ctx.fillRect(x, y, 2, 2);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(1, 1.5);
+            return texture;
+        }
+
+        // Sintesi audio procedurale (Web Audio API)
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            if (type === 'shoot') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } else if (type === 'gem') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nota D5
+                osc.frequency.exponentialRampToValueAtTime(1174.66, audioCtx.currentTime + 0.3); // Nota D6
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x010103);
@@ -163,9 +255,11 @@
 
             buildEnvironment();
             buildGun();
+            buildDustParticles();
             setupControls();
 
             document.getElementById('btn-start').addEventListener('click', () => {
+                initAudio();
                 document.getElementById('menu-screen').style.display = 'none';
                 gameStarted = true;
             });
@@ -177,8 +271,13 @@
             const mapSizeX = mapGrid[0].length * 2;
             const mapSizeZ = mapGrid.length * 2;
 
+            const brickTex = createProceduralBrickTexture();
             const wallGeo = new THREE.BoxGeometry(2, 3, 2);
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x151820, roughness: 0.8 });
+            const wallMat = new THREE.MeshStandardMaterial({ 
+                map: brickTex, 
+                roughness: 0.8,
+                metalness: 0.1
+            });
             
             const floorGeo = new THREE.PlaneGeometry(mapSizeX, mapSizeZ);
             const floorMat = new THREE.MeshStandardMaterial({ color: 0x050608, roughness: 0.9 });
@@ -204,7 +303,7 @@
             }
 
             const gemGeo = new THREE.OctahedronGeometry(0.35);
-            const gemMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 1.0 });
+            const gemMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 1.5 });
             const validSpots = [
                 {x: 2, z: 28}, {x: 28, z: 2}, {x: 28, z: 28}, {x: 14, z: 14}, 
                 {x: 2, z: 14}, {x: 28, z: 14}, {x: 14, z: 2}, {x: 14, z: 28}
@@ -216,6 +315,31 @@
                 scene.add(gem);
                 gems.push(gem);
             });
+        }
+
+        // Sistema di particelle procedurale (pulviscolo atmosferico nel buio)
+        function buildDustParticles() {
+            const particleCount = 300;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+
+            for(let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 60;
+                positions[i+1] = Math.random() * 3;
+                positions[i+2] = (Math.random() - 0.5) * 60;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({
+                color: 0x00ffcc,
+                size: 0.05,
+                transparent: true,
+                opacity: 0.4
+            });
+
+            dustParticles = new THREE.Points(geometry, material);
+            scene.add(dustParticles);
         }
 
         function buildGun() {
@@ -323,6 +447,7 @@
 
             document.getElementById('btn-shoot').addEventListener('pointerdown', (e) => {
                 e.stopPropagation();
+                playSound('shoot');
                 muzzleFlashLight.intensity = 6;
                 gunGroup.position.z += 0.08;
                 setTimeout(() => {
@@ -339,7 +464,6 @@
             if (gameStarted) {
                 const mag = Math.hypot(moveInput.x, moveInput.y);
                 if (mag > 0.05) {
-                    // Velocità ulteriormente ridotta da 1.6 a 1.0
                     const speed = 1.0 * mag * delta;
                     
                     const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
@@ -364,6 +488,7 @@
                         gem.rotation.y += 2.0 * delta;
                         if (playerPos.distanceTo(gem.position) < 1.8) {
                             gem.visible = false;
+                            playSound('gem');
                             collectedGems++;
                             document.getElementById('gems-count').innerText = collectedGems;
                             if (collectedGems === totalGems) {
