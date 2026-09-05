@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Labyrinth - Absolute Touch Look</title>
+    <title>3D Labyrinth - Fixed Touch</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #010103; font-family: monospace; position: fixed; }
@@ -290,11 +290,11 @@
                     moveInput.x = dx / 45;
                     moveInput.y = dy / 45;
                 } else if (e.pointerId === lookPointerId) {
-                    // Cursore/visuale segue direttamente il movimento del dito in tempo reale con alta responsività
+                    // Segni corretti: la visuale segue esattamente la direzione del dito senza inversioni
                     const deltaX = e.clientX - lastLookX;
                     const deltaY = e.clientY - lastLookY;
-                    cameraYaw -= deltaX * 0.007;
-                    cameraPitch = Math.max(-0.6, Math.min(0.6, cameraPitch + deltaY * 0.007));
+                    cameraYaw += deltaX * 0.007;
+                    cameraPitch = Math.max(-0.6, Math.min(0.6, cameraPitch - deltaY * 0.007));
                     lastLookX = e.clientX;
                     lastLookY = e.clientY;
                 }
