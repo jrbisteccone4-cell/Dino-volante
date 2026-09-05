@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rompicapo Colori e Suoni</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        h1 {
+            margin-bottom: 5px;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+        #score {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #bbbbbb;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 300px;
+            height: 300px;
+            max-width: 90vw;
+            max-height: 90vw;
+            margin-bottom: 25px;
+        }
+        .pad {
+            border-radius: 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.1s ease, transform 0.1s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .pad:active, .pad.active {
+            opacity: 1;
+            transform: scale(0.95);
+        }
+        #green { background-color: #2ecc71; }
+        #red { background-color: #e74c3c; }
+        #yellow { background-color: #f1c40f; }
+        #blue { background-color: #3498db; }
+
+        #start-btn {
+            background-color: #9b59b6;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(155, 89, 182, 0.4);
+            transition: background 0.2s;
+        }
+        #start-btn:active {
+            background-color: #8e44ad;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Rompicapo Colori</h1>
+    <div id="score">Punteggio: 0 | Record: 0</div>
+
+    <div class="board">
+        <div class="pad" id="green" data-sound="329.63"></div>
+        <div class="pad" id="red" data-sound="261.63"></div>
+        <div class="pad" id="yellow" data-sound="220.00"></div>
+        <div class="pad" id="blue" data-sound="164.81"></div>
+    </div>
+
+    <button id="start-btn" onclick="startGame()">GIOCA</button>
+
+    <script>
+        const pads = ['green', 'red', 'yellow', 'blue'];
+        let sequence = [];
+        let playerSequence = [];
+        let score = 0;
+        let highscore = 0;
+        let gamePlaying = false;
+        let audioCtx = null;
+
+        const scoreDisplay = document.getElementById('score');
+        const startBtn = document.getElementById('start-btn');
+
+        // Configurazione audio tramite Web Audio API (senza file esterni)
+        function playTone(freq, duration) {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function lightUp(padId, duration) {
+            const pad = document.getElementById(padId);
+            const freq = parseFloat(pad.getAttribute('data-sound'));
+            pad.classList.add('active');
+            playTone(freq, duration);
+            setTimeout(() => {
+                pad.classList.remove('active');
+            }, duration * 1000);
+        }
+
+        function startGame() {
+            sequence = [];
+            playerSequence = [];
+            score = 0;
+            updateScoreDisplay();
+            startBtn.style.display = 'none';
+            gamePlaying = true;
+            nextRound();
+        }
+
+        function nextRound() {
+            playerSequence = [];
+            const randomPad = pads[Math.floor(Math.random() * pads.length)];
+            sequence.push(randomPad);
+            playSequence();
+        }
+
+        function playSequence() {
+            let i = 0;
+            const interval = setInterval(() => {
+                lightUp(sequence[i], 0.4);
+                i++;
+                if (i >= sequence.length) {
+                    clearInterval(interval);
+                }
+            }, 800);
+        }
+
+        function handlePadClick(padId) {
+            if (!gamePlaying) return;
+
+            lightUp(padId, 0.3);
+            playerSequence.push(padId);
+
+            const currentIndex = playerSequence.length - 1;
+
+            // Controlla se il tocco è corretto
+            if (playerSequence[currentIndex] !== sequence[currentIndex]) {
+                gameOver();
+                return;
+            }
+
+            // Se ha completato la sequenza del round
+            if (playerSequence.length === sequence.length) {
+                score++;
+                if (score > highscore) highscore = score;
+                updateScoreDisplay();
+                setTimeout(nextRound, 1000);
+            }
+        }
+
+        function updateScoreDisplay() {
+            scoreDisplay.textContent = `Punteggio: ${score} | Record: ${highscore}`;
+        }
+
+        function gameOver() {
+            gamePlaying = false;
+            // Suono di errore grave
+            playTone(100, 0.6);
+            alert(`Fine gioco! Punteggio finale: ${score}`);
+            startBtn.style.display = 'block';
+            startBtn.textContent = 'RIGIOCA';
+        }
+
+        // Associa gli eventi di tocco/click ai riquadri
+        pads.forEach(padId => {
+            const pad = document.getElementById(padId);
+            pad.addEventListener('click', () => handlePadClick(padId));
+            pad.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Evita doppio click o zoom accidentale su mobile
+                handlePadClick(padId);
+            });
+        });
+    </script>
+</body>
+</html>
