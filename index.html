@@ -3,397 +3,314 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pac-Man Next-Gen</title>
+    <title>3D Labyrinth - GitHub Edition</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0d0d0d; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; position: fixed; }
-        
-        #game-wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 420px;
-            height: 100%;
-            max-height: 600px;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            border: 2px solid #222;
-            box-shadow: 0 0 20px rgba(0,255,204,0.1);
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #111; font-family: monospace; position: fixed; }
+        canvas { display: block; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 1; }
+
+        #menu-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 10, 15, 0.96); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 99999;
         }
+        .menu-title { font-size: 26px; font-weight: bold; color: #00ffcc; margin-bottom: 10px; text-align: center; letter-spacing: 2px; }
+        .menu-subtitle { font-size: 14px; color: #888; margin-bottom: 30px; text-align: center; }
+        .menu-btn {
+            width: 220px; padding: 15px; background: #000; border: 2px solid #00ffcc;
+            color: #00ffcc; font-size: 16px; font-weight: bold; font-family: monospace;
+            border-radius: 8px; cursor: pointer; text-align: center; box-shadow: 0 0 15px rgba(0,255,204,0.3);
+        }
+        .menu-btn:active { transform: scale(0.95); background: #00ffcc; color: #000; }
 
         #hud {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 20px;
-            color: #fff;
-            font-size: 15px;
-            font-weight: bold;
-            background: #141414;
-            border-bottom: 2px solid #222;
-            letter-spacing: 1px;
+            position: absolute; top: 15px; left: 15px; color: #00ffcc; font-size: 14px;
+            font-weight: bold; pointer-events: none; z-index: 10; background: rgba(0,0,0,0.75);
+            padding: 10px 15px; border-radius: 8px; border: 1px solid #00ffcc;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        .score-box { color: #00ffcc; }
-        .lives-box { color: #ff3366; }
-
-        canvas {
-            background-color: #000;
-            display: block;
-            touch-action: none;
-            flex-grow: 1;
+        #victory-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 255, 204, 0.15); backdrop-filter: blur(5px);
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 99998;
         }
 
-        #overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(10, 10, 10, 0.92);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
+        #joystick-container {
+            position: absolute; bottom: 35px; left: 25px; width: 120px; height: 120px;
+            background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%; touch-action: none; z-index: 10;
+        }
+        #joystick-knob {
+            position: absolute; top: 37px; left: 37px; width: 42px; height: 42px;
+            background: #00ffcc; border-radius: 50%; pointer-events: none;
+            box-shadow: 0 0 10px #00ffcc;
         }
 
-        .title { font-size: 30px; color: #00ffcc; margin-bottom: 15px; text-shadow: 0 0 10px rgba(0,255,204,0.4); letter-spacing: 3px; font-weight: bold; text-align: center; }
-        .subtitle { color: #888; font-size: 12px; margin-bottom: 30px; text-align: center; padding: 0 20px; line-height: 1.4; }
-        
-        .btn {
-            background: #00ffcc; color: #000; border: none; padding: 14px 35px;
-            font-size: 16px; font-weight: bold; font-family: monospace; border-radius: 8px;
-            cursor: pointer; box-shadow: 0 4px 15px rgba(0,255,204,0.3); letter-spacing: 1px;
+        #btn-action {
+            position: absolute; bottom: 45px; right: 25px; width: 75px; height: 75px; border-radius: 50%;
+            border: 2px solid #00ffcc; color: #00ffcc; font-weight: bold; font-size: 13px;
+            display: flex; align-items: center; justify-content: center; touch-action: none;
+            z-index: 10; background: rgba(0, 0, 0, 0.6); box-shadow: 0 0 15px rgba(0,255,204,0.3);
         }
-        .btn:active { transform: scale(0.95); background: #00ccaa; }
+        #btn-action:active { background: #00ffcc; color: #000; transform: scale(0.9); }
     </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="game-wrapper">
-        <div id="hud">
-            <div>SCORE: <span id="score-val" class="score-box">0</span></div>
-            <div>VITE: <span id="lives-val" class="lives-box">3</span></div>
-        </div>
-
-        <canvas id="canvas"></canvas>
-
-        <div id="overlay">
-            <div class="title">PAC-MAN</div>
-            <div class="subtitle">Scorri sullo schermo o usa le frecce per guidare Pac-Man. Mangia le sfere ed evita i fantasmi!</div>
-            <button class="btn" id="start-btn">GIOCA ORA</button>
-        </div>
+    <div id="menu-screen">
+        <div class="menu-title">LABIRINTO 3D</div>
+        <div class="menu-subtitle">Raccogli tutte le gemme blu</div>
+        <div class="menu-btn" id="btn-start">GIOCA ORA</div>
     </div>
 
+    <div id="victory-screen">
+        <div class="menu-title" style="color: #fff; text-shadow: 0 0 10px #00ffcc;">COMPLIMENTI!</div>
+        <div class="menu-subtitle" style="color: #00ffcc;">Hai raccolto tutte le gemme.</div>
+        <div class="menu-btn" onclick="location.reload()">RIGIOCA</div>
+    </div>
+
+    <div id="hud">
+        GEMME: <span id="gems-count">0</span> / 5
+    </div>
+
+    <div id="joystick-container"><div id="joystick-knob"></div></div>
+    <div id="btn-action">INTERAGISCI</div>
+
     <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        let scene, camera, renderer;
+        let clock = new THREE.Clock();
+        let moveInput = { x: 0, y: 0 };
+        let cameraYaw = 0, cameraPitch = 0;
+        
+        let playerPos = new THREE.Vector3(2, 0.8, 2);
+        let colliders = [];
+        let gems = [];
+        let collectedGems = 0;
+        const totalGems = 5;
+        let gameStarted = false;
 
-        // Layout pulito e simmetrico del labirinto (1 = Muro, 0 = Pallino, 2 = Vuoto, 3 = Power Pellet)
-        const mapTemplate = [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,3,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,3,1],
-            [1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,0,1],
-            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
-            [1,1,1,1,0,1,1,1,2,1,2,1,1,1,0,1,1,1,1],
-            [2,2,2,1,0,1,2,2,2,2,2,2,2,1,0,1,2,2,2],
-            [1,1,1,1,0,1,2,1,1,2,1,1,2,1,0,1,1,1,1],
-            [2,2,2,2,0,2,2,1,2,2,2,1,2,2,0,2,2,2,2],
-            [1,1,1,1,0,1,2,1,1,1,1,1,2,1,0,1,1,1,1],
-            [2,2,2,1,0,1,2,2,2,2,2,2,2,1,0,1,2,2,2],
-            [1,1,1,1,0,1,2,1,1,1,1,1,2,1,0,1,1,1,1],
-            [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1],
-            [1,3,0,1,0,0,0,0,0,2,0,0,0,0,0,1,0,3,1],
-            [1,1,0,1,0,1,0,1,1,1,1,1,0,1,0,1,0,1,1],
-            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        // Mappa del labirinto (1 = Muro, 0 = Spazio libero)
+        const mapGrid = [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,1],
+            [1,0,1,0,1,0,1,1,0,1],
+            [1,0,1,0,0,0,0,1,0,1],
+            [1,0,1,1,1,1,0,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1],
+            [1,1,1,1,0,1,1,1,0,1],
+            [1,0,0,1,0,0,0,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1]
         ];
 
-        const ROWS = mapTemplate.length;
-        const COLS = mapTemplate[0].length;
-        let tileSize = 20;
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a12);
+            scene.fog = new THREE.FogExp2(0x0a0a12, 0.08);
 
-        function resizeCanvas() {
-            const wrapper = document.getElementById('game-wrapper');
-            const maxWidth = wrapper.clientWidth;
-            const maxHeight = wrapper.clientHeight - 50;
-            tileSize = Math.floor(Math.min(maxWidth / COLS, maxHeight / ROWS));
-            canvas.width = COLS * tileSize;
-            canvas.height = ROWS * tileSize;
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
+            scene.add(camera);
+
+            renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            document.body.appendChild(renderer.domElement);
+
+            // Luci tridimensionali suggestive
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0x00ffcc, 1.5, 10);
+            camera.add(pointLight);
+
+            buildEnvironment();
+            setupControls();
+
+            document.getElementById('btn-start').addEventListener('click', () => {
+                document.getElementById('menu-screen').style.display = 'none';
+                gameStarted = true;
+            });
+
+            animate();
         }
 
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        function buildEnvironment() {
+            const wallGeo = new THREE.BoxGeometry(2, 3, 2);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x1f2430, roughness: 0.7 });
+            
+            const floorGeo = new THREE.PlaneGeometry(20, 20);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.9 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.set(9, 0, 9);
+            scene.add(floor);
 
-        let score = 0;
-        let lives = 3;
-        let gameRunning = false;
-        let currentMap = [];
-        let frightenedTimer = 0;
+            const ceiling = floor.clone();
+            ceiling.rotation.x = Math.PI / 2;
+            ceiling.position.set(9, 3, 9);
+            scene.add(ceiling);
 
-        let pacman = {
-            x: 9, y: 15,
-            dx: 0, dy: 0,
-            nextDx: 0, nextDy: 0,
-            speed: 2.5, // Pixel per frame ottimizzati
-            pixelX: 9 * tileSize, pixelY: 15 * tileSize,
-            mouthAngle: 0.2, mouthSpeed: 0.03
-        };
+            // Costruzione Labirinto da matrice
+            for (let z = 0; z < mapGrid.length; z++) {
+                for (let x = 0; x < mapGrid[z].length; x++) {
+                    const posX = x * 2;
+                    const posZ = z * 2;
 
-        let ghosts = [
-            { x: 9, y: 8, pixelX: 9*tileSize, pixelY: 8*tileSize, color: '#ff3366', dx: 0, dy: -1, speed: 2.0 }, // Rosso
-            { x: 9, y: 9, pixelX: 9*tileSize, pixelY: 9*tileSize, color: '#ffb8ff', dx: 0, dy: 1, speed: 2.0 },  // Rosa
-            { x: 8, y: 9, pixelX: 8*tileSize, pixelY: 9*tileSize, color: '#00ffff', dx: -1, dy: 0, speed: 2.0 }, // Ciano
-            { x: 10, y: 9, pixelX: 10*tileSize, pixelY: 10*tileSize, color: '#ffb852', dx: 1, dy: 0, speed: 2.0 } // Arancione
-        ];
+                    if (mapGrid[z][x] === 1) {
+                        const wall = new THREE.Mesh(wallGeo, wallMat);
+                        wall.position.set(posX, 1.5, posZ);
+                        scene.add(wall);
+                        
+                        // Collider Box matematico per ogni blocco muro
+                        colliders.push(new THREE.Box3().setFromObject(wall));
+                    }
+                }
+            }
 
-        function resetGame() {
-            score = 0;
-            lives = 3;
-            currentMap = mapTemplate.map(row => [...row]);
-            resetPositions();
-            updateHUD();
-        }
-
-        function resetPositions() {
-            pacman.x = 9; pacman.y = 15;
-            pacman.dx = 0; pacman.dy = 0;
-            pacman.nextDx = 0; pacman.nextDy = 0;
-            pacman.pixelX = pacman.x * tileSize;
-            pacman.pixelY = pacman.y * tileSize;
-
-            const gConfigs = [
-                {x: 9, y: 8, dx: 0, dy: -1},
-                {x: 9, y: 9, dx: 0, dy: 1},
-                {x: 8, y: 9, dx: -1, dy: 0},
-                {x: 10, y: 9, dx: 1, dy: 0}
+            // Posizionamento Casuale delle Gemme negli spazi vuoti
+            const gemGeo = new THREE.OctahedronGeometry(0.35);
+            const gemMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.8 });
+            
+            const validSpots = [
+                {x: 2, z: 8}, {x: 8, z: 1}, {x: 16, z: 8}, {x: 16, z: 16}, {x: 8, z: 16}
             ];
-            ghosts.forEach((g, i) => {
-                g.x = gConfigs[i].x; g.y = gConfigs[i].y;
-                g.dx = gConfigs[i].dx; g.dy = gConfigs[i].dy;
-                g.pixelX = g.x * tileSize; g.pixelY = g.y * tileSize;
+
+            validSpots.forEach(spot => {
+                const gem = new THREE.Mesh(gemGeo, gemMat);
+                gem.position.set(spot.x, 0.8, spot.z);
+                scene.add(gem);
+                gems.push(gem);
             });
         }
 
-        function updateHUD() {
-            document.getElementById('score-val').innerText = score;
-            document.getElementById('lives-val').innerText = lives;
+        function checkCollision(targetPos) {
+            const playerBox = new THREE.Box3();
+            playerBox.min.set(targetPos.x - 0.3, 0, targetPos.z - 0.3);
+            playerBox.max.set(targetPos.x + 0.3, 2, targetPos.z + 0.3);
+
+            for (let i = 0; i < colliders.length; i++) {
+                if (colliders[i].intersectsBox(playerBox)) return true;
+            }
+            return false;
         }
 
-        function isWall(gx, gy) {
-            if (gx < 0 || gx >= COLS) return false; // Tunnel laterale libero
-            if (gy < 0 || gy >= ROWS) return true;
-            return currentMap[gy][gx] === 1;
-        }
+        function setupControls() {
+            const container = document.getElementById('joystick-container');
+            const knob = document.getElementById('joystick-knob');
+            let joystickId = null;
+            let lookId = null;
+            let center = { x: 0, y: 0 };
+            let lastTouch = { x: 0, y: 0 };
 
-        function update() {
-            // Gestione timer Power Pellet
-            if (frightenedTimer > 0) frightenedTimer--;
-
-            // Svolta fluida agli incroci
-            if (pacman.nextDx !== 0 || pacman.nextDy !== 0) {
-                if (pacman.pixelX % tileSize === 0 && pacman.pixelY % tileSize === 0) {
-                    let curGx = Math.round(pacman.pixelX / tileSize);
-                    let curGy = Math.round(pacman.pixelY / tileSize);
-                    if (!isWall(curGx + pacman.nextDx, curGy + pacman.nextDy)) {
-                        pacman.dx = pacman.nextDx;
-                        pacman.dy = pacman.nextDy;
+            window.addEventListener('touchstart', (e) => {
+                for (let t of e.changedTouches) {
+                    const rect = container.getBoundingClientRect();
+                    if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+                        if (joystickId === null) {
+                            joystickId = t.identifier;
+                            center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                        }
+                    } else if (t.clientX > window.innerWidth / 3 && lookId === null) {
+                        lookId = t.identifier;
+                        lastTouch = { x: t.clientX, y: t.clientY };
                     }
                 }
-            }
+            }, { passive: false });
 
-            // Movimento Pac-Man con blocco sui muri
-            if (pacman.dx !== 0 || pacman.dy !== 0) {
-                let nextPx = pacman.pixelX + pacman.dx * pacman.speed;
-                let nextPy = pacman.pixelY + pacman.dy * pacman.speed;
-                
-                let targetGx = Math.round(nextPx / tileSize);
-                let targetGy = Math.round(nextPy / tileSize);
-
-                if (pacman.pixelX % tileSize === 0 && pacman.pixelY % tileSize === 0) {
-                    if (isWall(targetGx, targetGy)) {
-                        pacman.pixelX = targetGx * tileSize;
-                        pacman.pixelY = targetGy * tileSize;
-                    } else {
-                        pacman.pixelX = nextPx;
-                        pacman.pixelY = nextPy;
+            window.addEventListener('touchmove', (e) => {
+                for (let t of e.touches) {
+                    if (t.identifier === joystickId) {
+                        const dx = t.clientX - center.x;
+                        const dy = t.clientY - center.y;
+                        const dist = Math.min(Math.hypot(dx, dy), 40);
+                        const angle = Math.atan2(dy, dx);
+                        knob.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
+                        moveInput.x = dx / 40;
+                        moveInput.y = dy / 40;
+                    } else if (t.identifier === lookId) {
+                        const dx = t.clientX - lastTouch.x;
+                        const dy = t.clientY - lastTouch.y;
+                        cameraYaw -= dx * 0.004;
+                        cameraPitch = Math.max(-0.5, Math.min(0.5, cameraPitch + dy * 0.004));
+                        lastTouch = { x: t.clientX, y: t.clientY };
                     }
-                } else {
-                    pacman.pixelX = nextPx;
-                    pacman.pixelY = nextPy;
                 }
-            }
+            }, { passive: false });
 
-            // Tunnel laterale seamless
-            if (pacman.pixelX < 0) pacman.pixelX = (COLS - 1) * tileSize;
-            else if (pacman.pixelX >= COLS * tileSize) pacman.pixelX = 0;
-
-            pacman.x = Math.round(pacman.pixelX / tileSize);
-            pacman.y = Math.round(pacman.pixelY / tileSize);
-
-            // Raccolta pallini
-            if (currentMap[pacman.y] && currentMap[pacman.y][pacman.x] !== undefined) {
-                if (currentMap[pacman.y][pacman.x] === 0) {
-                    currentMap[pacman.y][pacman.x] = 2;
-                    score += 10;
-                    updateHUD();
-                } else if (currentMap[pacman.y][pacman.x] === 3) {
-                    currentMap[pacman.y][pacman.x] = 2;
-                    score += 50;
-                    frightenedTimer = 450; // ~7 secondi di vulnerabilità fantasmi
-                    updateHUD();
+            const endTouch = (e) => {
+                for (let t of e.changedTouches) {
+                    if (t.identifier === joystickId) {
+                        joystickId = null;
+                        knob.style.transform = `translate(0px, 0px)`;
+                        moveInput = { x: 0, y: 0 };
+                    }
+                    if (t.identifier === lookId) lookId = null;
                 }
-            }
+            };
+            window.addEventListener('touchend', endTouch);
+            window.addEventListener('touchcancel', endTouch);
 
-            // Animazione bocca
-            pacman.mouthAngle += pacman.mouthSpeed;
-            if (pacman.mouthAngle > 0.4 || pacman.mouthAngle < 0.05) pacman.mouthSpeed = -pacman.mouthSpeed;
-
-            // Movimento Fantasmi
-            ghosts.forEach(g => {
-                g.pixelX += g.dx * g.speed;
-                g.pixelY += g.dy * g.speed;
-
-                // Gestione cambi direzione agli incroci esatti
-                if (g.pixelX % tileSize === 0 && g.pixelY % tileSize === 0) {
-                    g.x = Math.round(g.pixelX / tileSize);
-                    g.y = Math.round(g.pixelY / tileSize);
-
-                    const dirs = [{dx:0, dy:-1}, {dx:0, dy:1}, {dx:-1, dy:0}, {dx:1, dy:0}];
-                    // Evita inversione immediata a U se possibile
-                    const validDirs = dirs.filter(d => !(d.dx === -g.dx && d.dy === -g.dy) && !isWall(g.x + d.dx, g.y + d.dy));
-                    
-                    let chosen = validDirs.length > 0 ? validDirs[Math.floor(Math.random() * validDirs.length)] : {dx:-g.dx, dy:-g.dy};
-                    g.dx = chosen.dx;
-                    g.dy = chosen.dy;
-                }
-
-                // Collisione Pac-Man / Fantasma
-                let dist = Math.hypot(pacman.pixelX - g.pixelX, pacman.pixelY - g.pixelY);
-                if (dist < tileSize * 0.7) {
-                    if (frightenedTimer > 0) {
-                        // Mangia fantasma
-                        score += 200;
-                        updateHUD();
-                        g.x = 9; g.y = 9;
-                        g.pixelX = 9 * tileSize; g.pixelY = 9 * tileSize;
-                    } else {
-                        // Perdi vita
-                        lives--;
-                        updateHUD();
-                        if (lives <= 0) {
-                            gameRunning = false;
-                            document.getElementById('overlay').style.display = 'flex';
-                            document.querySelector('.title').innerText = "GAME OVER";
-                            document.getElementById('start-btn').innerText = "RIGIOCA";
-                        } else {
-                            resetPositions();
+            // Pulsante d'azione per raccogliere le gemme vicine
+            document.getElementById('btn-action').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                gems.forEach((gem, index) => {
+                    if (gem.visible && playerPos.distanceTo(gem.position) < 2.0) {
+                        gem.visible = false;
+                        collectedGems++;
+                        document.getElementById('gems-count').innerText = collectedGems;
+                        if (collectedGems === totalGems) {
+                            document.getElementById('victory-screen').style.display = 'flex';
                         }
                     }
-                }
-            });
+                });
+            }, { passive: false });
         }
 
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = Math.min(clock.getDelta(), 0.1);
 
-            // Disegno Labirinto
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (currentMap[r][c] === 1) {
-                        ctx.fillStyle = '#1111ff';
-                        ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
-                    } else if (currentMap[r][c] === 0) {
-                        ctx.fillStyle = '#ffb8ae';
-                        ctx.beginPath();
-                        ctx.arc(c * tileSize + tileSize/2, r * tileSize + tileSize/2, tileSize * 0.15, 0, Math.PI * 2);
-                        ctx.fill();
-                    } else if (currentMap[r][c] === 3) {
-                        ctx.fillStyle = '#ffb8ae';
-                        ctx.beginPath();
-                        ctx.arc(c * tileSize + tileSize/2, r * tileSize + tileSize/2, tileSize * 0.35, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
+            if (gameStarted) {
+                const mag = Math.hypot(moveInput.x, moveInput.y);
+                if (mag > 0.05) {
+                    const speed = 3.0 * mag * delta;
+                    const angle = Math.atan2(-moveInput.x, -moveInput.y) + cameraYaw;
+                    
+                    const nextX = playerPos.clone();
+                    nextX.x += Math.sin(angle) * speed;
+                    if (!checkCollision(nextX)) playerPos.x = nextX.x;
+
+                    const nextZ = playerPos.clone();
+                    nextZ.z += Math.cos(angle) * speed;
+                    if (!checkCollision(nextZ)) playerPos.z = nextZ.z;
                 }
+
+                // Animazione rotazione gemme
+                gems.forEach(g => { if(g.visible) g.rotation.y += 2.0 * delta; });
             }
 
-            // Disegno Pac-Man
-            ctx.fillStyle = '#00ffcc';
-            ctx.beginPath();
-            let rot = 0;
-            if (pacman.dx === 1) rot = 0;
-            if (pacman.dx === -1) rot = Math.PI;
-            if (pacman.dy === 1) rot = Math.PI / 2;
-            if (pacman.dy === -1) rot = Math.PI * 1.5;
-
-            ctx.arc(
-                pacman.pixelX + tileSize/2, 
-                pacman.pixelY + tileSize/2, 
-                tileSize * 0.45, 
-                rot + pacman.mouthAngle, 
-                rot + Math.PI * 2 - pacman.mouthAngle
+            camera.position.set(playerPos.x, playerPos.y, playerPos.z);
+            
+            const target = new THREE.Vector3(
+                playerPos.x - Math.sin(cameraYaw),
+                playerPos.y - cameraPitch * 2,
+                playerPos.z - Math.cos(cameraYaw)
             );
-            ctx.lineTo(pacman.pixelX + tileSize/2, pacman.pixelY + tileSize/2);
-            ctx.fill();
+            camera.lookAt(target);
 
-            // Disegno Fantasmi
-            ghosts.forEach(g => {
-                ctx.fillStyle = frightenedTimer > 0 ? '#2266ff' : g.color;
-                ctx.beginPath();
-                ctx.arc(g.pixelX + tileSize/2, g.pixelY + tileSize/2 - 2, tileSize * 0.45, Math.PI, 0, false);
-                ctx.lineTo(g.pixelX + tileSize - 3, g.pixelY + tileSize);
-                ctx.lineTo(g.pixelX + 3, g.pixelY + tileSize);
-                ctx.fill();
-            });
+            renderer.render(scene, camera);
         }
 
-        function loop() {
-            if (gameRunning) {
-                update();
-                draw();
-                requestAnimationFrame(loop);
-            }
-        }
-
-        // Controlli Touch avanzati (Swipe)
-        let touchStartX = 0, touchStartY = 0;
-        window.addEventListener('touchstart', e => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }, {passive: true});
-
-        window.addEventListener('touchmove', e => {
-            if (!gameRunning) return;
-            let dx = e.touches[0].clientX - touchStartX;
-            let dy = e.touches[0].clientY - touchStartY;
-
-            if (Math.abs(dx) > Math.abs(dy)) {
-                if (dx > 15) { pacman.nextDx = 1; pacman.nextDy = 0; }
-                else if (dx < -15) { pacman.nextDx = -1; pacman.nextDy = 0; }
-            } else {
-                if (dy > 15) { pacman.nextDx = 0; pacman.nextDy = 1; }
-                else if (dy < -15) { pacman.nextDx = 0; pacman.nextDy = -1; }
-            }
-        }, {passive: true});
-
-        // Controlli Tastiera PC
-        window.addEventListener('keydown', e => {
-            if (!gameRunning) return;
-            if (e.key === 'ArrowRight' || e.key === 'd') { pacman.nextDx = 1; pacman.nextDy = 0; }
-            if (e.key === 'ArrowLeft' || e.key === 'a') { pacman.nextDx = -1; pacman.nextDy = 0; }
-            if (e.key === 'ArrowDown' || e.key === 's') { pacman.nextDx = 0; pacman.nextDy = 1; }
-            if (e.key === 'ArrowUp' || e.key === 'w') { pacman.nextDx = 0; pacman.nextDy = -1; }
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        document.getElementById('start-btn').addEventListener('click', () => {
-            document.getElementById('overlay').style.display = 'none';
-            resetGame();
-            gameRunning = true;
-            loop();
-        });
+        window.onload = init;
     </script>
 </body>
 </html>
