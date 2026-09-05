@@ -78,8 +78,10 @@
         function log(msg, isError = false) { 
             console.log(msg);
             const logEl = document.getElementById('status-log');
-            logEl.style.color = isError ? "#ff4444" : "#00ffcc";
-            logEl.innerText = msg; 
+            if(logEl) {
+                logEl.style.color = isError ? "#ff4444" : "#00ffcc";
+                logEl.innerText = msg; 
+            }
         }
 
         let scene, camera, renderer, mapMesh;
@@ -125,7 +127,7 @@
         }
 
         function createFullPerimeterWalls() {
-            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xf0d050, roughness: 0.85 });
+            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xf0d050, roughness: 0.85, visible: false });
             const wallHeight = 30;
             const minX = -44.1, maxX = 48.7, minZ = -50.0, maxZ = 188.3;
             const widthX = maxX - minX, depthZ = maxZ - minZ;
@@ -152,20 +154,32 @@
             collidableObjects.push(eastWall);
         }
 
+        // Sistema di collisione avanzato anti-attraversamento muri (Anti-Portal Bug)
         function canMoveTo(targetPos) {
             if (collidableObjects.length === 0) return true;
+            
+            // Controlla a raggio intorno al giocatore per evitare di "bucare" le pareti
             const origin = targetPos.clone();
-            origin.y += 0.4;
+            origin.y += 0.5; // Altezza torace
+            
+            const checkRadius = 0.5; // Spessore del volume di collisione del personaggio
             const directions = [
                 new THREE.Vector3(1, 0, 0),
                 new THREE.Vector3(-1, 0, 0),
                 new THREE.Vector3(0, 0, 1),
-                new THREE.Vector3(0, 0, -1)
+                new THREE.Vector3(0, 0, -1),
+                new THREE.Vector3(0.7, 0, 0.7),
+                new THREE.Vector3(-0.7, 0, 0.7),
+                new THREE.Vector3(0.7, 0, -0.7),
+                new THREE.Vector3(-0.7, 0, -0.7)
             ];
+
             for (let dir of directions) {
                 raycaster.set(origin, dir);
                 const hits = raycaster.intersectObjects(collidableObjects, true);
-                if (hits.length > 0 && hits[0].distance < 0.4) return false;
+                if (hits.length > 0 && hits[0].distance < checkRadius) {
+                    return false; // Bloccato dal muro
+                }
             }
             return true;
         }
@@ -174,19 +188,12 @@
             log("Caricamento personaggio.glb...");
             const loader = new THREE.GLTFLoader();
             
-            // Proviamo a caricarlo direttamente dalla root con percorso relativo pulito
             loader.load('./personaggio.glb', (gltf) => {
                 characterModel = gltf.scene;
 
-                // Calcola le dimensioni reali per adattarlo perfettamente all'altezza umana (~1.8 metri)
                 const box = new THREE.Box3().setFromObject(characterModel);
                 const size = box.getSize(new THREE.Vector3());
-                const center = box.getCenter(new THREE.Vector3());
-
-                characterModel.position.x = -center.x;
-                characterModel.position.z = -center.z;
-                characterModel.position.y = -box.min.y;
-
+                
                 const maxDim = Math.max(size.x, size.y, size.z);
                 if (maxDim > 0) {
                     const scaleFactor = 1.8 / maxDim;
@@ -197,6 +204,7 @@
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
+                        child.visible = true;
                         if (child.material) {
                             child.material.side = THREE.DoubleSide;
                         }
@@ -204,10 +212,10 @@
                 });
 
                 scene.add(characterModel);
-                log("Personaggio.glb caricato con successo!", false);
+                log("Personaggio.glb caricato correttamente!", false);
             }, undefined, (error) => {
-                console.error("Errore caricamento personaggio.glb:", error);
-                log("ERRORE: Impossibile trovare personaggio.glb", true);
+                console.error("Errore GLTF personaggio:", error);
+                log("ERRORE: File personaggio.glb non trovato", true);
             });
         }
 
@@ -215,7 +223,7 @@
             log("Caricamento mappa.glb...");
             const loader = new THREE.GLTFLoader();
 
-            loader.load('mappa.glb', (gltf) => {
+            loader.load('./mappa.glb', (gltf) => {
                 mapMesh = gltf.scene;
                 collidableObjects = [];
                 scene.add(mapMesh);
@@ -223,7 +231,7 @@
                 mapMesh.traverse((child) => {
                     if (child.isMesh) {
                         if (child.material) {
-                            child.material.side = THREE.DoubleSide;
+                            child.material.side = THREE.DoubleSide; // Rende visibili i muri da entrambi i lati evitando buchi visivi
                         }
                         collidableObjects.push(child);
                     }
@@ -360,6 +368,7 @@
                         Math.cos(moveAngle) * currentSpeed
                     );
 
+                    // Movimento assi separati per scivolare lungo i muri senza blocchi totali o compenetrazioni
                     let nextX = playerPos.clone();
                     nextX.x += moveDir.x;
                     if (canMoveTo(nextX)) playerPos.x = nextX.x;
@@ -381,14 +390,11 @@
                 }
 
                 if (characterModel) {
-                    characterModel.position.x = playerPos.x;
-                    characterModel.position.y = playerPos.y;
-                    characterModel.position.z = playerPos.z;
+                    characterModel.position.set(playerPos.x, playerPos.y, playerPos.z);
                     characterModel.rotation.y = cameraYaw + Math.PI;
                 }
             }
 
-            // VISUALE IN TERZA PERSONA
             const cameraDist = 3.0;
             camera.position.set(
                 playerPos.x - Math.sin(cameraYaw) * cameraDist,
