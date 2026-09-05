@@ -11,11 +11,11 @@
 
         #menu-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 8, 0.98); display: flex; flex-direction: column;
+            background: rgba(5, 5, 8, 0.96); display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 99999;
         }
         .menu-title { font-size: 26px; font-weight: bold; color: #00ffcc; margin-bottom: 10px; text-align: center; letter-spacing: 2px; }
-        .menu-subtitle { font-size: 14px; color: #888; margin-bottom: 30px; text-align: center; }
+        .menu-subtitle { font-size: 13px; color: #888; margin-bottom: 30px; text-align: center; padding: 0 20px; }
         .menu-btn {
             width: 220px; padding: 15px; background: #000; border: 2px solid #00ffcc;
             color: #00ffcc; font-size: 16px; font-weight: bold; font-family: monospace;
@@ -24,16 +24,9 @@
         .menu-btn:active { transform: scale(0.95); background: #00ffcc; color: #000; }
 
         #hud {
-            position: absolute; top: 15px; left: 15px; color: #00ffcc; font-size: 14px;
+            position: absolute; top: 15px; left: 15px; color: #00ffcc; font-size: 13px;
             font-weight: bold; pointer-events: none; z-index: 10; background: rgba(0,0,0,0.75);
             padding: 10px 15px; border-radius: 8px; border: 1px solid #00ffcc;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-
-        #crosshair {
-            position: absolute; top: 50%; left: 50%; width: 6px; height: 6px;
-            background: rgba(0,255,204,0.7); border-radius: 50%; transform: translate(-50%, -50%);
-            pointer-events: none; z-index: 10; box-shadow: 0 0 6px #00ffcc;
         }
 
         #victory-screen {
@@ -44,7 +37,7 @@
 
         #joystick-container {
             position: absolute; bottom: 35px; left: 25px; width: 120px; height: 120px;
-            background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%; touch-action: none; z-index: 10;
         }
         #joystick-knob {
@@ -54,16 +47,17 @@
         }
 
         .action-btn-group {
-            position: absolute; bottom: 35px; right: 25px; display: flex; flex-direction: column; gap: 12px; z-index: 10;
+            position: absolute; bottom: 35px; right: 25px; display: flex; flex-direction: column; gap: 15px; z-index: 10;
         }
-        .ctrl-btn {
-            width: 70px; height: 70px; border-radius: 50%;
-            border: 2px solid #00ffcc; color: #00ffcc; font-weight: bold; font-size: 11px;
-            display: flex; align-items: center; justify-content: center; touch-action: none;
-            background: rgba(0, 0, 0, 0.65); box-shadow: 0 0 12px rgba(0,255,204,0.2);
-            text-align: center;
+        .side-btn {
+            width: 70px; height: 70px; border-radius: 50%; border: 2px solid #00ffcc;
+            color: #00ffcc; font-weight: bold; font-size: 11px; display: flex; align-items: center;
+            justify-content: center; touch-action: none; background: rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 10px rgba(0,255,204,0.3); text-align: center;
         }
-        .ctrl-btn:active { background: #00ffcc; color: #000; transform: scale(0.92); }
+        .side-btn:active { background: #00ffcc; color: #000; transform: scale(0.9); }
+        #btn-flashlight { border-color: #ffaa00; color: #ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.3); }
+        #btn-flashlight.active { background: #ffaa00; color: #000; }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -72,24 +66,25 @@
 
     <div id="menu-screen">
         <div class="menu-title">LABIRINTO ESTESO 3D</div>
-        <div class="menu-subtitle">Esplora, accendi la torcia e trova le 8 gemme</div>
+        <div class="menu-subtitle">Trova le 8 gemme nascoste ed evita di perderti</div>
         <div class="menu-btn" id="btn-start">ENTRA NEL LABIRINTO</div>
     </div>
 
     <div id="victory-screen">
         <div class="menu-title" style="color: #fff; text-shadow: 0 0 10px #00ffcc;">SEI USCITO!</div>
-        <div class="menu-subtitle" style="color: #00ffcc;">Hai recuperato tutte le gemme.</div>
+        <div class="menu-subtitle" style="color: #00ffcc;">Hai recuperato tutte le gemme del labirinto.</div>
         <div class="menu-btn" onclick="location.reload()">RIGIOCA</div>
     </div>
 
-    <div id="hud">GEMME: <span id="gems-count">0</span> / 8</div>
-    <div id="crosshair"></div>
+    <div id="hud">
+        GEMME: <span id="gems-count">0</span> / 8
+    </div>
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
-    
+
     <div class="action-btn-group">
-        <div class="ctrl-btn" id="btn-torch">TORCIA</div>
-        <div class="ctrl-btn" id="btn-fire" style="border-color: #ff4444; color: #ff4444; box-shadow: 0 0 12px rgba(255,68,68,0.2);">SPARA</div>
+        <div class="side-btn" id="btn-shoot">SPARA</div>
+        <div class="side-btn active" id="btn-flashlight">TORCIA</div>
     </div>
 
     <script>
@@ -104,61 +99,71 @@
         let collectedGems = 0;
         const totalGems = 8;
         let gameStarted = false;
+        let flashlightOn = true;
+        let flashlight, muzzleFlashLight;
+        let gunGroup;
 
-        let flashlight, flashlightOn = true;
-        let gunGroup, muzzleFlash;
-        let shootAnimTimer = 0;
-
-        // Labirinto molto più vasto (20x20 celle)
+        // Labirinto immenso e intricato (30x30)
         const mapGrid = [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
-            [1,0,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1,1,0,1],
-            [1,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
-            [1,0,1,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1],
-            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
-            [1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1],
-            [1,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
-            [1,0,0,0,0,1,0,1,1,1,0,1,1,1,0,1,0,1,0,1],
-            [1,1,1,1,1,1,0,0,0,1,0,0,0,1,0,1,0,0,0,1],
-            [1,0,0,0,0,0,0,1,0,1,1,1,0,1,0,1,1,1,0,1],
-            [1,0,1,1,1,1,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
-            [1,0,1,0,0,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1],
-            [1,0,1,0,1,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
-            [1,0,0,0,1,0,0,1,0,1,1,1,1,1,0,1,1,1,0,1],
-            [1,1,1,0,1,0,1,1,0,0,0,0,0,1,0,0,0,0,0,1],
-            [1,0,0,0,0,0,1,0,0,1,1,1,0,1,1,1,1,1,0,1],
-            [1,0,1,1,1,0,1,0,1,1,0,1,0,0,0,0,0,1,0,1],
-            [1,0,0,0,1,0,0,0,0,0,0,1,1,1,1,1,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
+            [1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,0,1,0,1,1,1,0,1],
+            [1,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,1],
+            [1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,1,1,1],
+            [1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1],
+            [1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,1],
+            [1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,1,0,1],
+            [1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,1,0,1,0,1,0,1],
+            [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1],
+            [1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,1],
+            [1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,1],
+            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1],
+            [1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,1],
+            [1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,0,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1],
+            [1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1],
+            [1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
+            [1,0,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,1,0,1],
+            [1,0,0,0,1,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,1,0,1],
+            [1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,1,0,1,0,1],
+            [1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1],
+            [1,0,1,1,1,1,1,0,1,0,1,0,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1],
+            [1,0,0,0,0,0,1,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1],
+            [1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,1,0,1],
+            [1,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,1,0,1],
+            [1,0,1,0,1,0,1,1,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,1,1,1,0,1,0,1],
+            [1,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1],
+            [1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x030305);
-            scene.fog = new THREE.FogExp2(0x030305, 0.055);
+            scene.fog = new THREE.FogExp2(0x030305, 0.09);
 
+            // Risoluzione dello schermo ottimizzata al massimo
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
             scene.add(camera);
 
-            // Risoluzione nativa dello schermo ad alta definizione piena (PixelRatio reale)
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.08);
+            // Illuminazione e Torcia
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
             scene.add(ambientLight);
 
-            // Torcia in mano sinistra (SpotLight direzionale agganciata alla camera)
-            flashlight = new THREE.SpotLight(0xffffee, 3.5, 18, Math.PI / 5, 0.5, 1);
-            flashlight.position.set(-0.3, -0.2, -0.2);
+            flashlight = new THREE.SpotLight(0xffffff, 2.5, 12, Math.PI / 5, 0.5, 1);
             camera.add(flashlight);
-            flashlight.target.position.set(0, 0, -10);
-            camera.add(flashlight.target);
+            flashlight.position.set(0, 0, 0);
+            flashlight.target = camera;
+            // Spostata leggermente a sinistra per simulare la mano sinistra
+            flashlight.position.x = -0.2;
 
             buildEnvironment();
-            buildWeapon();
+            buildGun();
             setupControls();
 
             document.getElementById('btn-start').addEventListener('click', () => {
@@ -170,21 +175,25 @@
         }
 
         function buildEnvironment() {
-            const wallGeo = new THREE.BoxGeometry(2, 3.2, 2);
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x161922, roughness: 0.8 });
+            const mapSizeX = mapGrid[0].length * 2;
+            const mapSizeZ = mapGrid.length * 2;
+
+            const wallGeo = new THREE.BoxGeometry(2, 3, 2);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x181c24, roughness: 0.8 });
             
-            const floorGeo = new THREE.PlaneGeometry(40, 40);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x0c0e12, roughness: 0.95 });
+            const floorGeo = new THREE.PlaneGeometry(mapSizeX, mapSizeZ);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x0c0e12, roughness: 0.9 });
             const floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
-            floor.position.set(19, 0, 19);
+            floor.position.set(mapSizeX/2 - 1, 0, mapSizeZ/2 - 1);
             scene.add(floor);
 
             const ceiling = floor.clone();
             ceiling.rotation.x = Math.PI / 2;
-            ceiling.position.set(19, 3.2, 19);
+            ceiling.position.set(mapSizeX/2 - 1, 3, mapSizeZ/2 - 1);
             scene.add(ceiling);
 
+            // Costruzione Labirinto
             for (let z = 0; z < mapGrid.length; z++) {
                 for (let x = 0; x < mapGrid[z].length; x++) {
                     const posX = x * 2;
@@ -192,23 +201,23 @@
 
                     if (mapGrid[z][x] === 1) {
                         const wall = new THREE.Mesh(wallGeo, wallMat);
-                        wall.position.set(posX, 1.6, posZ);
+                        wall.position.set(posX, 1.5, posZ);
                         scene.add(wall);
                         colliders.push(new THREE.Box3().setFromObject(wall));
                     }
                 }
             }
 
-            // 8 Gemme sparse nel vasto labirinto
+            // Gemme nascoste nel vasto labirinto
             const gemGeo = new THREE.OctahedronGeometry(0.35);
-            const gemMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.9 });
+            const gemMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.8 });
             
-            const gemSpots = [
-                {x: 2, z: 18}, {x: 18, z: 2}, {x: 36, z: 18}, {x: 36, z: 36},
-                {x: 18, z: 36}, {x: 8, z: 8}, {x: 30, z: 8}, {x: 20, z: 20}
+            const validSpots = [
+                {x: 2, z: 28}, {x: 28, z: 2}, {x: 28, z: 28}, {x: 14, z: 14}, 
+                {x: 2, z: 14}, {x: 28, z: 14}, {x: 14, z: 2}, {x: 14, z: 28}
             ];
 
-            gemSpots.forEach(spot => {
+            validSpots.forEach(spot => {
                 const gem = new THREE.Mesh(gemGeo, gemMat);
                 gem.position.set(spot.x, 0.8, spot.z);
                 scene.add(gem);
@@ -216,40 +225,47 @@
             });
         }
 
-        function buildWeapon() {
+        // Creazione Arma Nera a Destra collegata alla Telecamera
+        function buildGun() {
             gunGroup = new THREE.Group();
 
-            // Corpo pistola nero opaco posizionato in basso a destra
-            const bodyGeo = new THREE.BoxGeometry(0.12, 0.16, 0.45);
-            const gunMat = new THREE.MeshStandardMaterial({ color: 0x111113, roughness: 0.3, metalness: 0.8 });
-            const body = new THREE.Mesh(bodyGeo, gunMat);
-            body.position.set(0.35, -0.32, -0.55);
-
-            // Canna e Impugnatura
-            const barrelGeo = new THREE.BoxGeometry(0.08, 0.08, 0.3);
-            const barrel = new THREE.Mesh(barrelGeo, gunMat);
-            barrel.position.set(0.35, -0.26, -0.75);
-
-            const gripGeo = new THREE.BoxGeometry(0.1, 0.25, 0.12);
-            const grip = new THREE.Mesh(gripGeo, gunMat);
+            const gunBodyMat = new THREE.MeshStandardMaterial({ color: 0x111113, roughness: 0.3, metalness: 0.8 });
+            const slideMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.2, metalness: 0.9 });
+            
+            // Impugnatura
+            const gripGeo = new THREE.BoxGeometry(0.08, 0.22, 0.12);
+            const grip = new THREE.Mesh(gripGeo, gunBodyMat);
+            grip.position.set(0, -0.12, 0.05);
             grip.rotation.x = 0.3;
-            grip.position.set(0.35, -0.48, -0.45);
+            gunGroup.add(grip);
 
-            // Lampo di sparo (Muzzle Flash) nascosto inizialmente
-            const flashGeo = new THREE.SphereGeometry(0.1, 8, 8);
-            const flashMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
-            muzzleFlash = new THREE.Mesh(flashGeo, flashMat);
-            muzzleFlash.position.set(0.35, -0.26, -0.95);
-            muzzleFlash.visible = false;
+            // Carrello superiore
+            const slideGeo = new THREE.BoxGeometry(0.08, 0.09, 0.35);
+            const slide = new THREE.Mesh(slideGeo, slideMat);
+            slide.position.set(0, 0.02, 0);
+            gunGroup.add(slide);
 
-            gunGroup.add(body, barrel, grip, muzzleFlash);
+            // Canna
+            const barrelGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.15, 8);
+            const barrel = new THREE.Mesh(barrelGeo, slideMat);
+            barrel.rotation.x = Math.PI / 2;
+            barrel.position.set(0, 0.03, -0.22);
+            gunGroup.add(barrel);
+
+            // Luce lampo sparo (Muzzle flash)
+            muzzleFlashLight = new THREE.PointLight(0xffaa00, 0, 3);
+            muzzleFlashLight.position.set(0, 0.03, -0.3);
+            gunGroup.add(muzzleFlashLight);
+
+            // Posizionamento in basso a destra nella visuale in prima persona
+            gunGroup.position.set(0.32, -0.32, -0.55);
             camera.add(gunGroup);
         }
 
         function checkCollision(targetPos) {
             const playerBox = new THREE.Box3();
             playerBox.min.set(targetPos.x - 0.3, 0, targetPos.z - 0.3);
-            playerBox.max.set(targetPos.x + 0.3, 3, targetPos.z + 0.3);
+            playerBox.max.set(targetPos.x + 0.3, 2, targetPos.z + 0.3);
 
             for (let i = 0; i < colliders.length; i++) {
                 if (colliders[i].intersectsBox(playerBox)) return true;
@@ -265,6 +281,7 @@
             let center = { x: 0, y: 0 };
             let lastTouch = { x: 0, y: 0 };
 
+            // Controllo tocco migliorato per seguire ovunque il dito sullo schermo per la visuale
             window.addEventListener('touchstart', (e) => {
                 for (let t of e.changedTouches) {
                     const rect = container.getBoundingClientRect();
@@ -274,7 +291,6 @@
                             center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
                         }
                     } else if (t.clientX > window.innerWidth / 3 && lookId === null) {
-                        // Area destra dello schermo dedicata alla visuale fluida e reattiva
                         lookId = t.identifier;
                         lastTouch = { x: t.clientX, y: t.clientY };
                     }
@@ -292,11 +308,10 @@
                         moveInput.x = dx / 40;
                         moveInput.y = dy / 40;
                     } else if (t.identifier === lookId) {
-                        // Movimento del cursore/camera tarato con precisione per massima fluidità
                         const dx = t.clientX - lastTouch.x;
                         const dy = t.clientY - lastTouch.y;
                         cameraYaw -= dx * 0.0035;
-                        cameraPitch = Math.max(-0.45, Math.min(0.45, cameraPitch + dy * 0.0035));
+                        cameraPitch = Math.max(-0.5, Math.min(0.5, cameraPitch + dy * 0.0035));
                         lastTouch = { x: t.clientX, y: t.clientY };
                     }
                 }
@@ -315,30 +330,25 @@
             window.addEventListener('touchend', endTouch);
             window.addEventListener('touchcancel', endTouch);
 
-            // Pulsante Torcia (lato destro)
-            document.getElementById('btn-torch').addEventListener('touchstart', (e) => {
+            // Pulsante Torcia
+            document.getElementById('btn-flashlight').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 flashlightOn = !flashlightOn;
-                flashlight.intensity = flashlightOn ? 3.5 : 0;
+                flashlight.intensity = flashlightOn ? 2.5 : 0;
+                const btn = document.getElementById('btn-flashlight');
+                if (flashlightOn) btn.classList.add('active');
+                else btn.classList.remove('active');
             }, { passive: false });
 
-            // Pulsante Sparo (lato destro) con animazione rinculo pistola e raccolta automatica gemme vicine
-            document.getElementById('btn-fire').addEventListener('touchstart', (e) => {
+            // Pulsante Spara (Effetto rinculo arma e lampo di luce)
+            document.getElementById('btn-shoot').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                shootAnimTimer = 0.12;
-                muzzleFlash.visible = true;
-
-                // Controllo raccolta gemme allo sparo/interazione
-                gems.forEach((gem) => {
-                    if (gem.visible && playerPos.distanceTo(gem.position) < 2.5) {
-                        gem.visible = false;
-                        collectedGems++;
-                        document.getElementById('gems-count').innerText = collectedGems;
-                        if (collectedGems === totalGems) {
-                            document.getElementById('victory-screen').style.display = 'flex';
-                        }
-                    }
-                });
+                muzzleFlashLight.intensity = 5;
+                gunGroup.position.z += 0.08; // Rinculo visivo
+                setTimeout(() => {
+                    muzzleFlashLight.intensity = 0;
+                    gunGroup.position.z -= 0.08;
+                }, 80);
             }, { passive: false });
         }
 
@@ -361,17 +371,20 @@
                     if (!checkCollision(nextZ)) playerPos.z = nextZ.z;
                 }
 
-                // Gestione animazione sparo rinculo pistola
-                if (shootAnimTimer > 0) {
-                    shootAnimTimer -= delta;
-                    gunGroup.position.z = 0.08;
-                    if (shootAnimTimer <= 0) {
-                        muzzleFlash.visible = false;
-                        gunGroup.position.z = 0;
+                // Rotazione e raccolta automatica gemme vicine
+                gems.forEach((gem) => { 
+                    if(gem.visible) {
+                        gem.rotation.y += 2.0 * delta;
+                        if (playerPos.distanceTo(gem.position) < 1.8) {
+                            gem.visible = false;
+                            collectedGems++;
+                            document.getElementById('gems-count').innerText = collectedGems;
+                            if (collectedGems === totalGems) {
+                                document.getElementById('victory-screen').style.display = 'flex';
+                            }
+                        }
                     }
-                }
-
-                gems.forEach(g => { if(g.visible) g.rotation.y += 2.0 * delta; });
+                });
             }
 
             camera.position.set(playerPos.x, playerPos.y, playerPos.z);
@@ -390,7 +403,6 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
         });
 
         window.onload = init;
