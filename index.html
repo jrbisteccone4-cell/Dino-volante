@@ -154,14 +154,14 @@
             collidableObjects.push(eastWall);
         }
 
-        // Controllo collisioni leggero basato su 4 direzioni (zero lag, nessun blocco invisibile casuale)
+        // Controllo collisioni ultra-pulito: ignora pavimenti/soffitti e controlla solo le pareti
         function canMoveTo(targetPos) {
             if (collidableObjects.length === 0) return true;
             
             const origin = targetPos.clone();
-            origin.y += 0.5; // Altezza petto
+            origin.y += 0.5; 
             
-            const checkRadius = 0.45; 
+            const checkRadius = 0.4; 
             const directions = [
                 new THREE.Vector3(1, 0, 0),
                 new THREE.Vector3(-1, 0, 0),
@@ -226,9 +226,20 @@
                 mapMesh.traverse((child) => {
                     if (child.isMesh) {
                         if (child.material) {
-                            child.material.side = THREE.DoubleSide; // Rende visibili i muri da entrambi i lati
+                            child.material.side = THREE.DoubleSide;
                         }
-                        collidableObjects.push(child);
+                        
+                        // Filtro geometrico intelligente: scarta pavimenti e soffitti piatti larghi per evitare muri invisibili
+                        child.geometry.computeBoundingBox();
+                        const box = child.geometry.boundingBox.clone();
+                        box.applyMatrix4(child.matrixWorld);
+                        const size = new THREE.Vector3();
+                        box.getSize(size);
+
+                        // Aggiunge solo gli oggetti che hanno una certa altezza verticale (escludendo le grandi lastre di pavimento/soffitto)
+                        if (size.y > 0.4 && (size.x < 30 || size.z < 30)) {
+                            collidableObjects.push(child);
+                        }
                     }
                 });
 
@@ -360,7 +371,6 @@
                     const moveX = Math.sin(moveAngle) * totalSpeed;
                     const moveZ = Math.cos(moveAngle) * totalSpeed;
 
-                    // Assi separati per scivolare fluidamente lungo i muri reali
                     let nextX = playerPos.clone();
                     nextX.x += moveX;
                     if (canMoveTo(nextX)) playerPos.x = nextX.x;
