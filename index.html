@@ -95,8 +95,8 @@
         let isMapLoaded = false;
         let characterModel = null;
 
-        // Array di Box3 matematici istantanei (Zero lag, massima precisione)
-        let collisionBoxes = [];
+        const raycaster = new THREE.Raycaster();
+        let collidableObjects = [];
 
         function init() {
             scene = new THREE.Scene();
@@ -126,55 +126,57 @@
             animate();
         }
 
-        function buildMapColliders() {
-            collisionBoxes = [];
-
-            // 1. Muri perimetrali esterni invalicabili basati sui confini esatti della mappa
+        function createFullPerimeterWalls() {
+            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xf0d050, roughness: 0.85, visible: false });
+            const wallHeight = 30;
             const minX = -44.1, maxX = 48.7, minZ = -50.0, maxZ = 188.3;
-            const thickness = 2.0;
+            const widthX = maxX - minX, depthZ = maxZ - minZ;
+            const centerX = (maxX + minX) / 2, centerZ = (maxZ + minZ) / 2;
 
-            // Nord, Sud, Ovest, Est perimetrali
-            collisionBoxes.push(new THREE.Box3(new THREE.Vector3(minX - thickness, -10, minZ - thickness), new THREE.Vector3(maxX + thickness, 50, minZ)));
-            collisionBoxes.push(new THREE.Box3(new THREE.Vector3(minX - thickness, -10, maxZ), new THREE.Vector3(maxX + thickness, 50, maxZ + thickness)));
-            collisionBoxes.push(new THREE.Box3(new THREE.Vector3(minX - thickness, -10, minZ), new THREE.Vector3(minX, 50, maxZ)));
-            collisionBoxes.push(new THREE.Box3(new THREE.Vector3(maxX, -10, minZ), new THREE.Vector3(maxX + thickness, 50, maxZ)));
+            const northWall = new THREE.Mesh(new THREE.BoxGeometry(widthX, wallHeight, 2), wallMaterial);
+            northWall.position.set(centerX, wallHeight / 2, minZ);
+            scene.add(northWall);
+            collidableObjects.push(northWall);
 
-            // 2. Generazione automatica dei Box di collisione da tutti i muri interni del file GLTF della mappa
-            if (mapMesh) {
-                mapMesh.traverse((child) => {
-                    if (child.isMesh) {
-                        child.geometry.computeBoundingBox();
-                        const box = new THREE.Box3().copy(child.geometry.boundingBox);
-                        box.applyMatrix4(child.matrixWorld);
-                        
-                        // Filtra solo gli oggetti che somigliano a pareti o ostacoli (escludendo pavimenti troppo sottili o soffitti alti)
-                        const size = new THREE.Vector3();
-                        box.getSize(size);
-                        
-                        if (size.y > 1.5 && (size.x < 15 || size.z < 15)) {
-                            // Espande leggermente la scatola per creare un cuscinetto fisico anti-attraversamento
-                            box.expandByScalar(0.15);
-                            collisionBoxes.push(box);
-                        }
-                    }
-                });
-            }
-            log(`Creati ${collisionBoxes.length} blocchi di collisione ottimizzati.`);
+            const southWall = new THREE.Mesh(new THREE.BoxGeometry(widthX, wallHeight, 2), wallMaterial);
+            southWall.position.set(centerX, wallHeight / 2, maxZ);
+            scene.add(southWall);
+            collidableObjects.push(southWall);
+
+            const westWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, depthZ), wallMaterial);
+            westWall.position.set(minX, wallHeight / 2, centerZ);
+            scene.add(westWall);
+            collidableObjects.push(westWall);
+
+            const eastWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, depthZ), wallMaterial);
+            eastWall.position.set(maxX, wallHeight / 2, centerZ);
+            scene.add(eastWall);
+            collidableObjects.push(eastWall);
         }
 
-        // Controllo collisioni geometrico puro (Istantaneo, senza lag e senza buchi)
-        function checkCollision(pos) {
-            const playerBox = new THREE.Box3();
-            // Crea un cilindro/box di collisione attorno al giocatore (raggio 0.4 metri)
-            playerBox.min.set(pos.x - 0.4, pos.y, pos.z - 0.4);
-            playerBox.max.set(pos.x + 0.4, pos.y + 1.8, pos.z + 0.4);
+        // Controllo collisioni leggero basato su 4 direzioni (zero lag, nessun blocco invisibile casuale)
+        function canMoveTo(targetPos) {
+            if (collidableObjects.length === 0) return true;
+            
+            const origin = targetPos.clone();
+            origin.y += 0.5; // Altezza petto
+            
+            const checkRadius = 0.45; 
+            const directions = [
+                new THREE.Vector3(1, 0, 0),
+                new THREE.Vector3(-1, 0, 0),
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(0, 0, -1)
+            ];
 
-            for (let i = 0; i < collisionBoxes.length; i++) {
-                if (collisionBoxes[i].intersectsBox(playerBox)) {
-                    return true; // C'è collisione con un muro
+            for (let i = 0; i < directions.length; i++) {
+                raycaster.set(origin, directions[i]);
+                const hits = raycaster.intersectObjects(collidableObjects, true);
+                if (hits.length > 0 && hits[0].distance < checkRadius) {
+                    return false; 
                 }
             }
-            return false; // Libero
+            return true;
         }
 
         function loadCharacter() {
@@ -218,17 +220,19 @@
 
             loader.load('./mappa.glb', (gltf) => {
                 mapMesh = gltf.scene;
+                collidableObjects = [];
                 scene.add(mapMesh);
 
                 mapMesh.traverse((child) => {
                     if (child.isMesh) {
                         if (child.material) {
-                            child.material.side = THREE.DoubleSide;
+                            child.material.side = THREE.DoubleSide; // Rende visibili i muri da entrambi i lati
                         }
+                        collidableObjects.push(child);
                     }
                 });
 
-                buildMapColliders();
+                createFullPerimeterWalls();
                 loadCharacter();
 
                 playerPos.set(8.0, 0, 0); 
@@ -356,18 +360,14 @@
                     const moveX = Math.sin(moveAngle) * totalSpeed;
                     const moveZ = Math.cos(moveAngle) * totalSpeed;
 
-                    // Movimento sugli assi separati con controllo Box colliders (Fluidissimo e blocco totale sui muri)
-                    let testPos = playerPos.clone();
-                    testPos.x += moveX;
-                    if (!checkCollision(testPos)) {
-                        playerPos.x = testPos.x;
-                    }
+                    // Assi separati per scivolare fluidamente lungo i muri reali
+                    let nextX = playerPos.clone();
+                    nextX.x += moveX;
+                    if (canMoveTo(nextX)) playerPos.x = nextX.x;
 
-                    testPos = playerPos.clone();
-                    testPos.z += moveZ;
-                    if (!checkCollision(testPos)) {
-                        playerPos.z = testPos.z;
-                    }
+                    let nextZ = playerPos.clone();
+                    nextZ.z += moveZ;
+                    if (canMoveTo(nextZ)) playerPos.z = nextZ.z;
                 }
 
                 if (!isGrounded) {
