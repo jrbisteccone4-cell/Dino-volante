@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Labyrinth - Corrected Movement & Look</title>
+    <title>3D Labyrinth - Absolute Joystick Fix</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #010103; font-family: monospace; position: fixed; }
@@ -341,21 +341,22 @@
                 if (mag > 0.05) {
                     const speed = 3.2 * mag * delta;
                     
-                    // Vettori di movimento allineati correttamente alla visuale della telecamera
-                    const forwardX = -Math.sin(cameraYaw);
-                    const forwardZ = -Math.cos(cameraYaw);
-                    const rightX = Math.cos(cameraYaw);
-                    const rightZ = -Math.sin(cameraYaw);
+                    // Calcolo diretto dei vettori forward e right in base all'angolo di visuale corrente
+                    const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+                    const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
 
-                    const moveDirX = (rightX * moveInput.x) - (forwardX * moveInput.y);
-                    const moveDirZ = (rightZ * moveInput.x) - (forwardZ * moveInput.y);
+                    // Corretto esplicitamente: asse Y invertito per joystick (su = avanti, giù = indietro)
+                    const moveDir = new THREE.Vector3();
+                    moveDir.addScaledVector(forward, -moveInput.y);
+                    moveDir.addScaledVector(right, moveInput.x);
+                    moveDir.normalize();
 
                     const nextX = playerPos.clone();
-                    nextX.x += moveDirX * speed * 2;
+                    nextX.x += moveDir.x * speed * 2;
                     if (!checkCollision(nextX)) playerPos.x = nextX.x;
 
                     const nextZ = playerPos.clone();
-                    nextZ.z += moveDirZ * speed * 2;
+                    nextZ.z += moveDir.z * speed * 2;
                     if (!checkCollision(nextZ)) playerPos.z = nextZ.z;
                 }
 
